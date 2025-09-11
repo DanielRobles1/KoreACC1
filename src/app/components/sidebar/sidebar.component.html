@@ -6,27 +6,69 @@
 
     <h2 class="text-lg font-bold mb-4 text-center">KORE ACC</h2>
 
-    <ul class="space-y-1">
+    <ul class="space-y-2">
       <li>
-        <a href="#" class="block w-full -mx-4 px-4 py-2 text-center hover:bg-slate-800 hover:text-white">
-          Polizas
-        </a>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='polizas'"
+                (click)="setActive('polizas')">
+          <img src="assets/svgs/poliza.svg" alt="Pólizas" class="icon">
+          <span class="ml-2">Pólizas</span>
+        </button>
       </li>
+
       <li>
-        <a href="#" class="block w-full -mx-4 px-4 py-2 text-center hover:bg-slate-800 hover:text-white">
-          Reportes
-        </a>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='reportes'"
+                (click)="toggleReportes()">
+          <img src="assets/svgs/reportes.svg" alt="Reportes" class="icon">
+          <span class="ml-2 flex-1 text-left">Reportes</span>
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-4 w-4 caret transition-transform"
+               [class.rotate-180]="reportesOpen"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <ul class="mt-2 space-y-1 pl-10" *ngIf="reportesOpen">
+          <li>
+            <a href="#" class="subbtn">
+              <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balance general">
+              <span class="ml-2">Balance general</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="subbtn">
+              <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balanza de comprobacion">
+              <span class="ml-2">Balanza de comprobacion</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="subbtn">
+              <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Estado de resultados">
+              <span class="ml-2">Estado de resultados</span>
+            </a>
+          </li>
+        </ul>
       </li>
+
       <li>
-        <a href="#" class="block w-full -mx-4 px-4 py-2 text-center hover:bg-slate-800 hover:text-white">
-          Dashboard
-        </a>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='dashboard'"
+                (click)="setActive('dashboard')">
+          <img src="assets/svgs/dashboard.svg" alt="Dashboard" class="icon">
+          <span class="ml-2">Dashboard</span>
+        </button>
       </li>
     </ul>
   </div>
 
-  <div class="absolute bottom-4 left-0 right-0">
-    <a href="#" class="flex justify-center items-center -mx-4 px-4 py-2 hover:bg-slate-800 hover:text-white">
+  <div class="absolute bottom-20 left-0 right-0 px-4">
+    <a href="#" class="btn">
       <span>⚙️</span>
       <span class="ml-2">Configuración</span>
     </a>

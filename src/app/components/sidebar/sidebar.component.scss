@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:host { --accent: #2E5777; }
+
+.btn {
+  @apply flex items-center w-full px-4 py-2 rounded-full transition select-none text-white bg-slate-800;
+  &:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+}
+
+.btn--active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.subbtn {
+  @apply flex items-center w-full px-3 py-1.5 rounded-full bg-slate-100 text-slate-800 transition;
+  &:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+}
+.icon { width: 1.25rem; height: 1.25rem; }
+.icon-sm { width: 1rem; height: 1rem; }
+
+.btn:hover img.icon,
+.btn--active img.icon,
+.subbtn:hover img.icon-sm {
+  filter: brightness(0) invert(1);
+}
+
+.caret { transition: transform 180ms ease; }
