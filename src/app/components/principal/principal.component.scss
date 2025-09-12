@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* --- Variables --- */
+:host {
+  display: block;
+  /* Cambia el ancho del sidebar aquí (debe coincidir en sidebar y spacer) */
+  --sbw: 16rem; /* equivale a w-64 */
+}
+
+/* --- Layout --- */
+.layout { @apply min-h-screen bg-white text-gray-900 overflow-x-hidden flex; }
+
+/* Sidebar fijo + transición para móvil */
+.sidebar {
+  width: var(--sbw);
+  @apply fixed inset-y-0 left-0 z-40 bg-gray-800 text-white shadow-2xl
+         transform transition-transform duration-300 md:translate-x-0;
+}
+.sidebar.closed { @apply -translate-x-full md:translate-x-0; }
+
+/* Backdrop cuando el sidebar está abierto en móvil */
+.backdrop { @apply fixed inset-0 bg-black/40 z-30; }
+
+/* Spacer que “reserva” el ancho del sidebar (solo md+) */
+.spacer { width: var(--sbw); @apply shrink-0 hidden md:block; }
+
+/* Contenido principal */
+.content { @apply flex-1 p-6; }
+
+/* Header */
+.header { @apply flex items-center justify-between mb-6; }
+.title  { @apply text-2xl font-bold; }
+
+.primary-btn {
+  @apply flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:opacity-90 transition;
+}
+.primary-plus {
+  @apply flex items-center justify-center w-8 h-8 bg-white text-gray-900 rounded-full text-2xl font-bold leading-none;
+}
+
+/* Tabs */
+.tabs { @apply flex gap-2 mb-6; }
+.tab  { @apply px-4 py-2 rounded border border-gray-300 bg-white hover:bg-gray-100; }
+.tab.active { @apply bg-gray-900 text-white; }
+
+
+.card   { @apply bg-white border border-gray-200 rounded-xl shadow-sm p-4; }
+.footer { @apply mt-4; }
+
+
+.hamburger { @apply mb-4 p-2 bg-gray-900 text-white rounded; }

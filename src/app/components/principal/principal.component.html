@@ -1,0 +1,47 @@
+<div class="layout">
+  <!-- Sidebar fijo -->
+  <app-sidebar
+    class="sidebar"
+    [class.closed]="!sidebarOpen">
+  </app-sidebar>
+
+  <!-- Backdrop móvil -->
+  <div *ngIf="sidebarOpen" class="backdrop md:hidden" (click)="closeSidebar()"></div>
+
+  <!-- Spacer: reserva ancho del sidebar (solo md+) -->
+  <div class="spacer"></div>
+
+  <!-- Contenido -->
+  <div class="content">
+    <!-- Hamburguesa móvil -->
+    <button class="hamburger md:hidden" (click)="toggleSidebar()">☰</button>
+
+    <div class="header">
+      <h1 class="title">{{ title }}</h1>
+
+      <button *ngIf="primaryActionLabel"
+              (click)="primaryAction.emit()"
+              class="primary-btn">
+        <span>{{ primaryActionLabel }}</span>
+        <span class="primary-plus">+</span>
+      </button>
+    </div>
+
+    <div *ngIf="tabs?.length" class="tabs">
+      <button *ngFor="let t of tabs"
+              (click)="activeTabId = t.id"
+              [class.active]="t.id===activeTabId"
+              class="tab">
+        {{ t.label }}
+      </button>
+    </div>
+
+    <div class="card">
+      <ng-content></ng-content>
+    </div>
+
+    <div class="footer">
+      <ng-content select="[page-footer]"></ng-content>
+    </div>
+  </div>
+</div>
