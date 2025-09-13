@@ -1,0 +1,85 @@
+<div class="panel">
+    <section class="card">
+        <header class="card__header">
+        <div class="header-left">
+            <h1 class="panel__title">{{ title }}</h1>
+
+            <div class="search" *ngIf="showSearch">
+            <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+                [(ngModel)]="innerSearch"
+                (ngModelChange)="onSearchChange($event)"
+                [placeholder]="placeholderSearch"
+                type="text"
+            />
+            </div>
+
+            <nav class="tabs" *ngIf="tabs?.length">
+            <button
+                *ngFor="let t of tabs; trackBy: trackByIndex"
+                type="button"
+                [class.active]="t.id === activeTabId"
+                (click)="onTabClick(t.id)"
+            >
+                <img *ngIf="t.icon" class="tab-icon" [attr.src]="t.icon" [attr.alt]="t.iconAlt || t.label" aria-hidden="true" />
+                <span>{{ t.label }}</span>
+            </button>
+            </nav>
+        </div>
+
+        <button class="primary" type="button" (click)="onPrimary()">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            {{ primaryActionLabel }}
+        </button>
+        </header>
+
+        <div class="table-wrapper">
+        <table>
+            <thead>
+            <tr>
+                <th *ngFor="let col of columns" [style.width]="col.width">{{ col.header }}</th>
+                <th *ngIf="actions?.length">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let row of data; trackBy: trackByIndex">
+                <td *ngFor="let col of columns">{{ row[col.key] }}</td>
+                <td class="actions" *ngIf="actions?.length">
+                <button
+                    class="icon"
+                    *ngFor="let a of actions"
+                    type="button"
+                    [title]="a.tooltip || a.label || a.id"
+                    (click)="onActionClick(a.id, row)"
+                >
+                    <svg *ngIf="a.id === 'edit'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    <svg *ngIf="a.id === 'delete'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                    <path d="M10 11v6"></path><path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                    </svg>
+                    <span *ngIf="a.id !== 'edit' && a.id !== 'delete'">{{ a.label || a.id }}</span>
+                </button>
+                </td>
+            </tr>
+
+            <tr *ngIf="!data || data.length === 0">
+                <td class="empty" [attr.colspan]="columns.length + (actions?.length ? 1 : 0)">
+                Sin registros
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+</div>

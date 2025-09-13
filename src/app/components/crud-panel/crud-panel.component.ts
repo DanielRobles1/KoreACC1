@@ -1,0 +1,86 @@
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+export type CrudTab = {
+  id: string;
+  label: string;
+  icon?: string;
+  iconAlt?: string;
+};
+export type CrudColumn = { key: string; header: string; width?: string };
+export type CrudAction = { id: string; label?: string; tooltip?: string };
+
+@Component({
+  selector: 'app-crud-panel',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './crud-panel.component.html',
+  styleUrls: ['./crud-panel.component.scss'], // <- en plural
+})
+export class CrudPanelComponent {
+  /** Header */
+  @Input() title = '';
+
+  /** Tabs (Usuarios / Roles y permisos / etc.) */
+  @Input() tabs: CrudTab[] = [];
+  @Input() activeTabId?: string;
+  @Output() tabChange = new EventEmitter<string>();
+
+  /** Search */
+  @Input() showSearch = true;
+  @Input() placeholderSearch = 'Buscar...';
+  @Output() search = new EventEmitter<string>();
+  innerSearch = '';
+
+  /** Botón primario (Nuevo Usuario / Nuevo Rol / etc.) */
+  @Input() primaryActionLabel = 'Nuevo';
+  @Output() primaryAction = new EventEmitter<void>();
+
+  /** Tabla */
+  @Input() columns: CrudColumn[] = [];
+  @Input() data: any[] = [];
+
+  /** Acciones por fila */
+  @Input() actions: CrudAction[] = [
+    { id: 'edit', label: 'Editar' },
+    { id: 'delete', label: 'Eliminar' },
+  ];
+  @Output() action = new EventEmitter<{ action: string; row: any }>();
+  @Output() edit = new EventEmitter<any>();
+  @Output() remove = new EventEmitter<any>();
+
+  /** Paginación */
+  @Input() page = 1;
+  @Input() totalPages = 1;
+  @Output() pageChange = new EventEmitter<number>();
+
+  onTabClick(id: string) { this.tabChange.emit(id); }
+  onPrimary() { this.primaryAction.emit(); }
+  onSearchChange(v: string) { this.search.emit(v); }
+
+  onActionClick(id: string, row: any) {
+    this.action.emit({ action: id, row });
+    if (id === 'edit') this.edit.emit(row);
+    if (id === 'delete') this.remove.emit(row);
+  }
+
+  goPage(p: number) {
+    if (p < 1 || p > this.totalPages) return;
+    this.page = p;
+    this.pageChange.emit(this.page);
+  }
+
+  trackByIndex(i: number) { return i; }
+
+  get visiblePages(): (number | '…')[] {
+    const set = new Set<number>([1, this.page - 1, this.page, this.page + 1, this.totalPages]);
+    const arr = [...set].filter(n => n >= 1 && n <= this.totalPages).sort((a, b) => a - b);
+    const out: (number | '…')[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      out.push(arr[i]);
+      if (i < arr.length - 1 && arr[i + 1] - arr[i] > 1) out.push('…');
+    }
+    return out;
+  }
+}

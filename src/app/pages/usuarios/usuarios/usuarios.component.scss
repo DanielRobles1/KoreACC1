@@ -1,0 +1,15 @@
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr; /* ancho sidebar + resto */
+  height: 100vh;
+}
+
+.sidebar {
+  background: var(--kore-page-bg);
+}
+
+.content {
+  padding: 1rem;
+  background: var(--kore-page-bg, #2C3E50); 
+  overflow-y: auto;
+}

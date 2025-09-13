@@ -1,0 +1,24 @@
+<div class="layout">
+    <!-- Sidebar a la izquierda -->
+    <app-sidebar class="sidebar"></app-sidebar>
+
+    <!-- Contenido principal -->
+    <div class="content">
+        <app-crud-panel
+        [title]="title"
+        [tabs]="tabs"
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+
+        [primaryActionLabel]="'Nuevo Usuario'"
+        (primaryAction)="onPrimary()"
+
+        [columns]="columns"
+        [data]="rows"
+        [actions]="actions"
+
+        [page]="page"
+        [totalPages]="totalPages">
+        </app-crud-panel>
+    </div>
+</div>

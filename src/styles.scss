@@ -1,1 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
+/* Colores de marca – ajusta a tu paleta */
+:root {
+  --kore-page-bg: #2C3E50;   /* azul del fondo principal */
+  --kore-card-bg: #ffffff;   /* blanco del contenedor */
+  --kore-primary:  #0f6e9a;  /* azul del botón "Nuevo ..." */
+}
+
+/* Si quieres fondo general en toda la app */
+html, body { height: 100%; }
+body { margin: 0; background: var(--kore-page-bg); }
