@@ -1,24 +1,58 @@
 <div class="layout">
-    <!-- Sidebar a la izquierda -->
-    <app-sidebar class="sidebar"></app-sidebar>
+  <!-- Sidebar a la izquierda -->
+  <app-sidebar class="sidebar"></app-sidebar>
 
-    <!-- Contenido principal -->
-    <div class="content">
-        <app-crud-panel
-        [title]="title"
-        [tabs]="tabs"
-        [activeTabId]="activeTabId"
-        (tabChange)="onTabChange($event)"
+  <!-- Contenido principal -->
+  <div class="content">
+    <app-crud-panel
+      [title]="title"
+      [tabs]="tabs"
+      [activeTabId]="activeTabId"
+      (tabChange)="onTabChange($event)"
 
-        [primaryActionLabel]="'Nuevo Usuario'"
-        (primaryAction)="onPrimary()"
+      [primaryActionLabel]="'Nuevo Usuario'"
+      (primaryAction)="onPrimary()"
 
-        [columns]="columns"
-        [data]="rows"
-        [actions]="actions"
+      [columns]="columns"
+      [data]="rows"
+      [actions]="actions"
+      (action)="onRowAction($event)"
 
-        [page]="page"
-        [totalPages]="totalPages">
-        </app-crud-panel>
-    </div>
+      [page]="page"
+      [totalPages]="totalPages">
+    </app-crud-panel>
+  </div>
 </div>
+
+<!-- MODAL DE FORMULARIO (Reutilizable) -->
+<app-modal
+  [open]="modalOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  (closed)="closeModal()
+  "
+  (canceled)="cancelModal()"
+  (confirmed)="userFormRef.submit()"
+>
+  <!-- Contenido proyectado: formulario reusable -->
+  <app-user-form
+    #userFormRef
+    [value]="editing"
+    [roles]="['Administrador','Contador','Auditor','Invitado']"
+    [readonlyEmail]="!!editing"
+    (submitted)="upsertUser($event)"
+    (canceled)="cancelModal()"
+  ></app-user-form>
+</app-modal>
+
+<!-- MODAL DE CONFIRMACIÓN (Reutilizable) -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()"
+>
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>

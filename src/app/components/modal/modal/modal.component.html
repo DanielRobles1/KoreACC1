@@ -1,0 +1,44 @@
+<div class="modal" *ngIf="open" (mousedown)="onBackdropClick($event)">
+  <div
+    class="modal__dialog"
+    [class.sm]="size === 'sm'"
+    [class.md]="size === 'md'"
+    [class.lg]="size === 'lg'"
+    [class.xl]="size === 'xl'"
+    (mousedown)="$event.stopPropagation()"
+  >
+    <header class="modal__header">
+      <h2 class="modal__title">{{ title }}</h2>
+
+      <div class="modal__actions">
+        <button type="button" class="btn ghost light" (click)="cancel()" aria-label="Cancelar">
+          Cancelar
+        </button>
+        <button type="button" class="btn primary light" (click)="confirm()" aria-label="Guardar">
+          <img src="assets/svgs/save.svg" alt="Guardar" class="h-5 w-5"/>
+        </button>
+
+        <button
+          *ngIf="showClose"
+          class="icon-btn light"
+          type="button"
+          (click)="close()"
+          aria-label="Cerrar"
+          title="Cerrar"
+        >
+          ✕
+        </button>
+      </div>
+    </header>
+
+    <section class="modal__body">
+      <ng-content></ng-content>
+    </section>
+
+    <!-- Footer ya no se usa; lo dejamos por compatibilidad pero oculto por CSS -->
+    <footer class="modal__footer">
+      <button type="button" class="btn ghost" (click)="cancel()">Cancelar</button>
+      <button type="button" class="btn primary" (click)="confirm()">Guardar</button>
+    </footer>
+  </div>
+</div>
