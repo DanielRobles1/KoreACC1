@@ -72,7 +72,7 @@ export class LoginComponent {
     }, 1000);
   }
 
-  forgotPassword(): void {
-    this.router.navigate(['/recuperar-password']);
-  }
+  forgotPassword() {
+  this.router.navigate(['/login/recuperar-password']);
+}
 }

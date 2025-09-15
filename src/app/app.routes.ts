@@ -4,6 +4,7 @@ import { HomeComponent } from './pages/home/home.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios/usuarios.component';
 
 import { LoginComponent } from './pages/login/login.component';
+import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.component';
 
 
 export const routes: Routes = [
@@ -23,5 +24,11 @@ export const routes: Routes = [
   {
     path: 'usuarios',
     component: UsuariosComponent
-  }
+ 
+ },
+ {
+  path: 'login/recuperar-password',
+  component: RecuperarcontrComponent
+}
+
 ];
