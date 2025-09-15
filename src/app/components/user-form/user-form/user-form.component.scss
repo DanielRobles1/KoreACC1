@@ -7,6 +7,11 @@
 
 .uform__avatar { display: grid; place-items: center; margin-bottom: .75rem; }
 .avatar { width: 64px; height: 64px; border-radius: 999px; background: #e2e8f0; }
+.avatar img {
+  align-items: center;
+  width: 3.8rem;
+  height: 3.8rem;
+}
 
 .grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;

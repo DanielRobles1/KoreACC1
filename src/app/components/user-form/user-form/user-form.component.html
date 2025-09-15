@@ -1,14 +1,21 @@
 <form (ngSubmit)="submit()" [formGroup]="form" class="uform">
   <div class="uform__avatar">
-    <!-- placeholder de avatar -->
-    <div class="avatar"></div>
+    <div class="avatar">
+      <img src="assets/svgs/user.svg" alt="User-SVG">
+    </div>
   </div>
 
   <div class="grid">
     <label>
       <span>Nombre*</span>
-      <input type="text" placeholder="Nombre completo" formControlName="nombre" />
+      <input type="text" placeholder="Nombre(s)" formControlName="nombre" />
       <small class="err" *ngIf="f.nombre.touched && f.nombre.invalid">Campo obligatorio (mín. 3 caracteres)</small>
+    </label>
+
+    <label>
+      <span>Apellido*</span>
+      <input type="text" placeholder="Apellido" formControlName="apellido" />
+      <small class="err" *ngIf="f.apellido.touched && f.apellido.invalid">Campo obligatorio (mín. 3 caracteres)</small>
     </label>
 
     <label>

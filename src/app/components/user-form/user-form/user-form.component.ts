@@ -5,6 +5,7 @@ import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } 
 export interface Usuario {
   id?: number;
   nombre: string;
+  apellido: string;
   correo: string;
   telefono?: string;
   rol?: string;
@@ -13,6 +14,7 @@ export interface Usuario {
 
 type UsuarioForm = {
   nombre: FormControl<string>;
+  apellido: FormControl<string>;
   correo: FormControl<string>;
   telefono: FormControl<string>;
   rol: FormControl<string>;
@@ -39,6 +41,7 @@ export class UserFormComponent implements OnChanges {
   constructor(private fb: FormBuilder) {
     this.form = this.fb.nonNullable.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
+      apellido: ['', [Validators.required, Validators.minLength(3)]],
       correo: ['', [Validators.required, Validators.email]],
       telefono: [''],
       rol: [''],
@@ -48,7 +51,7 @@ export class UserFormComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {
-      const v = this.value || { nombre: '', correo: '', telefono: '', rol: '', area: '' };
+      const v = this.value || { nombre: '', apellido: '', correo: '', telefono: '', rol: '', area: '' };
       this.form.reset(v);
       // opcional: bloquear correo en edición
       if (this.readonlyEmail) this.form.get('correo')?.disable();

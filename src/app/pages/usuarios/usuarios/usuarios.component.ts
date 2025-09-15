@@ -11,7 +11,7 @@ import { UserFormComponent, Usuario } from '../../../components/user-form/user-f
   standalone: true,
   imports: [SidebarComponent, CrudPanelComponent, ModalComponent, UserFormComponent],
   templateUrl: './usuarios.component.html',
-  styleUrls: ['./usuarios.component.scss'] // <- plural
+  styleUrls: ['./usuarios.component.scss']
 })
 export class UsuariosComponent {
 
@@ -29,14 +29,15 @@ export class UsuariosComponent {
   columns: CrudColumn[] = [
     { key: 'id',       header: '#' },
     { key: 'nombre',   header: 'Nombre' },
+    { key: 'apellido',   header: 'Apellido' },
     { key: 'correo',   header: 'Correo' },
     { key: 'telefono', header: 'Teléfono' },
     { key: 'rol',      header: 'Rol' },
   ];
 
   rows: Usuario[] = [
-    { id: 1, nombre: 'Alejandro Rivera', correo: 'ale@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Contador' },
-    { id: 2, nombre: 'Daniel',           correo: 'dani@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Administrador' },
+    { id: 1, nombre: 'Alejandro', apellido: 'Rivera', correo: 'ale@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Contador' },
+    { id: 2, nombre: 'Lenin',     apellido: 'Bravo', correo: 'lenin@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Administrador' },
   ];
 
   actions: CrudAction[] = [
