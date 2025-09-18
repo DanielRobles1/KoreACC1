@@ -10,13 +10,12 @@
       [primaryActionLabel]="primaryActionLabel"
       (primaryAction)="onPrimary()"
       [columns]="columns"
-      [data]="tableRows"   
+      [data]="tableRows"
       [actions]="actions"
       (action)="onRowAction($event)"
       [page]="page"
       [totalPages]="totalPages"
-      (search)="onSearch($event)"  
-    >
+      (search)="onSearch($event)">
     </app-crud-panel>
   </div>
 </div>
@@ -28,25 +27,34 @@
   [size]="modalSize"
   (closed)="closeModal()"
   (canceled)="cancelModal()"
-  (confirmed)="roleFormRef.submitForm()"  
->
+  (confirmed)="roleFormRef.submitForm()">
   <app-role-form
     #roleFormRef
     [role]="editingRole"
     [availablePermissions]="availablePermissions"
-    (submitted)="upsertRole($event)"
-    (canceled)="cancelModal()"
-  ></app-role-form>
+    (submitted)="prepareUpsert($event)"
+    (canceled)="cancelModal()">
+  </app-role-form>
 </app-modal>
 
-<!-- Modal Confirmación -->
+<!-- Modal Confirmación: ELIMINAR -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
   size="sm"
   (closed)="closeConfirm()"
   (canceled)="cancelConfirm()"
-  (confirmed)="confirmProceed()"
->
+  (confirmed)="confirmProceed()">
   <p class="mb-2">{{ confirmMessage }}</p>
+</app-modal>
+
+<!-- Modal Confirmación: GUARDAR (crear/editar) -->
+<app-modal
+  [open]="saveConfirmOpen"
+  [title]="saveConfirmTitle"
+  size="sm"
+  (closed)="closeSaveConfirm()"
+  (canceled)="cancelSaveConfirm()"
+  (confirmed)="confirmSaveProceed()">
+  <p class="mb-2">{{ saveConfirmMessage }}</p>
 </app-modal>

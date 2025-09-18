@@ -34,7 +34,7 @@ type UsuarioForm = {
 })
 export class UserFormComponent implements OnChanges {
   @Input() value: Usuario | null = null;
-  @Input() roles: string[] = ['Administrador', 'Contador', 'Auditor', 'Invitado'];
+  @Input() roles: string[] = ['Administrador', 'Contador', 'Auditor'];
   @Input() readonlyEmail = false;
 
   @Output() submitted = new EventEmitter<Usuario>();
