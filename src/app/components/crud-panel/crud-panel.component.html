@@ -17,17 +17,18 @@
             />
             </div>
 
-            <nav class="tabs" *ngIf="tabs?.length">
-            <button
-                *ngFor="let t of tabs; trackBy: trackByIndex"
-                type="button"
-                [class.active]="t.id === activeTabId"
-                (click)="onTabClick(t.id)"
-            >
-                <img *ngIf="t.icon" class="tab-icon" [attr.src]="t.icon" [attr.alt]="t.iconAlt || t.label" aria-hidden="true" />
-                <span>{{ t.label }}</span>
-            </button>
-            </nav>
+          <nav class="tabs" *ngIf="tabs?.length">
+  <button
+    *ngFor="let t of tabs; trackBy: trackByIndex"
+    type="button"
+    [class.active]="t.id === activeTabId"
+    (click)="onTabClick(t.id)"
+    [routerLink]="t.route || null" >
+    <img *ngIf="t.icon" class="tab-icon" [attr.src]="t.icon" [attr.alt]="t.iconAlt || t.label" aria-hidden="true" />
+    <span>{{ t.label }}</span>
+  </button>
+</nav>
+
         </div>
 
         <button class="primary" type="button" (click)="onPrimary()">

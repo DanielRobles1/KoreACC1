@@ -3,20 +3,24 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 export interface Usuario {
-  id?: number;
+  id_usuario?: number;
   nombre: string;
-  apellido: string;
+  apellido_p: string;
+  apellido_m: string;
   correo: string;
   telefono?: string;
+  usuario?: string;
   rol?: string;
   area?: string;
 }
 
 type UsuarioForm = {
   nombre: FormControl<string>;
-  apellido: FormControl<string>;
+  apellido_p: FormControl<string>;
+  apellido_m: FormControl<string>;
   correo: FormControl<string>;
   telefono: FormControl<string>;
+  usuario: FormControl<string>;
   rol: FormControl<string>;
   area: FormControl<string>;
 };
@@ -41,9 +45,11 @@ export class UserFormComponent implements OnChanges {
   constructor(private fb: FormBuilder) {
     this.form = this.fb.nonNullable.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
-      apellido: ['', [Validators.required, Validators.minLength(3)]],
+      apellido_p: ['', [Validators.required, Validators.minLength(3)]],
+      apellido_m: ['', [Validators.required, Validators.minLength(3)]],
       correo: ['', [Validators.required, Validators.email]],
       telefono: [''],
+      usuario: [''],
       rol: [''],
       area: ['']
     });
@@ -51,15 +57,14 @@ export class UserFormComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {
-      const v = this.value || { nombre: '', apellido: '', correo: '', telefono: '', rol: '', area: '' };
+      const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: '', area: '' };
       this.form.reset(v);
-      // opcional: bloquear correo en edición
       if (this.readonlyEmail) this.form.get('correo')?.disable();
       else this.form.get('correo')?.enable();
     }
   }
 
-  get f() { return this.form.controls; } 
+  get f() { return this.form.controls; }
 
   submit() {
     if (this.form.invalid) {
@@ -67,7 +72,7 @@ export class UserFormComponent implements OnChanges {
       return;
     }
     const payload: Usuario = {
-      ...(this.value?.id ? { id: this.value.id } : {}),
+      ...(this.value?.id_usuario ? { id_usuario: this.value.id_usuario } : {}),
       ...this.form.getRawValue()
     };
     this.submitted.emit(payload);

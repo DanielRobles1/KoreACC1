@@ -1,51 +1,45 @@
-<div class="layout">
-  <!-- Sidebar a la izquierda -->
+<div class="layout"> 
   <app-sidebar class="sidebar"></app-sidebar>
 
-  <!-- Contenido principal -->
   <div class="content">
     <app-crud-panel
       [title]="title"
       [tabs]="tabs"
       [activeTabId]="activeTabId"
       (tabChange)="onTabChange($event)"
-
-      [primaryActionLabel]="'Nuevo Usuario'"
+      [primaryActionLabel]="primaryActionLabel"
       (primaryAction)="onPrimary()"
-
       [columns]="columns"
-      [data]="rows"
+      [data]="tableRows"   
       [actions]="actions"
       (action)="onRowAction($event)"
-
       [page]="page"
-      [totalPages]="totalPages">
+      [totalPages]="totalPages"
+      (search)="onSearch($event)"  
+    >
     </app-crud-panel>
   </div>
 </div>
 
-<!-- MODAL DE FORMULARIO (Reutilizable) -->
+<!-- Modal Crear/Editar -->
 <app-modal
   [open]="modalOpen"
   [title]="modalTitle"
   [size]="modalSize"
-  (closed)="closeModal()
-  "
+  (closed)="closeModal()"
   (canceled)="cancelModal()"
-  (confirmed)="userFormRef.submit()"
+  (confirmed)="roleFormRef.submitForm()"  
 >
-  <!-- Contenido proyectado: formulario reusable -->
-  <app-user-form
-    #userFormRef
-    [value]="editing"
-    [roles]="['Administrador','Contador','Auditor','Invitado']"
-    [readonlyEmail]="!!editing"
-    (submitted)="upsertUser($event)"
+  <app-role-form
+    #roleFormRef
+    [role]="editingRole"
+    [availablePermissions]="availablePermissions"
+    (submitted)="upsertRole($event)"
     (canceled)="cancelModal()"
-  ></app-user-form>
+  ></app-role-form>
 </app-modal>
 
-<!-- MODAL DE CONFIRMACIÓ-->
+<!-- Modal Confirmación -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -54,5 +48,5 @@
   (canceled)="cancelConfirm()"
   (confirmed)="confirmProceed()"
 >
-  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+  <p class="mb-2">{{ confirmMessage }}</p>
 </app-modal>

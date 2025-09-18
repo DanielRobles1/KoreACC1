@@ -5,6 +5,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, RouterModule } from '@angular/router';
 import { RecaptchaModule, RECAPTCHA_SETTINGS, RecaptchaSettings } from 'ng-recaptcha';
 import { environment } from '@environments/environment';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -28,7 +29,8 @@ export class LoginComponent {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private auth: AuthService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -36,13 +38,12 @@ export class LoginComponent {
         '',
         [
           Validators.required,
-          Validators.minLength(8), // mínimo 8 caracteres
-          // Validación estricta activada por defecto
+          Validators.minLength(8),
           Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/),
         ],
       ],
       remember: [false],
-      recaptcha: ['', Validators.required],
+      recaptcha: ['', Validators.required], // solo se valida en el form, no se manda
     });
   }
 
@@ -63,16 +64,23 @@ export class LoginComponent {
       return;
     }
 
-    console.log('✅ Datos enviados:', this.loginForm.value);
+    // ⚡ solo enviamos lo que backend necesita
+    const { username, password } = this.loginForm.value;
 
     this.loading = true;
-    setTimeout(() => {
-      this.loading = false;
-      this.router.navigate(['/usuarios']);
-    }, 1000);
+    this.auth.login(username, password).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/usuarios']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.authError = err.error?.message || 'Error de autenticación. Verifica tus credenciales.';
+      }
+    });
   }
 
   forgotPassword() {
-  this.router.navigate(['/login/recuperar-password']);
-}
+    this.router.navigate(['/login/recuperar-password']);
+  }
 }

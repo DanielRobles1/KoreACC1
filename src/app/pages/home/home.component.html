@@ -5,11 +5,26 @@
   [primaryActionLabel]="'Nuevo Usuario'"
   (primaryAction)="newUser()"
 >
+  <!-- 🔹 Botones de navegación -->
   <div class="flex gap-4 mb-6">
-    <button class="px-4 py-2 bg-blue-600 text-white rounded">Usuarios</button>
-    <button class="px-4 py-2 bg-gray-200 text-gray-900 rounded">Roles y permisos</button>
+    <button
+      class="px-4 py-2 bg-blue-600 text-white rounded"
+      routerLink="/usuarios"
+      routerLinkActive="bg-blue-700"
+    >
+      Usuarios
+    </button>
+
+    <button
+      class="px-4 py-2 bg-gray-200 text-gray-900 rounded"
+      routerLink="/login/roles"
+      routerLinkActive="bg-gray-300"
+    >
+      Roles y permisos
+    </button>
   </div>
 
+  <!-- 🔹 Tabla de usuarios -->
   <div class="bg-white">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold text-gray-900">Control de usuarios</h2>
@@ -41,8 +56,12 @@
           <td class="px-4 py-2 border">{{ user.email }}</td>
           <td class="px-4 py-2 border">{{ user.phone }}</td>
           <td class="px-4 py-2 border">{{ user.role }}</td>
-          <td class="px-4 py-2 border"><button class="text-blue-600 hover:underline">✏️</button></td>
-          <td class="px-4 py-2 border"><button class="text-red-600 hover:underline">🗑️</button></td>
+          <td class="px-4 py-2 border">
+            <button class="text-blue-600 hover:underline">✏️</button>
+          </td>
+          <td class="px-4 py-2 border">
+            <button class="text-red-600 hover:underline">🗑️</button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -55,6 +74,5 @@
     </div>
   </div>
 
-  
   <div page-footer></div>
 </app-principal>

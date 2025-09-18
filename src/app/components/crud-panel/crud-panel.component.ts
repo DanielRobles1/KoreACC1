@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SidebarComponent } from '../sidebar/sidebar.component'; 
+
 
 export type CrudTab = {
   id: string;
   label: string;
   icon?: string;
   iconAlt?: string;
+  route?: string;
 };
 export type CrudColumn = { key: string; header: string; width?: string };
 export type CrudAction = { id: string; label?: string; tooltip?: string };
@@ -14,14 +18,14 @@ export type CrudAction = { id: string; label?: string; tooltip?: string };
 @Component({
   selector: 'app-crud-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SidebarComponent,RouterModule],
   templateUrl: './crud-panel.component.html',
   styleUrls: ['./crud-panel.component.scss'], // <- en plural
 })
 export class CrudPanelComponent {
   /** Header */
   @Input() title = '';
-
+ route?: string; //
   /** Tabs (Usuarios / Roles y permisos / etc.) */
   @Input() tabs: CrudTab[] = [];
   @Input() activeTabId?: string;

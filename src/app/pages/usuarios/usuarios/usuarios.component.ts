@@ -1,10 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 // UI Components
 import { SidebarComponent } from '../../../components/sidebar/sidebar.component';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from '../../../components/crud-panel/crud-panel.component';
 import { ModalComponent } from '../../../components/modal/modal/modal.component';
 import { UserFormComponent, Usuario } from '../../../components/user-form/user-form/user-form.component';
+
+export interface Rol {
+  id: number;
+  nombre: string;
+  permisos: string[];
+}
 
 @Component({
   selector: 'app-usuarios',
@@ -13,49 +21,65 @@ import { UserFormComponent, Usuario } from '../../../components/user-form/user-f
   templateUrl: './usuarios.component.html',
   styleUrls: ['./usuarios.component.scss']
 })
-export class UsuariosComponent {
+export class UsuariosComponent implements OnInit {
+
+  constructor(
+    private router: Router,
+    private http: HttpClient
+  ) {}
+
+  ngOnInit() {
+    this.cargarUsuarios();
+  }
+
+  // API URL (ajústala a tu backend)
+  private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
   // UI TEXT
   title = 'Gestión de usuarios y permisos';
 
   // TABS
   tabs: CrudTab[] = [
-    { id: 'usuarios', label: 'Usuarios',         icon: 'assets/svgs/poliza.svg', iconAlt: 'Usuarios' },
-    { id: 'roles',    label: 'Roles y permisos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Roles y permisos' },
+    { id: 'usuarios', label: 'Usuarios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Usuarios', route: '/usuarios' },
+    { id: 'roles', label: 'Roles y permisos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Roles y permisos', route: '/login/roles' },
   ];
   activeTabId = 'usuarios';
 
+  // ROLES REGISTRADOS (mock, podrías traerlos del backend)
+  roles: Rol[] = [
+    { id: 1, nombre: 'Administrador', permisos: ['crear_usuario', 'editar_usuario', 'eliminar_usuario', 'gestionar_roles'] },
+    { id: 2, nombre: 'Contador', permisos: ['ver_reportes', 'exportar_datos'] },
+  ];
+
   // TABLE: COLUMNS & DATA
   columns: CrudColumn[] = [
-    { key: 'id',       header: '#' },
-    { key: 'nombre',   header: 'Nombre' },
-    { key: 'apellido',   header: 'Apellido' },
-    { key: 'correo',   header: 'Correo' },
+    { key: 'id_usuario', header: '#' },
+    { key: 'nombre', header: 'Nombre' },
+    { key: 'apellido_p', header: 'Apellido Paterno' },
+    { key: 'apellido_m', header: 'Apellido Materno' },
+    { key: 'correo', header: 'Correo' },
     { key: 'telefono', header: 'Teléfono' },
-    { key: 'rol',      header: 'Rol' },
+    // Si quieres roles, habría que mapearlos (ejemplo: usuario.roles.map(r => r.nombre).join(', '))
   ];
 
-  rows: Usuario[] = [
-    { id: 1, nombre: 'Alejandro', apellido: 'Rivera', correo: 'ale@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Contador' },
-    { id: 2, nombre: 'Lenin',     apellido: 'Bravo', correo: 'lenin@gmail.com', telefono: '951-xxx-xx-xx', rol: 'Administrador' },
-  ];
+  rows: Usuario[] = [];
 
   actions: CrudAction[] = [
-    { id: 'edit',   tooltip: 'Editar usuario' },
+    { id: 'edit', tooltip: 'Editar usuario' },
     { id: 'delete', tooltip: 'Eliminar usuario' },
   ];
 
   // PAGINATION
   page = 1;
-  totalPages = 68;
+  totalPages = 1;
 
-  // FORM MODAL STATE (REUSABLE MODAL + USER FORM)
+  // FORM MODAL STATE
   modalOpen = false;
   modalTitle = 'Nuevo usuario';
   modalSize: 'sm' | 'md' | 'lg' | 'xl' = 'md';
   editing: Usuario | null = null;
 
-  // CONFIRMATION MODAL STATE (REUSABLE)
+  // CONFIRMATION MODAL STATE
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
@@ -63,32 +87,48 @@ export class UsuariosComponent {
   private pendingRow: Usuario | null = null;
   private pendingUser: Usuario | null = null;
 
-  // HANDLERS: TABS
-  onTabChange(id: string) {
-    this.activeTabId = id;
+  // ===== API CALLS =====
+  cargarUsuarios() {
+    this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
+      next: (res) => {
+        console.log('📥 Respuesta usuarios:', res);
+        this.rows = res.data;
+        this.totalPages = res.pagination.pages;
+      },
+      error: (err) => { console.error('Error al cargar usuarios', err); }
+    });
   }
 
-  // HANDLERS: PRIMARY (ADD NEW) & ROW ACTIONS (EDIT / DELETE)
+  // ===== HANDLERS =====
+
+  // TABS
+  onTabChange(id: string) {
+    this.activeTabId = id;
+    const selected = this.tabs.find(t => t.id === id);
+    if (selected?.route) {
+      this.router.navigate([selected.route]);
+    }
+  }
+
+  // PRIMARY (ADD NEW)
   onPrimary() {
-    // Abrir modal en modo creación
     this.editing = null;
     this.modalTitle = 'Añadir usuario';
     this.modalSize = 'md';
     this.modalOpen = true;
   }
 
+  // ROW ACTIONS
   onRowAction(evt: { action: string; row: Usuario }) {
     if (evt.action === 'edit') {
-      // Abrir modal en modo edición
       this.editing = evt.row;
-      this.modalTitle = `Editar usuario #${evt.row.id}`;
+      this.modalTitle = `Editar usuario #${evt.row.id_usuario}`;
       this.modalSize = 'md';
       this.modalOpen = true;
       return;
     }
 
     if (evt.action === 'delete') {
-      // Preparar y abrir confirmación de eliminación
       this.pendingAction = 'delete';
       this.pendingRow = evt.row;
       this.confirmTitle = 'Confirmar eliminación';
@@ -97,13 +137,12 @@ export class UsuariosComponent {
     }
   }
 
-  // HANDLERS: FORM (EMIT SUBMITTED) → OPEN CONFIRM
+  // FORM SUBMIT
   upsertUser(payload: Usuario) {
-    // Preparar confirmación de guardado (creación o edición)
     this.pendingAction = 'save';
     this.pendingUser = payload;
 
-    const esEdicion = !!this.editing?.id;
+    const esEdicion = !!this.editing?.id_usuario;
     this.confirmTitle = esEdicion ? 'Confirmar actualización' : 'Confirmar creación';
     this.confirmMessage = esEdicion
       ? `¿Guardar los cambios del usuario “${payload.nombre}”?`
@@ -112,55 +151,56 @@ export class UsuariosComponent {
     this.confirmOpen = true;
   }
 
-  // HANDLERS: CONFIRM MODAL
+  // CONFIRM MODAL
   closeConfirm() { this.confirmOpen = false; }
+  cancelConfirm() { this.resetConfirm(); }
 
-  cancelConfirm() {
+  confirmProceed() {
+    if (this.pendingAction === 'delete' && this.pendingRow) {
+      this.http.delete(`${this.apiUrl}/${this.pendingRow.id_usuario}`).subscribe({
+        next: () => {
+          this.rows = this.rows.filter(r => r.id_usuario !== this.pendingRow!.id_usuario);
+          this.resetConfirm();
+        },
+        error: (err) => console.error('Error al eliminar', err)
+      });
+    }
+
+    if (this.pendingAction === 'save' && this.pendingUser) {
+      const payload = this.pendingUser;
+      if (this.editing?.id_usuario) {
+        // actualizar
+        this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
+          next: (user) => {
+            this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
+            this.resetConfirm();
+            this.modalOpen = false;
+          },
+          error: (err) => console.error('Error al actualizar', err)
+        });
+      } else {
+        // crear
+        this.http.post<Usuario>(this.apiUrl, payload).subscribe({
+          next: (user: any) => {
+            this.rows = [...this.rows, user];
+            this.resetConfirm();
+            this.modalOpen = false;
+          },
+          error: (err) => console.error('Error al crear', err)
+        });
+      }
+    }
+  }
+
+  private resetConfirm() {
     this.confirmOpen = false;
     this.pendingAction = null;
     this.pendingRow = null;
     this.pendingUser = null;
+    this.editing = null;
   }
 
-  confirmProceed() {
-    // Eliminar
-    if (this.pendingAction === 'delete' && this.pendingRow) {
-      this.rows = this.rows.filter(r => r.id !== this.pendingRow!.id);
-      this.confirmOpen = false;
-      this.pendingAction = null;
-      this.pendingRow = null;
-      return;
-    }
-
-    // Guardar (crear o actualizar)
-    if (this.pendingAction === 'save' && this.pendingUser) {
-      const payload = this.pendingUser;
-
-      if (this.editing?.id) {
-        // Actualizar
-        this.rows = this.rows.map(r => r.id === this.editing!.id ? { ...r, ...payload } : r);
-      } else {
-        // Crear
-        const nextId = (this.rows.at(-1)?.id || 0) + 1;
-        this.rows = [...this.rows, { ...payload, id: nextId }];
-      }
-
-      // Cerrar modales y limpiar estado
-      this.confirmOpen = false;
-      this.modalOpen = false;
-      this.pendingAction = null;
-      this.pendingUser = null;
-      this.editing = null;
-      return;
-    }
-  }
-
-  // ===========================================================================
-  // HANDLERS: FORM MODAL OPEN/CLOSE
-  // ===========================================================================
+  // FORM MODAL
   closeModal() { this.modalOpen = false; }
   cancelModal() { this.modalOpen = false; }
-
-  // Nota: Si en el futuro deseas que (confirmed) del modal principal haga submit,
-  // ya está conectado en el HTML con la template ref #userFormRef.
 }
