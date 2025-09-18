@@ -12,10 +12,10 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  login(identifier: string, password: string) {
+  login(identifier: string, password: string, recaptchaToken: string) {
     return this.http.post<{ token: string; user: any }>(
       `${this.apiUrl}/login`,
-      { identifier, password }
+      { identifier, password, recaptchaToken }
     ).pipe(
       tap(res => {
         console.log('📥 Respuesta del login:', res); // 👈 debug

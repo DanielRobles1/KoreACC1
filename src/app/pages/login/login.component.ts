@@ -68,7 +68,7 @@ export class LoginComponent {
     const { username, password } = this.loginForm.value;
 
     this.loading = true;
-    this.auth.login(username, password).subscribe({
+    this.auth.login(username, password, this.recaptchaToken!).subscribe({
       next: () => {
         this.loading = false;
         this.router.navigate(['/usuarios']);
