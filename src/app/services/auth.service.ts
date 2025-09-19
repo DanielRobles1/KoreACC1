@@ -1,7 +1,8 @@
 // src/app/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs/operators';
+import { catchError, finalize, tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -30,7 +31,34 @@ export class AuthService {
     );
   }
 
-  logout() {
+  resetPassword(email: string){
+    return this.http.post(
+      `${this.apiUrl}/reset-password`,
+      { email },
+    ).pipe(
+      tap(res => console.log('Reset password request sent:', res)),
+      catchError(err => {
+        console.error('Reset password request failed:', err);
+        return throwError(() => err);
+      })
+    )
+  }
+
+  logout(): Observable<any> {
+    return this.http.post(
+      `${this.apiUrl}/logout`,
+      {},
+    ).pipe(
+      tap(res => console.log('Logout server ok:', res)),
+      catchError(err => {
+        console.warn('Logout server failed, clearing client anyway', err);
+        return throwError(() => err);
+      }),
+      finalize(() => this.clearSession())
+    );
+  }
+
+  private clearSession() {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem('user');
   }

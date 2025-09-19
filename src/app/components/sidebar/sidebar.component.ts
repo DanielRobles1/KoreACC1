@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
-
+import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 type Item = 'polizas' | 'reportes' | 'dashboard';
 
@@ -13,6 +14,7 @@ type Item = 'polizas' | 'reportes' | 'dashboard';
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
+  constructor(private auth: AuthService, private router: Router) {}
   active: Item = 'polizas';
   reportesOpen = false;
 
@@ -37,7 +39,7 @@ export class SidebarComponent {
     this.confirmTitle = 'Cerrar sesión';
     this.confirmMessage = '¿Seguro que deseas cerrar sesión?';
     this.confirmOpen = true;
-    this.actionToConfirm = () => this.logout();
+    this.actionToConfirm = () => this.onLogout();
   }
 
   // 🔹 Cerrar modal sin hacer nada
@@ -66,5 +68,13 @@ export class SidebarComponent {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
+  }
+
+  onLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    this.auth.logout().subscribe({
+      next: () => this.router.navigate(['/login'])
+    })
   }
 }

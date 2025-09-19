@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { AuthService } from '@app/services/auth.service';
 
 @Component({
   selector: 'app-recuperarcontr',
@@ -11,6 +12,8 @@ import { RouterModule } from '@angular/router';
   styleUrls: ['./recuperarcontr.component.scss']
 })
 export class RecuperarcontrComponent {
+  constructor (private fb: FormBuilder, private auth: AuthService) {}
+
   recoverForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]]
   });
@@ -19,13 +22,23 @@ export class RecuperarcontrComponent {
   success = false;
   message = '';
 
-  constructor(private fb: FormBuilder) {}
-
   submit() {
     if (this.recoverForm.invalid) return;
 
     this.loading = true;
     const email = this.recoverForm.value.email;
+    this.auth.resetPassword(email!).subscribe({
+      next: (res) => {
+        this.loading = false;
+        this.success = true;
+        this.message = `Se han enviado instrucciones a ${email}`;
+      },
+      error: (err) => {
+        this.loading = false;
+        this.success = false;
+        this.message = err.error?.message || 'Error al enviar las instrucciones. Inténtalo de nuevo.';
+      }
+    });
 
     // Simulación de envío
     setTimeout(() => {
