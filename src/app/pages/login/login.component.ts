@@ -45,6 +45,15 @@ export class LoginComponent {
       remember: [false],
       recaptcha: ['', Validators.required], // solo se valida en el form, no se manda
     });
+
+    // 🔹 Al iniciar, si hay username guardado lo cargamos
+    const savedUsername = localStorage.getItem('rememberedUsername');
+    if (savedUsername) {
+      this.loginForm.patchValue({
+        username: savedUsername,
+        remember: true
+      });
+    }
   }
 
   togglePassword(): void {
@@ -64,8 +73,14 @@ export class LoginComponent {
       return;
     }
 
-    // ⚡ solo enviamos lo que backend necesita
-    const { username, password } = this.loginForm.value;
+    const { username, password, remember } = this.loginForm.value;
+
+    // Guardar o limpiar del ese de recordar
+    if (remember) {
+      localStorage.setItem('rememberedUsername', username);
+    } else {
+      localStorage.removeItem('rememberedUsername');
+    }
 
     this.loading = true;
     this.auth.login(username, password, this.recaptchaToken!).subscribe({
