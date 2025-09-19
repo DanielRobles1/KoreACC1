@@ -67,10 +67,31 @@
     </ul>
   </div>
 
+  <!-- Configuración -->
   <div class="absolute bottom-20 left-0 right-0 px-4">
     <a href="#" class="btn">
       <span>⚙️</span>
       <span class="ml-2">Configuración</span>
     </a>
   </div>
+
+  <!-- Cerrar sesión -->
+<div class="absolute bottom-4 left-0 right-0 px-4">
+  <button type="button" class="btn w-full text-red-600" (click)="openLogoutConfirm()">
+    <span>🚪</span>
+    <span class="ml-2">Cerrar sesión</span>
+  </button>
+</div>
+
+<!-- Modal de confirmación -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>
+
 </div>
