@@ -2,21 +2,28 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
+import { UsuariosService } from '@app/services/usuarios.service';
 import { Router } from '@angular/router';
+import { UserFormComponent, Usuario as UsuarioForm } from '../user-form/user-form/user-form.component';
 
-type Item = 'polizas' | 'reportes' | 'dashboard';
+type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ModalComponent],
+  imports: [CommonModule, ModalComponent, ],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, private users: UsuariosService) {}
+
+  user: any = null;
+  editing = false;
   active: Item = 'polizas';
+  sidebarOpen = true;
   reportesOpen = false;
+  configOpen = false;
 
   // 🔹 Variables para el modal
   confirmOpen = false;
@@ -24,14 +31,25 @@ export class SidebarComponent {
   confirmMessage = '';
   private actionToConfirm: (() => void) | null = null;
 
+  // Sidebar
+  toggleSidebar() {
+    this.sidebarOpen = !this.sidebarOpen;
+  }
+
   setActive(item: Item) {
     this.active = item;
     if (item !== 'reportes') this.reportesOpen = false;
+    if (item !== 'configuracion') this.configOpen = false;
   }
 
   toggleReportes() {
     this.reportesOpen = !this.reportesOpen;
     this.active = 'reportes';
+  }
+
+  toggleConfiguracion() {
+    this.configOpen = !this.configOpen;
+    this.active = 'configuracion';
   }
 
   // 🔹 Abrir modal para cerrar sesión
@@ -48,13 +66,11 @@ export class SidebarComponent {
     this.actionToConfirm = null;
   }
 
-  // 🔹 Cancelar explícitamente
   cancelConfirm() {
     this.confirmOpen = false;
     this.actionToConfirm = null;
   }
 
-  // 🔹 Confirmar acción
   confirmProceed() {
     if (this.actionToConfirm) {
       this.actionToConfirm();
@@ -64,17 +80,18 @@ export class SidebarComponent {
   }
 
   // 🔹 Lógica real de logout
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-  }
-
   onLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.auth.logout().subscribe({
       next: () => this.router.navigate(['/login'])
     })
+  }
+
+  ngOnInit() {
+    this.users.getMe().subscribe({
+      next: (data) => this.user = data,
+      error: (err) => console.error('Error cargando usuario', err)
+    });
   }
 }

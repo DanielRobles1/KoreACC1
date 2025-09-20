@@ -35,7 +35,7 @@ type UiRole = {
 export class RolesypermisosComponent {
   @ViewChild('roleFormRef') roleFormRef!: RoleFormComponent;
 
-  constructor(private router: Router, private rolesSvc: RolesService) {}
+  constructor(private router: Router, private rolesSvc: RolesService) { }
 
   // =======================
   // UI CONFIG
@@ -62,6 +62,7 @@ export class RolesypermisosComponent {
   actions: CrudAction[] = [
     { id: 'edit', label: 'Editar' },
     { id: 'delete', label: 'Eliminar' },
+    { id: 'permissions', label: 'Permisos' },
   ];
 
   page = 1;
@@ -86,6 +87,12 @@ export class RolesypermisosComponent {
   saveConfirmTitle = '';
   saveConfirmMessage = '';
   private pendingSaveRole: Partial<UiRole> | null = null;
+
+  // ===== MODAL SOLO PERMISOS =====
+  permOpen = false;
+  permTitle = 'Editar permisos';
+  permRole: UiRole | null = null;
+  permSelections: string[] = []; // array temporal con los permisos seleccionados
 
   // =======================
   // PERMISOS DISPONIBLES
@@ -119,9 +126,10 @@ export class RolesypermisosComponent {
     return `${perms.slice(0, 3).map(p => this.formatPermission(p)).join(', ')} (+${perms.length - 3} más)`;
   }
 
-  private formatPermission(permission: string): string {
+  formatPermission(permission: string): string {
     return permission.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
+
 
   // =======================
   // INIT
@@ -136,8 +144,8 @@ export class RolesypermisosComponent {
     const id = api.id ?? api.id_rol ?? 0;
     const permissions =
       Array.isArray(api.permisos) ? api.permisos :
-      Array.isArray(api.Permisos) ? api.Permisos.map(p => p.nombre) :
-      [];
+        Array.isArray(api.Permisos) ? api.Permisos.map(p => p.nombre) :
+          [];
     return {
       id,
       nombre: api.nombre,
@@ -217,6 +225,15 @@ export class RolesypermisosComponent {
         this.confirmMessage = `¿Estás seguro de que deseas eliminar el rol "${toDel.nombre}"?`;
         this.confirmOpen = true;
       }
+    }
+
+    if (event.action === 'permissions') {
+      const original = this.rows.find(r => r.id === event.row.id);
+      if (!original) return;
+      this.permRole = { ...original };
+      this.permSelections = [...(original.permissions ?? [])]; // copia selecciones
+      this.permTitle = `Editar permisos: ${original.nombre}`;
+      this.permOpen = true;
     }
   }
 
@@ -306,8 +323,90 @@ export class RolesypermisosComponent {
     });
   }
 
+  // Evita re-renders innecesarios en *ngFor
+  trackByCat = (_: number, item: { key: string; value: string[] }) => item.key;
+  trackByPerm = (_: number, perm: string) => this.canonical(perm);
+
+  // Alias semántico del toggle, por si quieres logs/telemetría
+  onPermCheckboxChange(p: string, ev: Event) {
+    this.togglePermOnly(p, ev);
+  }
+
+
   // Búsqueda desde crud-panel
   onSearch(term: string) {
     this.searchTerm = term;
   }
+
+  // Mapa de categorías a prefijos o palabras clave
+  private permissionGroupsMap: Record<string, string[]> = {
+    'Usuarios': ['usuario', 'user'],
+    'Pólizas': ['poliza', 'póliza'],
+    'Reportes': ['reporte', 'report']
+  };
+
+  // Devuelve objeto {categoria: permisos[]}
+  get groupedPermissions(): Record<string, string[]> {
+    const groups: Record<string, string[]> = {
+      'Usuarios': [],
+      'Pólizas': [],
+      'Reportes': [],
+      'Otros': []
+    };
+
+    for (const perm of this.availablePermissions) {
+      let added = false;
+      for (const [cat, keywords] of Object.entries(this.permissionGroupsMap)) {
+        if (keywords.some(k => perm.toLowerCase().includes(k))) {
+          groups[cat].push(perm);
+          added = true;
+          break;
+        }
+      }
+      if (!added) groups['Otros'].push(perm);
+    }
+
+    return groups;
+  }
+  // Toggle checkbox de permisos
+
+  // Confirmar cambios de permisos
+  confirmPermissionsOnly() {
+    if (!this.permRole) { this.permOpen = false; return; }
+    this.rolesSvc.replaceRolePermissions(this.permRole.id, this.permSelections).subscribe({
+      next: () => {
+        this.permOpen = false;
+        this.permRole = null;
+        this.loadRoles();
+      },
+      error: (err) => console.error('Error al actualizar permisos', err)
+    });
+  }
+
+  // Normaliza para comparar (no cambia lo que envías al backend)
+  canonical(p: string): string {
+    return (p ?? '').toString().trim().toLowerCase();
+  }
+
+  // ¿Está seleccionado p?
+  isPermSelected(p: string): boolean {
+    const cand = this.canonical(p);
+    return (this.permSelections ?? []).some(x => this.canonical(x) === cand);
+  }
+
+  // Alterna p cuidando comparación canónica
+  togglePermOnly(p: string, ev: Event) {
+    const checked = (ev.target as HTMLInputElement).checked;
+    const cand = this.canonical(p);
+
+    if (checked) {
+      // evita duplicados aunque vengan con casing distinto
+      const exists = (this.permSelections ?? []).some(x => this.canonical(x) === cand);
+      if (!exists) this.permSelections = [...(this.permSelections ?? []), p]; // guarda el valor crudo
+    } else {
+      this.permSelections = (this.permSelections ?? []).filter(x => this.canonical(x) !== cand);
+    }
+  }
+
+
 }

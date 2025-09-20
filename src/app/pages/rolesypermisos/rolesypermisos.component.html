@@ -58,3 +58,34 @@
   (confirmed)="confirmSaveProceed()">
   <p class="mb-2">{{ saveConfirmMessage }}</p>
 </app-modal>
+
+<!-- Modal: SOLO PERMISOS -->
+<app-modal
+  [open]="permOpen"
+  [title]="permTitle"
+  size="sm"
+  (closed)="permOpen = false"
+  (canceled)="permOpen = false"
+  (confirmed)="confirmPermissionsOnly()">
+
+  <div class="max-h-64 overflow-auto border rounded p-3">
+    <div *ngFor="let cat of (groupedPermissions | keyvalue); trackBy: trackByCat">
+      <h4 class="text-sm font-semibold text-purple-700 mb-1">{{ cat.key }}</h4>
+
+      <label
+        class="flex items-center gap-3 py-1 cursor-pointer"
+        *ngFor="let p of cat.value; trackBy: trackByPerm"
+        [for]="'perm_'+cat.key+'_'+p">
+        <input
+          type="checkbox"
+          class="h-4 w-4"
+          [id]="'perm_'+cat.key+'_'+p"
+          [checked]="isPermSelected(p)"
+          (change)="onPermCheckboxChange(p, $event)">
+        <span class="text-sm">{{ formatPermission(p) }}</span>
+      </label>
+
+      <hr class="my-2" />
+    </div>
+  </div>
+</app-modal>

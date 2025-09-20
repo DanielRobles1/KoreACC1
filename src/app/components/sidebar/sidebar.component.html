@@ -1,10 +1,42 @@
-<div class="fixed top-0 left-0 h-full w-64 bg-white text-gray-800 p-0 shadow-md border-r border-gray-200">
-  <div class="p-4">
-    <div class="mb-4 flex justify-center">
-      <img src="assets/svgs/Kore-ACC.svg" alt="Logo" class="h-28 w-auto">
-    </div>
+<!-- Botón para mostrar/ocultar sidebar -->
+<button class="fixed top-4 left-4 z-50 bg-blue-100 border rounded p-2 shadow-md"
+        (click)="toggleSidebar()">
+  <svg *ngIf="!sidebarOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+  <svg *ngIf="sidebarOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M6 18L18 6M6 6l12 12" />
+  </svg>
+</button>
+
+<!-- Sidebar -->
+<div class="fixed top-0 left-0 h-full w-64 bg-white text-gray-800 p-0 shadow-md border-r border-gray-200 transition-transform duration-300"
+     [class.-translate-x-full]="!sidebarOpen">
+
+    <div class="p-4">
+      <div class="mb-4 flex flex-col items-center text-center">
+    <img src="assets/svgs/Kore-ACC.svg" alt="Logo" class="h-28 w-auto">
 
     <h2 class="text-lg font-bold mb-4 text-center">KORE ACC</h2>
+    
+    <!-- 👤 Datos del usuario loggeado -->
+    <div *ngIf="user" class="mt-2">
+      <p class="text-lg font-extrabold">Bienvenido de nuevo {{ user.nombre }}</p>
+      <p class="text-xl font-bold text-gray-500">{{ user.apellidos }}</p>
+      <p class="text-xl font-bold text-gray-500">{{ user.correo }}</p>
+    </div>
+
+    <!-- Botón en el sidebar -->
+    <button type="button" class="mt-3 w-full btn">
+      ✏️ Editar perfil
+    </button>
+
+
+  </div>
 
     <ul class="space-y-2">
       <li>
@@ -17,6 +49,7 @@
         </button>
       </li>
 
+      <!-- Reportes -->
       <li>
         <button type="button"
                 class="btn"
@@ -67,31 +100,52 @@
     </ul>
   </div>
 
-  <!-- Configuración -->
+  <!-- Configuración con subopciones -->
   <div class="absolute bottom-20 left-0 right-0 px-4">
-    <a href="#" class="btn">
+    <button type="button"
+            class="btn w-full"
+            [class.btn--active]="active==='configuracion'"
+            (click)="toggleConfiguracion()">
       <span>⚙️</span>
-      <span class="ml-2">Configuración</span>
-    </a>
+      <span class="ml-2 flex-1 text-left">Configuración</span>
+      <svg xmlns="http://www.w3.org/2000/svg"
+           class="h-4 w-4 caret transition-transform"
+           [class.rotate-180]="configOpen"
+           fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+
+    <ul class="mt-2 space-y-1 pl-10" *ngIf="configOpen">
+      <li>
+        <a href="#" class="subbtn">Usuarios / Permisos</a>
+      </li>
+      <li>
+        <a href="#" class="subbtn">Catalogos</a>
+      </li>
+      <li>
+        <a href="#" class="subbtn">Empresa / Periodos</a>
+      </li>
+    </ul>
   </div>
 
   <!-- Cerrar sesión -->
-<div class="absolute bottom-4 left-0 right-0 px-4">
-  <button type="button" class="btn w-full text-red-600" (click)="openLogoutConfirm()">
-    <span>🚪</span>
-    <span class="ml-2">Cerrar sesión</span>
-  </button>
-</div>
+  <div class="absolute bottom-4 left-0 right-0 px-4">
+    <button type="button" class="btn w-full text-red-600" (click)="openLogoutConfirm()">
+      <span>🚪</span>
+      <span class="ml-2">Cerrar sesión</span>
+    </button>
+  </div>
 
-<!-- Modal de confirmación -->
-<app-modal
-  [open]="confirmOpen"
-  [title]="confirmTitle"
-  size="sm"
-  (closed)="closeConfirm()"
-  (canceled)="cancelConfirm()"
-  (confirmed)="confirmProceed()">
-  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
-</app-modal>
-
+  <!-- Modal de confirmación -->
+  <app-modal
+    [open]="confirmOpen"
+    [title]="confirmTitle"
+    size="sm"
+    (closed)="closeConfirm()"
+    (canceled)="cancelConfirm()"
+    (confirmed)="confirmProceed()">
+    <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+  </app-modal>
 </div>

@@ -24,7 +24,16 @@ export class UsuariosService {
 
   constructor(private http: HttpClient) {}
 
+  getMe(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/me`);
+  }
+
   getUsuarios(): Observable<Usuario[]> {
     return this.http.get<Usuario[]>(this.apiUrl);
+  }
+
+  // usuarios.service.ts
+  updateUsuario(id: number, payload: Partial<Usuario>) {
+    return this.http.put<{ message: string; usuario: Usuario }>(`${this.apiUrl}/${id}`, payload);
   }
 }

@@ -11,7 +11,6 @@ export interface Usuario {
   telefono?: string;
   usuario?: string;
   rol?: string;
-  area?: string;
 }
 
 type UsuarioForm = {
@@ -22,7 +21,6 @@ type UsuarioForm = {
   telefono: FormControl<string>;
   usuario: FormControl<string>;
   rol: FormControl<string>;
-  area: FormControl<string>;
 };
 
 @Component({
@@ -46,18 +44,17 @@ export class UserFormComponent implements OnChanges {
     this.form = this.fb.nonNullable.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
       apellido_p: ['', [Validators.required, Validators.minLength(3)]],
-      apellido_m: ['', [Validators.required, Validators.minLength(3)]],
+      apellido_m: ['', [Validators.minLength(3)]],
       correo: ['', [Validators.required, Validators.email]],
       telefono: [''],
       usuario: [''],
       rol: [''],
-      area: ['']
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {
-      const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: '', area: '' };
+      const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: ''};
       this.form.reset(v);
       if (this.readonlyEmail) this.form.get('correo')?.disable();
       else this.form.get('correo')?.enable();
