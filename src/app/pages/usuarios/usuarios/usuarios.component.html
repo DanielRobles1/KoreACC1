@@ -1,8 +1,8 @@
 <div class="layout">
-  <!-- Sidebar a la izquierda -->
+  
   <app-sidebar class="sidebar"></app-sidebar>
 
-  <!-- Contenido principal -->
+  
   <div class="content">
     <app-crud-panel
       [title]="title"
@@ -24,7 +24,7 @@
   </div>
 </div>
 
-<!-- MODAL DE FORMULARIO (Reutilizable) -->
+
 <app-modal
   [open]="modalOpen"
   [title]="modalTitle"
@@ -34,7 +34,7 @@
   (canceled)="cancelModal()"
   (confirmed)="userFormRef.submit()"
 >
-  <!-- Contenido proyectado: formulario reusable -->
+
   <app-user-form
     #userFormRef
     [value]="editing"
