@@ -1,82 +1,85 @@
 <div class="min-h-screen bg-gradient-to-b from-white via-gray-100 to-slate-300 flex items-center justify-center px-4 py-12">
-  <div class="w-full max-w-md bg-white rounded-3xl shadow-xl ring-1 ring-black/10 p-8">
+  <div class="w-full max-w-5xl flex flex-col md:flex-row bg-white rounded-3xl shadow-xl ring-1 ring-black/10 overflow-hidden">
 
-    <div class="flex justify-center mb-6">
+    <!-- logop -->
+    <div class="flex-1 flex items-center justify-center p-12 bg-white">
       <img src="/assets/svgs/Kore-ACC.svg" alt="Logo KORE ACC"
-           class="w-32 h-auto object-contain" />
+           class="w-72 md:w-80 h-auto object-contain" />
     </div>
 
-    <h2 class="text-2xl md:text-3xl font-extrabold text-center mb-4">
-      Recuperar Contraseña
-    </h2>
+    <!-- recuperar contra -->
+    <div class="flex-1 p-10 flex flex-col justify-center">
+      <h2 class="text-2xl md:text-3xl font-extrabold text-center mb-4">
+        Recuperar Contraseña
+      </h2>
 
-    <p class="text-center text-gray-600 mb-6 text-sm">
-      Ingresa tu correo electrónico y te enviaremos instrucciones para restablecer tu contraseña.
-    </p>
+      <p class="text-center text-gray-600 mb-6 text-sm">
+        Ingresa tu correo electrónico y te enviaremos instrucciones para restablecer tu contraseña.
+      </p>
 
-    <!-- Formulario -->
-    <form [formGroup]="recoverForm" (ngSubmit)="submit()" class="space-y-6">
+      <!-- Formulario -->
+      <form [formGroup]="recoverForm" (ngSubmit)="submit()" class="space-y-6">
 
-      <!-- Campo de correo -->
-      <div class="relative">
-        <label for="email" class="sr-only">Correo electrónico</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          placeholder="Correo electrónico"
-          class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
-                 bg-transparent outline-none py-2 pr-10"
-        />
-        <svg xmlns="http://www.w3.org/2000/svg"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor"
-             class="w-5 h-5 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M16 12H8m8 0a4 4 0 10-8 0 4 4 0 008 0z" />
-        </svg>
-
-        <!-- Validación -->
-        <small class="text-red-600"
-               *ngIf="recoverForm.get('email')?.touched && recoverForm.get('email')?.invalid">
-          El correo es obligatorio y debe ser válido
-        </small>
-      </div>
-
-      <!-- Botón de enviar -->
-      <button
-        type="submit"
-        [disabled]="recoverForm.invalid || loading"
-        (click)="submit()"
-        class="w-full bg-black text-white py-2.5 rounded-lg
-               shadow disabled:opacity-60 disabled:cursor-not-allowed
-               hover:bg-neutral-800 transition flex items-center justify-center gap-2">
-        <ng-container *ngIf="loading; else textoBoton">
-          <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-               viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10"
-                    stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"></path>
+        <!-- Campo de correo -->
+        <div class="relative">
+          <label for="email" class="sr-only">Correo electrónico</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="Correo electrónico"
+            class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
+                   bg-transparent outline-none py-2 pr-10"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor"
+               class="w-5 h-5 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 12H8m8 0a4 4 0 10-8 0 4 4 0 008 0z" />
           </svg>
-        </ng-container>
-        <ng-template #textoBoton>Enviar instrucciones</ng-template>
-      </button>
 
-      <!-- Mensaje de éxito o error -->
-      <div *ngIf="message" class="text-center text-sm mt-4 px-4 py-2 rounded-lg"
-           [ngClass]="{
-             'bg-green-100 text-green-700 ring-1 ring-green-300': success,
-             'bg-red-100 text-red-700 ring-1 ring-red-300': !success
-           }">
-        {{ message }}
+          <!-- Validación -->
+          <small class="text-red-600"
+                 *ngIf="recoverForm.get('email')?.touched && recoverForm.get('email')?.invalid">
+            El correo es obligatorio y debe ser válido
+          </small>
+        </div>
+
+        <!-- Botón de enviar -->
+        <button
+          type="submit"
+          [disabled]="recoverForm.invalid || loading"
+          class="w-full bg-black text-white py-2.5 rounded-lg
+                 shadow disabled:opacity-60 disabled:cursor-not-allowed
+                 hover:bg-neutral-800 transition flex items-center justify-center gap-2">
+          <ng-container *ngIf="loading; else textoBoton">
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                 viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10"
+                      stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </ng-container>
+          <ng-template #textoBoton>Enviar instrucciones</ng-template>
+        </button>
+
+        <!-- Mensaje de éxito o error -->
+        <div *ngIf="message" class="text-center text-sm mt-4 px-4 py-2 rounded-lg"
+             [ngClass]="{
+               'bg-green-100 text-green-700 ring-1 ring-green-300': success,
+               'bg-red-100 text-red-700 ring-1 ring-red-300': !success
+             }">
+          {{ message }}
+        </div>
+      </form>
+
+      <!-- Enlace para volver -->
+      <div class="text-center mt-6 text-sm">
+        <a routerLink="/login" class="text-blue-600 hover:underline">
+          Volver al inicio de sesión
+        </a>
       </div>
-    </form>
-
-    <!-- Enlace para volver -->
-    <div class="text-center mt-6 text-sm">
-      <a routerLink="/login" class="text-blue-600 hover:underline">
-        Volver al inicio de sesión
-      </a>
     </div>
   </div>
 </div>

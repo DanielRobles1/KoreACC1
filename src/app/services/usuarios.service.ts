@@ -31,6 +31,11 @@ export class UsuariosService {
   getUsuarios(): Observable<Usuario[]> {
     return this.http.get<Usuario[]>(this.apiUrl);
   }
+updateMe(data: any) {
+  return this.http.put(`${this.apiUrl}/me`, data);
+}
+
+
 
   // usuarios.service.ts
   updateUsuario(id: number, payload: Partial<Usuario>) {

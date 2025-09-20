@@ -31,9 +31,17 @@
     </div>
 
     <!-- Botón en el sidebar -->
-    <button type="button" class="mt-3 w-full btn">
-      ✏️ Editar perfil
-    </button>
+    <button type="button" class="mt-3 w-full btn" (click)="openEditProfile()">
+  ✏️ Editar perfil
+</button>
+
+
+<app-edit-profile-modal
+  [open]="editProfileOpen"
+  [user]="user"
+  (closed)="closeEditProfile()"
+  (saved)="saveProfile($event)">
+</app-edit-profile-modal>
 
 
   </div>

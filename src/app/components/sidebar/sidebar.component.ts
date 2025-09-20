@@ -4,34 +4,41 @@ import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
 import { UsuariosService } from '@app/services/usuarios.service';
 import { Router } from '@angular/router';
-import { UserFormComponent, Usuario as UsuarioForm } from '../user-form/user-form/user-form.component';
+import { EditProfileModalComponent } from '../edit-profile-modal/edit-profile-modal.component';
 
 type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ModalComponent, ],
+  imports: [CommonModule, ModalComponent, EditProfileModalComponent],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
-  constructor(private auth: AuthService, private router: Router, private users: UsuariosService) {}
+  constructor(
+    private auth: AuthService,
+    private router: Router,
+    private users: UsuariosService
+  ) {}
 
   user: any = null;
-  editing = false;
   active: Item = 'polizas';
   sidebarOpen = true;
   reportesOpen = false;
   configOpen = false;
 
-  // 🔹 Variables para el modal
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
   private actionToConfirm: (() => void) | null = null;
 
+  // 🔹 Modal de edición de perfil
+  editProfileOpen = false;
+
+  // =====================
   // Sidebar
+  // =====================
   toggleSidebar() {
     this.sidebarOpen = !this.sidebarOpen;
   }
@@ -52,7 +59,9 @@ export class SidebarComponent {
     this.active = 'configuracion';
   }
 
-  // 🔹 Abrir modal para cerrar sesión
+  // =====================
+  // Logout con confirmación
+  // =====================
   openLogoutConfirm() {
     this.confirmTitle = 'Cerrar sesión';
     this.confirmMessage = '¿Seguro que deseas cerrar sesión?';
@@ -60,7 +69,6 @@ export class SidebarComponent {
     this.actionToConfirm = () => this.onLogout();
   }
 
-  // 🔹 Cerrar modal sin hacer nada
   closeConfirm() {
     this.confirmOpen = false;
     this.actionToConfirm = null;
@@ -79,19 +87,39 @@ export class SidebarComponent {
     this.actionToConfirm = null;
   }
 
-  // 🔹 Lógica real de logout
   onLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.auth.logout().subscribe({
       next: () => this.router.navigate(['/login'])
-    })
+    });
   }
 
+  
   ngOnInit() {
     this.users.getMe().subscribe({
       next: (data) => this.user = data,
       error: (err) => console.error('Error cargando usuario', err)
     });
   }
+
+  
+  openEditProfile() {
+    this.editProfileOpen = true;
+  }
+
+  closeEditProfile() {
+    this.editProfileOpen = false;
+  }
+
+ saveProfile(updated: any) {
+  this.users.updateMe(updated).subscribe({
+  next: (res: any) => {
+    this.user = res.usuario;
+    this.editProfileOpen = false;
+  },
+  error: (err) => console.error('Error actualizando perfil', err)
+});
+
+}
 }
