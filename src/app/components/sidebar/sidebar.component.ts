@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
@@ -16,6 +16,9 @@ type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion';
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
+  @Input() open = true;
+  @Output() openChange = new EventEmitter<boolean>();
+
   constructor(
     private auth: AuthService,
     private router: Router,
@@ -23,8 +26,7 @@ export class SidebarComponent {
   ) {}
 
   user: any = null;
-  active: Item = 'polizas';
-  sidebarOpen = true;
+  active: Item = 'configuracion';
   reportesOpen = false;
   configOpen = false;
 
@@ -33,14 +35,11 @@ export class SidebarComponent {
   confirmMessage = '';
   private actionToConfirm: (() => void) | null = null;
 
-  // 🔹 Modal de edición de perfil
   editProfileOpen = false;
 
-  // =====================
-  // Sidebar
-  // =====================
   toggleSidebar() {
-    this.sidebarOpen = !this.sidebarOpen;
+    this.open = !this.open;
+    this.openChange.emit(this.open);
   }
 
   setActive(item: Item) {
@@ -59,9 +58,6 @@ export class SidebarComponent {
     this.active = 'configuracion';
   }
 
-  // =====================
-  // Logout con confirmación
-  // =====================
   openLogoutConfirm() {
     this.confirmTitle = 'Cerrar sesión';
     this.confirmMessage = '¿Seguro que deseas cerrar sesión?';
@@ -69,20 +65,11 @@ export class SidebarComponent {
     this.actionToConfirm = () => this.onLogout();
   }
 
-  closeConfirm() {
-    this.confirmOpen = false;
-    this.actionToConfirm = null;
-  }
-
-  cancelConfirm() {
-    this.confirmOpen = false;
-    this.actionToConfirm = null;
-  }
+  closeConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
+  cancelConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
 
   confirmProceed() {
-    if (this.actionToConfirm) {
-      this.actionToConfirm();
-    }
+    if (this.actionToConfirm) this.actionToConfirm();
     this.confirmOpen = false;
     this.actionToConfirm = null;
   }
@@ -90,12 +77,9 @@ export class SidebarComponent {
   onLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    this.auth.logout().subscribe({
-      next: () => this.router.navigate(['/login'])
-    });
+    this.auth.logout().subscribe({ next: () => this.router.navigate(['/login']) });
   }
 
-  
   ngOnInit() {
     this.users.getMe().subscribe({
       next: (data) => this.user = data,
@@ -103,23 +87,13 @@ export class SidebarComponent {
     });
   }
 
-  
-  openEditProfile() {
-    this.editProfileOpen = true;
+  openEditProfile() { this.editProfileOpen = true; }
+  closeEditProfile() { this.editProfileOpen = false; }
+
+  saveProfile(updated: any) {
+    this.users.updateMe(updated).subscribe({
+      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; },
+      error: (err) => console.error('Error actualizando perfil', err)
+    });
   }
-
-  closeEditProfile() {
-    this.editProfileOpen = false;
-  }
-
- saveProfile(updated: any) {
-  this.users.updateMe(updated).subscribe({
-  next: (res: any) => {
-    this.user = res.usuario;
-    this.editProfileOpen = false;
-  },
-  error: (err) => console.error('Error actualizando perfil', err)
-});
-
-}
 }

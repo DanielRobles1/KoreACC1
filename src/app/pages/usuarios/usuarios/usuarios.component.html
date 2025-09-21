@@ -1,29 +1,28 @@
-<div class="layout">
-  
-  <app-sidebar class="sidebar"></app-sidebar>
+<!-- usuarios.component.html -->
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
 
-  
   <div class="content">
     <app-crud-panel
       [title]="title"
       [tabs]="tabs"
       [activeTabId]="activeTabId"
       (tabChange)="onTabChange($event)"
-
       [primaryActionLabel]="'Nuevo Usuario'"
       (primaryAction)="onPrimary()"
-
       [columns]="columns"
       [data]="rows"
       [actions]="actions"
       (action)="onRowAction($event)"
-
       [page]="page"
       [totalPages]="totalPages">
     </app-crud-panel>
   </div>
 </div>
-
 
 <app-modal
   [open]="modalOpen"

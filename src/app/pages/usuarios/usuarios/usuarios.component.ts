@@ -69,6 +69,12 @@ export class UsuariosComponent implements OnInit {
     { id: 'delete', tooltip: 'Eliminar usuario' },
   ];
 
+  sidebarOpen = true;
+
+  onSidebarToggle(open: boolean) {
+    this.sidebarOpen = open;
+  }
+
   // PAGINATION
   page = 1;
   totalPages = 1;
