@@ -59,7 +59,7 @@ export class UsuariosComponent implements OnInit {
     { key: 'apellido_m', header: 'Apellido Materno' },
     { key: 'correo', header: 'Correo' },
     { key: 'telefono', header: 'Teléfono' },
-    // Si quieres roles, habría que mapearlos (ejemplo: usuario.roles.map(r => r.nombre).join(', '))
+    { key: 'estatus', header: 'Estatus' },
   ];
 
   rows: Usuario[] = [];

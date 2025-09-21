@@ -11,6 +11,7 @@ export interface Usuario {
   telefono?: string;
   usuario?: string;
   rol?: string;
+  roles?: string[];
 }
 
 type UsuarioForm = {
@@ -48,13 +49,13 @@ export class UserFormComponent implements OnChanges {
       correo: ['', [Validators.required, Validators.email]],
       telefono: [''],
       usuario: [''],
-      rol: [''],
+      rol: ['', Validators.required],
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {
-      const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: ''};
+      const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: '' };
       this.form.reset(v);
       if (this.readonlyEmail) this.form.get('correo')?.disable();
       else this.form.get('correo')?.enable();
@@ -68,12 +69,19 @@ export class UserFormComponent implements OnChanges {
       this.form.markAllAsTouched();
       return;
     }
+
+    const raw = this.form.getRawValue();
+    const { rol, ...rest } = raw;
+
     const payload: Usuario = {
       ...(this.value?.id_usuario ? { id_usuario: this.value.id_usuario } : {}),
-      ...this.form.getRawValue()
+      ...rest,
+      roles: rol ? [rol] : []
     };
+
     this.submitted.emit(payload);
   }
+
 
   cancel() { this.canceled.emit(); }
 }

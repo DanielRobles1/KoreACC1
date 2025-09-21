@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-cambiar-password',
@@ -18,7 +19,7 @@ export class CambiarPasswordComponent {
   showPassword = false;
   showConfirmPassword = false;
 
-  constructor(private fb: FormBuilder, private http: HttpClient) {
+  constructor(private fb: FormBuilder, private http: HttpClient, private router: Router) {
     this.form = this.fb.group({
       oldPassword: ['', [Validators.required, Validators.minLength(6)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
@@ -49,20 +50,21 @@ export class CambiarPasswordComponent {
     this.mensajeOk = '';
     this.mensajeError = '';
 
-    this.http.patch('/api/v1/auth/change-password', {
-  oldPassword: this.form.value.oldPassword,
-  newPassword: this.form.value.password
-}).subscribe({
-  next: () => {
-    this.loading = false;
-    this.mensajeOk = 'Contraseña cambiada con éxito';
-    this.form.reset();
-  },
-  error: (err) => {
-    this.loading = false;
-    this.mensajeError = err.error?.message || 'Error al cambiar la contraseña';
-  }
-});
+    this.http.patch('http://localhost:3000/api/v1/auth/change-password', {
+      oldPassword: this.form.value.oldPassword,
+      newPassword: this.form.value.password
+    }).subscribe({
+      next: () => {
+        this.loading = false;
+        this.mensajeOk = 'Contraseña cambiada con éxito';
+        this.router.navigate(['/login']);
+        this.form.reset();
+      },
+      error: (err) => {
+        this.loading = false;
+        this.mensajeError = err.error?.message || 'Error al cambiar la contraseña';
+      }
+    });
 
 
   }
