@@ -8,18 +8,34 @@ import { catchError, throwError } from 'rxjs';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+
   const token = auth.getToken();
 
-  const withAuth = token
-    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : req;
+  if (token) {
+    console.log('📌 Token encontrado:', token);
+    console.log('📌 Request URL:', req.url);
+    console.log('📌 Headers antes de enviar:', req.headers);
 
-  return next(withAuth).pipe(
+    req = req.clone({
+      setHeaders: { Authorization: `Bearer ${token}` }
+    });
+  } else {
+    console.warn('⚠️ No hay token en el storage');
+  }
+
+  return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
       if (err.status === 401 || err.status === 403) {
-        auth['clearSession']?.();
-        router.navigate(['/login']);
+        auth.clearSession();
+        if (router.url !== '/login') {
+          router.navigate(['/login']);
+        }
+      } else if (err.status === 428) {
+        if (router.url !== '/cambiar-password') {
+          router.navigate(['/cambiar-password']);
+        }
       }
+
       return throwError(() => err);
     })
   );

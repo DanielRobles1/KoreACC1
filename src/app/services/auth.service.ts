@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, finalize, tap } from 'rxjs/operators';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, firstValueFrom } from 'rxjs';
 
 export type UserRole = 'Administrador' | 'Contador' | 'Auditor' | string;
 
@@ -11,38 +11,49 @@ export class AuthService {
   private apiUrl   = 'http://localhost:3000/api/v1';
   private tokenKey = 'auth_token';
   private userKey  = 'user';
-  private permKey  = 'permissions'; // <- cache de permisos
+  private permKey  = 'permissions'; // cache de permisos
 
   constructor(private http: HttpClient) {}
+login(identifier: string, password: string, recaptchaToken: string) {
+  const body = { identifier, password, recaptchaToken };
 
-  login(identifier: string, password: string, recaptchaToken: string) {
-    return this.http.post<{ token: string; user: any }>(
-      `${this.apiUrl}/auth/login`,
-      { identifier, password, recaptchaToken }
-    ).pipe(
-      tap(res => {
-        console.log('📥 Respuesta del login:', res);
-        if (res.token) {
+  return this.http.post<{ token: string; user: any; code?: string; message?: string }>(
+    `${this.apiUrl}/auth/login`,
+    body,
+    { observe: 'response' }
+  ).pipe(
+    tap({
+      next: (response) => {
+        if (response.status === 200) {
+          const res = response.body!;
           localStorage.setItem(this.tokenKey, res.token);
           localStorage.setItem(this.userKey, JSON.stringify(res.user));
-          console.log('🔑 Token guardado:', res.token);
-        } else {
-          console.error('⚠️ No llegó token en la respuesta');
+          console.log('✅ Login exitoso', res);
         }
-      }),
-      // tras login, intenta precargar permisos
-      tap(async (res) => {
-        try {
-          const userId = res.user?.id_usuario ?? res.user?.id ?? null;
-          if (userId) {
-            await this.loadPermissions(userId).toPromise();
+      },
+      error: (err) => {
+        if (err.status === 428) {
+          console.warn('⚠️ Cambio de contraseña requerido', err.error);
+
+          // ✅ Guardar el token aunque falte cambiar la contraseña
+          if (err.error?.token) {
+            localStorage.setItem(this.tokenKey, err.error.token);
+            localStorage.setItem(this.userKey, JSON.stringify(err.error.user));
           }
-        } catch (e) {
-          console.warn('No se pudieron precargar permisos aún:', e);
+
+          // Devuelves el error al componente → este redirige a /cambiar-password
+        } else {
+          console.error('❌ Error en login', err);
         }
-      })
-    );
-  }
+      }
+    })
+  );
+}
+
+
+
+
+
 
   /** Carga roles/permisos desde tu endpoint y los guarda en localStorage */
   loadPermissions(userId: number) {
@@ -65,7 +76,7 @@ export class AuthService {
     );
   }
 
-  resetPassword(email: string){
+  resetPassword(email: string) {
     return this.http.post(`${this.apiUrl}/auth/reset-password`, { email }).pipe(
       tap(res => console.log('Reset password request sent:', res)),
       catchError(err => {
@@ -86,7 +97,8 @@ export class AuthService {
     );
   }
 
-  private clearSession() {
+  /** 🔓 Ahora es público, usable desde el interceptor */
+  clearSession() {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.userKey);
     localStorage.removeItem(this.permKey);

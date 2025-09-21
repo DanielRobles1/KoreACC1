@@ -6,6 +6,7 @@ import { UsuariosComponent } from './pages/usuarios/usuarios/usuarios.component'
 import { LoginComponent } from './pages/login/login.component';
 import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.component';
 import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.component';
+import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
 
 
 export const routes: Routes = [
@@ -34,5 +35,7 @@ export const routes: Routes = [
  {
   path: 'login/roles',
   component: RolesypermisosComponent
-}
+},
+{ path: 'cambiar-password', component: CambiarPasswordComponent },
+  { path: '', redirectTo: 'login', pathMatch: 'full' }
 ];

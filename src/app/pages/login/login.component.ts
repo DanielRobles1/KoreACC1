@@ -46,7 +46,7 @@ export class LoginComponent {
       recaptcha: ['', Validators.required], // solo se valida en el form, no se manda
     });
 
-    // 🔹 Al iniciar, si hay username guardado lo cargamos
+    // Al iniciar, si hay username guardado lo cargamos
     const savedUsername = localStorage.getItem('rememberedUsername');
     if (savedUsername) {
       this.loginForm.patchValue({
@@ -75,7 +75,7 @@ export class LoginComponent {
 
     const { username, password, remember } = this.loginForm.value;
 
-    // Guardar o limpiar del ese de recordar
+    // Guardar o limpiar del remember
     if (remember) {
       localStorage.setItem('rememberedUsername', username);
     } else {
@@ -86,11 +86,19 @@ export class LoginComponent {
     this.auth.login(username, password, this.recaptchaToken!).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/usuarios']);
+        this.router.navigate(['/usuarios']); 
       },
       error: (err) => {
         this.loading = false;
-        this.authError = err.error?.message || 'Error de autenticación. Verifica tus credenciales.';
+
+        if (err.status === 428) {
+          // 🚨 Caso especial: debe cambiar contraseña
+          this.router.navigate(['/cambiar-password'], {
+            state: { token: err.error.token, user: err.error.user }
+          });
+        } else {
+          this.authError = err.error?.message || 'Error de autenticación. Verifica tus credenciales.';
+        }
       }
     });
   }
