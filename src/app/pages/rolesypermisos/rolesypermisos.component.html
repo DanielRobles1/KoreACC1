@@ -56,7 +56,7 @@
 <app-modal
   [open]="saveConfirmOpen"
   [title]="saveConfirmTitle"
-  size="sm"
+  size="lg"
   (closed)="closeSaveConfirm()"
   (canceled)="cancelSaveConfirm()"
   (confirmed)="confirmSaveProceed()">
@@ -67,29 +67,55 @@
 <app-modal
   [open]="permOpen"
   [title]="permTitle"
-  size="sm"
+  size="lg"
   (closed)="permOpen = false"
   (canceled)="permOpen = false"
   (confirmed)="confirmPermissionsOnly()">
 
-  <div class="max-h-64 overflow-auto border rounded p-3">
-    <div *ngFor="let cat of (groupedPermissions | keyvalue); trackBy: trackByCat">
-      <h4 class="text-sm font-semibold text-purple-700 mb-1">{{ cat.key }}</h4>
+  <!-- Grid por categorías en columnas -->
+  <div class="max-h-96 overflow-auto">
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
 
-      <label
-        class="flex items-center gap-3 py-1 cursor-pointer"
-        *ngFor="let p of cat.value; trackBy: trackByPerm"
-        [for]="'perm_'+cat.key+'_'+p">
-        <input
-          type="checkbox"
-          class="h-4 w-4"
-          [id]="'perm_'+cat.key+'_'+p"
-          [checked]="isPermSelected(p)"
-          (change)="onPermCheckboxChange(p, $event)">
-        <span class="text-sm">{{ formatPermission(p) }}</span>
-      </label>
+      <section
+        class="border rounded-lg overflow-hidden"
+        *ngFor="let cat of (groupedPermissions | keyvalue); trackBy: trackByCat">
 
-      <hr class="my-2" />
+        <!-- Header de la columna -->
+        <header
+          class="sticky top-0 bg-white/95 backdrop-blur px-3 py-2 border-b flex items-center justify-between">
+          <h4 class="text-lg font-semibold">{{ cat.key }}</h4>
+
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-gray-600">
+              {{ countSelectedInGroup(cat.value) }}/{{ cat.value?.length || 0 }}
+            </span>
+
+            <button
+              type="button"
+              class="px-2 py-1 rounded border hover:bg-gray-50"
+              (click)="toggleGroup(cat.key, cat.value)">
+              {{ areAllSelectedInGroup(cat.value) ? 'Ninguno' : 'Todo' }}
+            </button>
+          </div>
+        </header>
+
+        <!-- Lista de permisos del grupo en 2 columnas (auto) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 px-3 py-2">
+          <label
+            class="flex items-center gap-2 py-1 cursor-pointer select-none"
+            *ngFor="let p of cat.value; trackBy: trackByPerm"
+            [for]="'perm_'+cat.key+'_'+p">
+            <input
+              type="checkbox"
+              class="h-4 w-4"
+              [id]="'perm_'+cat.key+'_'+p"
+              [checked]="isPermSelected(p)"
+              (change)="onPermCheckboxChange(p, $event)">
+            <span class="text-lg">{{ formatPermission(p) }}</span>
+          </label>
+        </div>
+      </section>
     </div>
   </div>
 </app-modal>

@@ -13,7 +13,7 @@ type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 export class ModalComponent {
   @Input() open = false;
   @Input() title = '';
-  @Input() size: ModalSize = 'md';
+  @Input() size: ModalSize = 'lg';
   @Input() showClose = true;
   @Input() closeOnBackdrop = true;
 

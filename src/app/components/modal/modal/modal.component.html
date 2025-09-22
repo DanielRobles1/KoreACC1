@@ -11,12 +11,6 @@
       <h2 class="modal__title">{{ title }}</h2>
 
       <div class="modal__actions">
-        <button type="button" class="btn ghost light" (click)="cancel()" aria-label="Cancelar">
-          Cancelar
-        </button>
-        <button type="button" class="btn primary light" (click)="confirm()" aria-label="Guardar">
-          <img src="assets/svgs/save.svg" alt="Guardar" class="h-5 w-5"/>
-        </button>
 
         <button
           *ngIf="showClose"
@@ -37,8 +31,14 @@
 
     <!-- Footer ya no se usa; lo dejamos por compatibilidad pero oculto por CSS -->
     <footer class="modal__footer">
-      <button type="button" class="btn ghost" (click)="cancel()">Cancelar</button>
-      <button type="button" class="btn primary" (click)="confirm()">Guardar</button>
+      <button type="button" class="btn ghost" (click)="cancel()" aria-label="Cancelar">
+          Cancelar
+        </button>
+        <button type="button" class="btn primary" (click)="confirm()" aria-label="Guardar">
+          Guardar
+        </button>
+      <!-- <button type="button" class="btn ghost" (click)="cancel()">Cancelar</button>
+      <button type="button" class="btn primary" (click)="confirm()">Guardar</button> -->
     </footer>
   </div>
 </div>
