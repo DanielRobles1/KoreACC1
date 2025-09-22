@@ -42,35 +42,7 @@ import { FormsModule, NgForm } from '@angular/forms';
         </label>
       </div>
 
-      <!-- Buscador -->
-      <div class="form-field">
-        <label class="block text-sm font-semibold text-gray-800">Buscar permisos</label>
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          name="searchTerm"
-          placeholder="Escribe para filtrar permisos..."
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 transition-colors duration-200"/>
-      </div>
-
-      <!-- Permisos (lista simple desde el backend) -->
-      <div class="form-field">
-        <label class="block text-sm font-semibold text-gray-800">Permisos</label>
-        <div class="mt-3 space-y-2">
-          <label
-            *ngFor="let permission of filteredPermissions()"
-            class="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              [id]="permission"
-              [value]="permission"
-              [checked]="localValue.permissions?.includes(permission)"
-              (change)="togglePermission(permission, $event)"
-              class="focus:ring-purple-500 h-5 w-5 text-purple-600 border-gray-300 rounded transition-colors duration-200"/>
-            <span class="text-sm font-medium text-gray-700">{{ formatPermission(permission) }}</span>
-          </label>
-        </div>
-      </div>
+      
     </form>
   `,
   styles: [`.form-field { margin-bottom: 1rem; display: flex; flex-direction: column; }`]

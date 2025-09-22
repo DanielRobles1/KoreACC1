@@ -39,7 +39,7 @@ export class LoginComponent {
         [
           Validators.required,
           Validators.minLength(8),
-          Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/),
+          //Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/),
         ],
       ],
       remember: [false],
@@ -92,7 +92,7 @@ export class LoginComponent {
         this.loading = false;
 
         if (err.status === 428) {
-          // 🚨 Caso especial: debe cambiar contraseña
+          
           this.router.navigate(['/cambiar-password'], {
             state: { token: err.error.token, user: err.error.user }
           });
