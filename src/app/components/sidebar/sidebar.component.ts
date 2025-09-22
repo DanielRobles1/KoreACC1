@@ -92,7 +92,7 @@ export class SidebarComponent {
 
   saveProfile(updated: any) {
     this.users.updateMe(updated).subscribe({
-      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; },
+      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; this.ngOnInit();},
       error: (err) => console.error('Error actualizando perfil', err)
     });
   }

@@ -10,6 +10,7 @@ export interface Usuario {
   correo: string;
   telefono?: string;
   usuario?: string;
+  estatus?: boolean;
   rol?: string;
   roles?: string[];
 }

@@ -26,7 +26,7 @@ export class UsuariosComponent implements OnInit {
   constructor(
     private router: Router,
     private http: HttpClient
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.cargarUsuarios();
@@ -89,7 +89,7 @@ export class UsuariosComponent implements OnInit {
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
-  private pendingAction: 'delete' | 'save' | null = null;
+  private pendingAction: 'inactivate' | 'reactivate' | 'save' | null = null;
   private pendingRow: Usuario | null = null;
   private pendingUser: Usuario | null = null;
 
@@ -135,10 +135,19 @@ export class UsuariosComponent implements OnInit {
     }
 
     if (evt.action === 'delete') {
-      this.pendingAction = 'delete';
+      const isInactive = !evt.row.estatus;
       this.pendingRow = evt.row;
-      this.confirmTitle = 'Confirmar eliminación';
-      this.confirmMessage = `¿Deseas eliminar a “${evt.row.nombre}” (${evt.row.correo})? Esta acción no se puede deshacer.`;
+
+      if (isInactive) {
+        this.pendingAction = 'reactivate';
+        this.confirmTitle = 'Confirmar reactivación';
+        this.confirmMessage = `¿Deseas reactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
+      } else {
+        this.pendingAction = 'inactivate';
+        this.confirmTitle = 'Confirmar inactivación';
+        this.confirmMessage = `¿Deseas inactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
+      }
+
       this.confirmOpen = true;
     }
   }
@@ -162,41 +171,60 @@ export class UsuariosComponent implements OnInit {
   cancelConfirm() { this.resetConfirm(); }
 
   confirmProceed() {
-    if (this.pendingAction === 'delete' && this.pendingRow) {
-      this.http.delete(`${this.apiUrl}/${this.pendingRow.id_usuario}`).subscribe({
-        next: () => {
-          this.rows = this.rows.filter(r => r.id_usuario !== this.pendingRow!.id_usuario);
+  if (this.pendingAction === 'inactivate' && this.pendingRow) {
+    this.http.delete(`${this.apiUrl}/${this.pendingRow.id_usuario}`).subscribe({
+      next: () => {
+        this.rows = this.rows.map(r =>
+          r.id_usuario === this.pendingRow!.id_usuario ? { ...r, estatus: false } : r
+        );
+        this.resetConfirm();
+        this.cargarUsuarios();
+      },
+      error: (err) => console.error('Error al inactivar', err)
+    });
+    return;
+  }
+
+  // REACTIVAR (PATCH /api/v1/usuarios/:id/reactivar)
+  if (this.pendingAction === 'reactivate' && this.pendingRow) {
+    this.http.patch<Usuario>(`${this.apiUrl}/${this.pendingRow.id_usuario}/reactivar`, {}).subscribe({
+      next: (user) => {
+        this.rows = this.rows.map(r =>
+          r.id_usuario === this.pendingRow!.id_usuario ? (user ?? { ...r, estatus: true }) : r
+        );
+        this.resetConfirm();
+        this.cargarUsuarios();
+      },
+      error: (err) => console.error('Error al reactivar', err)
+    });
+    return;
+  }
+
+  if (this.pendingAction === 'save' && this.pendingUser) {
+    const payload = this.pendingUser;
+    if (this.editing?.id_usuario) {
+      this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
+        next: (user) => {
+          this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
           this.resetConfirm();
+          this.modalOpen = false;
+          this.cargarUsuarios();
         },
-        error: (err) => console.error('Error al eliminar', err)
+        error: (err) => console.error('Error al actualizar', err)
+      });
+    } else {
+      this.http.post<Usuario>(this.apiUrl, payload).subscribe({
+        next: (user: any) => {
+          this.rows = [...this.rows, user];
+          this.resetConfirm();
+          this.modalOpen = false;
+        },
+        error: (err) => console.error('Error al crear', err)
       });
     }
-
-    if (this.pendingAction === 'save' && this.pendingUser) {
-      const payload = this.pendingUser;
-      if (this.editing?.id_usuario) {
-        // actualizar
-        this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
-          next: (user) => {
-            this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
-            this.resetConfirm();
-            this.modalOpen = false;
-          },
-          error: (err) => console.error('Error al actualizar', err)
-        });
-      } else {
-        // crear
-        this.http.post<Usuario>(this.apiUrl, payload).subscribe({
-          next: (user: any) => {
-            this.rows = [...this.rows, user];
-            this.resetConfirm();
-            this.modalOpen = false;
-          },
-          error: (err) => console.error('Error al crear', err)
-        });
-      }
-    }
   }
+}
+
 
   private resetConfirm() {
     this.confirmOpen = false;

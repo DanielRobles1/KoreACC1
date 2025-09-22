@@ -1,5 +1,9 @@
-<div class="layout"> 
-  <app-sidebar class="sidebar"></app-sidebar>
+<div class="layout" [class.is-collapsed]="!sidebarOpen"> 
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
 
   <div class="content">
     <app-crud-panel

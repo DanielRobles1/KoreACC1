@@ -99,6 +99,13 @@ export class RolesypermisosComponent {
   // =======================
   availablePermissions: string[] = [];
 
+  // Estados para el sidebar
+  sidebarOpen = true;
+
+  onSidebarToggle(open: boolean) {
+    this.sidebarOpen = open;
+  }
+
   // =======================
   // BÚSQUEDA
   // =======================
