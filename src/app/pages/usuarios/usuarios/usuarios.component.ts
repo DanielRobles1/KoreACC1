@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../services/auth.service';
 
-// UI Components
 import { SidebarComponent } from '../../../components/sidebar/sidebar.component';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from '../../../components/crud-panel/crud-panel.component';
 import { ModalComponent } from '../../../components/modal/modal/modal.component';
@@ -22,17 +22,29 @@ export interface Rol {
   styleUrls: ['./usuarios.component.scss']
 })
 export class UsuariosComponent implements OnInit {
-
+  
   constructor(
     private router: Router,
-    private http: HttpClient
-  ) { }
+    private http: HttpClient,
+    private auth: AuthService
+  ) {}
+
 
   ngOnInit() {
     this.cargarUsuarios();
+
+   
+    this.canCreate = this.auth.hasPermission('crear_usuario');
+    this.canEdit   = this.auth.hasPermission('editar_usuario');
+    this.canDelete = this.auth.hasPermission('eliminar_usuario');
+
+    this.actions = [
+      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar usuario' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar usuario' }] : [])
+    ];
   }
 
-  // API URL (ajústala a tu backend)
+ 
   private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
   // UI TEXT
@@ -44,12 +56,6 @@ export class UsuariosComponent implements OnInit {
     { id: 'roles', label: 'Roles y permisos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Roles y permisos', route: '/login/roles' },
   ];
   activeTabId = 'usuarios';
-
-  // ROLES REGISTRADOS (mock, podrías traerlos del backend)
-  roles: Rol[] = [
-    { id: 1, nombre: 'Administrador', permisos: ['crear_usuario', 'editar_usuario', 'eliminar_usuario', 'gestionar_roles'] },
-    { id: 2, nombre: 'Contador', permisos: ['ver_reportes', 'exportar_datos'] },
-  ];
 
   // TABLE: COLUMNS & DATA
   columns: CrudColumn[] = [
@@ -63,17 +69,15 @@ export class UsuariosComponent implements OnInit {
   ];
 
   rows: Usuario[] = [];
-
-  actions: CrudAction[] = [
-    { id: 'edit', tooltip: 'Editar usuario' },
-    { id: 'delete', tooltip: 'Eliminar usuario' },
-  ];
+  actions: CrudAction[] = [];
 
   sidebarOpen = true;
+  onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 
-  onSidebarToggle(open: boolean) {
-    this.sidebarOpen = open;
-  }
+  // PERMISOS
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
 
   // PAGINATION
   page = 1;
@@ -97,36 +101,36 @@ export class UsuariosComponent implements OnInit {
   cargarUsuarios() {
     this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
       next: (res) => {
-        console.log('📥 Respuesta usuarios:', res);
         this.rows = res.data;
         this.totalPages = res.pagination.pages;
       },
-      error: (err) => { console.error('Error al cargar usuarios', err); }
+      error: (err) => console.error('Error al cargar usuarios', err)
     });
   }
 
   // ===== HANDLERS =====
-
-  // TABS
-  onTabChange(id: string) {
-    this.activeTabId = id;
-    const selected = this.tabs.find(t => t.id === id);
+  onTabChange(tabId: string) {
+    this.activeTabId = tabId;
+    const selected = this.tabs.find(t => t.id === tabId);
     if (selected?.route) {
       this.router.navigate([selected.route]);
     }
   }
 
-  // PRIMARY (ADD NEW)
   onPrimary() {
+    if (!this.canCreate) {
+      console.warn('⛔ No tienes permiso para crear usuarios');
+      return;
+    }
     this.editing = null;
     this.modalTitle = 'Añadir usuario';
     this.modalSize = 'md';
     this.modalOpen = true;
   }
 
-  // ROW ACTIONS
   onRowAction(evt: { action: string; row: Usuario }) {
     if (evt.action === 'edit') {
+      if (!this.canEdit) return;
       this.editing = evt.row;
       this.modalTitle = `Editar usuario #${evt.row.id_usuario}`;
       this.modalSize = 'md';
@@ -135,6 +139,7 @@ export class UsuariosComponent implements OnInit {
     }
 
     if (evt.action === 'delete') {
+      if (!this.canDelete) return;
       const isInactive = !evt.row.estatus;
       this.pendingRow = evt.row;
 
@@ -147,84 +152,81 @@ export class UsuariosComponent implements OnInit {
         this.confirmTitle = 'Confirmar inactivación';
         this.confirmMessage = `¿Deseas inactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
       }
-
       this.confirmOpen = true;
     }
   }
 
-  // FORM SUBMIT
-  upsertUser(payload: Usuario) {
+  // ===== FORM SUBMIT =====
+  upsertUser(user: Usuario) {
     this.pendingAction = 'save';
-    this.pendingUser = payload;
+    this.pendingUser = user;
 
     const esEdicion = !!this.editing?.id_usuario;
     this.confirmTitle = esEdicion ? 'Confirmar actualización' : 'Confirmar creación';
     this.confirmMessage = esEdicion
-      ? `¿Guardar los cambios del usuario “${payload.nombre}”?`
-      : `¿Crear el usuario “${payload.nombre}”?`;
+      ? `¿Guardar los cambios del usuario “${user.nombre}”?`
+      : `¿Crear el usuario “${user.nombre}”?`;
 
     this.confirmOpen = true;
   }
 
-  // CONFIRM MODAL
-  closeConfirm() { this.confirmOpen = false; }
+  // ===== CONFIRM MODAL =====
+  closeConfirm() { this.resetConfirm(); }
   cancelConfirm() { this.resetConfirm(); }
 
   confirmProceed() {
-  if (this.pendingAction === 'inactivate' && this.pendingRow) {
-    this.http.delete(`${this.apiUrl}/${this.pendingRow.id_usuario}`).subscribe({
-      next: () => {
-        this.rows = this.rows.map(r =>
-          r.id_usuario === this.pendingRow!.id_usuario ? { ...r, estatus: false } : r
-        );
-        this.resetConfirm();
-        this.cargarUsuarios();
-      },
-      error: (err) => console.error('Error al inactivar', err)
-    });
-    return;
-  }
-
-  // REACTIVAR (PATCH /api/v1/usuarios/:id/reactivar)
-  if (this.pendingAction === 'reactivate' && this.pendingRow) {
-    this.http.patch<Usuario>(`${this.apiUrl}/${this.pendingRow.id_usuario}/reactivar`, {}).subscribe({
-      next: (user) => {
-        this.rows = this.rows.map(r =>
-          r.id_usuario === this.pendingRow!.id_usuario ? (user ?? { ...r, estatus: true }) : r
-        );
-        this.resetConfirm();
-        this.cargarUsuarios();
-      },
-      error: (err) => console.error('Error al reactivar', err)
-    });
-    return;
-  }
-
-  if (this.pendingAction === 'save' && this.pendingUser) {
-    const payload = this.pendingUser;
-    if (this.editing?.id_usuario) {
-      this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
-        next: (user) => {
-          this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
+    if (this.pendingAction === 'inactivate' && this.pendingRow) {
+      this.http.delete(`${this.apiUrl}/${this.pendingRow.id_usuario}`).subscribe({
+        next: () => {
+          this.rows = this.rows.map(r =>
+            r.id_usuario === this.pendingRow!.id_usuario ? { ...r, estatus: false } : r
+          );
           this.resetConfirm();
-          this.modalOpen = false;
           this.cargarUsuarios();
         },
-        error: (err) => console.error('Error al actualizar', err)
+        error: (err) => console.error('Error al inactivar', err)
       });
-    } else {
-      this.http.post<Usuario>(this.apiUrl, payload).subscribe({
-        next: (user: any) => {
-          this.rows = [...this.rows, user];
+      return;
+    }
+
+    if (this.pendingAction === 'reactivate' && this.pendingRow) {
+      this.http.patch<Usuario>(`${this.apiUrl}/${this.pendingRow.id_usuario}/reactivar`, {}).subscribe({
+        next: (user) => {
+          this.rows = this.rows.map(r =>
+            r.id_usuario === this.pendingRow!.id_usuario ? (user ?? { ...r, estatus: true }) : r
+          );
           this.resetConfirm();
-          this.modalOpen = false;
+          this.cargarUsuarios();
         },
-        error: (err) => console.error('Error al crear', err)
+        error: (err) => console.error('Error al reactivar', err)
       });
+      return;
+    }
+
+    if (this.pendingAction === 'save' && this.pendingUser) {
+      const payload = this.pendingUser;
+      if (this.editing?.id_usuario) {
+        this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
+          next: (user) => {
+            this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
+            this.resetConfirm();
+            this.modalOpen = false;
+            this.cargarUsuarios();
+          },
+          error: (err) => console.error('Error al actualizar', err)
+        });
+      } else {
+        this.http.post<Usuario>(this.apiUrl, payload).subscribe({
+          next: (user: any) => {
+            this.rows = [...this.rows, user];
+            this.resetConfirm();
+            this.modalOpen = false;
+          },
+          error: (err) => console.error('Error al crear', err)
+        });
+      }
     }
   }
-}
-
 
   private resetConfirm() {
     this.confirmOpen = false;

@@ -20,11 +20,13 @@ export type CrudAction = { id: string; label?: string; tooltip?: string };
   standalone: true,
   imports: [CommonModule, FormsModule, SidebarComponent,RouterModule],
   templateUrl: './crud-panel.component.html',
-  styleUrls: ['./crud-panel.component.scss'], // <- en plural
+  styleUrls: ['./crud-panel.component.scss'], 
 })
 export class CrudPanelComponent {
   /** Header */
   @Input() title = '';
+  @Input() disablePrimary = false;
+
  route?: string; //
   /** Tabs (Usuarios / Roles y permisos / etc.) */
   @Input() tabs: CrudTab[] = [];
@@ -37,7 +39,6 @@ export class CrudPanelComponent {
   @Output() search = new EventEmitter<string>();
   innerSearch = '';
 
-  /** Botón primario (Nuevo Usuario / Nuevo Rol / etc.) */
   @Input() primaryActionLabel = 'Nuevo';
   @Output() primaryAction = new EventEmitter<void>();
 

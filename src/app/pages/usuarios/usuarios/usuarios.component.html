@@ -1,39 +1,41 @@
-<!-- usuarios.component.html -->
-<div class="layout" [class.is-collapsed]="!sidebarOpen">
-  <app-sidebar
-    class="sidebar"
-    [open]="sidebarOpen"
-    (openChange)="onSidebarToggle($event)">
-  </app-sidebar>
+<div class="layout">
+  <!-- 📌 SIDEBAR -->
+  <app-sidebar class="sidebar"></app-sidebar>
 
+  <!-- 📌 CONTENIDO -->
   <div class="content">
-    <app-crud-panel
-      [title]="title"
-      [tabs]="tabs"
-      [activeTabId]="activeTabId"
-      (tabChange)="onTabChange($event)"
-      [primaryActionLabel]="'Nuevo Usuario'"
-      (primaryAction)="onPrimary()"
-      [columns]="columns"
-      [data]="rows"
-      [actions]="actions"
-      (action)="onRowAction($event)"
-      [page]="page"
-      [totalPages]="totalPages">
-    </app-crud-panel>
+   <app-crud-panel
+  [title]="title"
+  [tabs]="tabs"
+  [activeTabId]="activeTabId"
+  (tabChange)="onTabChange($event)"
+  
+  [primaryActionLabel]="'Nuevo Usuario'"
+  (primaryAction)="onPrimary()"
+  [disablePrimary]="!canCreate"
+
+  [columns]="columns"
+  [data]="rows"
+  [actions]="actions"
+  (action)="onRowAction($event)"
+
+  [page]="page"
+  [totalPages]="totalPages"
+>
+</app-crud-panel>
+
   </div>
 </div>
 
+<!-- 📌 MODAL DE FORMULARIO -->
 <app-modal
   [open]="modalOpen"
   [title]="modalTitle"
   [size]="modalSize"
-  (closed)="closeModal()
-  "
+  (closed)="closeModal()"
   (canceled)="cancelModal()"
   (confirmed)="userFormRef.submit()"
 >
-
   <app-user-form
     #userFormRef
     [value]="editing"
@@ -44,7 +46,7 @@
   ></app-user-form>
 </app-modal>
 
-<!-- MODAL DE CONFIRMACIÓ-->
+<!-- 📌 MODAL DE CONFIRMACIÓN -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -53,5 +55,5 @@
   (canceled)="cancelConfirm()"
   (confirmed)="confirmProceed()"
 >
-  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+  <p class="m-0 mb-2">{{ confirmMessage }}</p>
 </app-modal>
