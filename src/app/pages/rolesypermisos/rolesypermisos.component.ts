@@ -153,9 +153,9 @@ export class RolesypermisosComponent {
     this.loadRoles();
     this.loadPermisosDisponibles();
 
-    this.canCreate = this.auth.hasPermission('crear_usuario');
-    this.canEdit = this.auth.hasPermission('editar_usuario');
-    this.canDelete = this.auth.hasPermission('eliminar_usuario');
+    this.canCreate = this.auth.hasPermission('crear_rol');
+    this.canEdit = this.auth.hasPermission('editar_rol');
+    this.canDelete = this.auth.hasPermission('eliminar_rol');
     this.actions = [
       ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar Rol' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Rol' }] : []),
@@ -369,7 +369,8 @@ export class RolesypermisosComponent {
   private permissionGroupsMap: Record<string, string[]> = {
     'Usuarios': ['usuario', 'user'],
     'Pólizas': ['poliza', 'póliza'],
-    'Reportes': ['reporte', 'report']
+    'Reportes': ['reporte', 'report'],
+    'Roles': ['rol', 'rol']
   };
 
   // Devuelve objeto {categoria: permisos[]}
@@ -378,7 +379,7 @@ export class RolesypermisosComponent {
       'Usuarios': [],
       'Pólizas': [],
       'Reportes': [],
-      'Otros': []
+      'Roles': []
     };
 
     for (const perm of this.availablePermissions) {
