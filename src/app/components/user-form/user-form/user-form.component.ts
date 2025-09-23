@@ -13,6 +13,7 @@ export interface Usuario {
   estatus?: boolean;
   rol?: string;
   roles?: string[];
+  Rols?: { nombre: string }[];
 }
 
 type UsuarioForm = {

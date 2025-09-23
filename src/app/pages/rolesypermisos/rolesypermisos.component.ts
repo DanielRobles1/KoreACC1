@@ -6,6 +6,7 @@ import { ModalComponent } from '@app/components/modal/modal/modal.component';
 import { RoleFormComponent } from '@app/components/role-form-component/role-form-component.component';
 import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
 import { RolesService } from '@app/services/roles.service';
+import { AuthService } from '@app/services/auth.service';
 
 type ApiRole = {
   id?: number;
@@ -35,7 +36,10 @@ type UiRole = {
 export class RolesypermisosComponent {
   @ViewChild('roleFormRef') roleFormRef!: RoleFormComponent;
 
-  constructor(private router: Router, private rolesSvc: RolesService) { }
+  constructor(
+    private router: Router, 
+    private rolesSvc: RolesService,
+    private auth: AuthService ) { }
 
   // =======================
   // UI CONFIG
@@ -64,6 +68,10 @@ export class RolesypermisosComponent {
     { id: 'delete', label: 'Eliminar' },
     { id: 'permissions', label: 'Permisos' },
   ];
+
+  canCreate = false;
+  canEdit   = false;
+  canDelete = false;
 
   page = 1;
   totalPages = 1;
@@ -144,6 +152,15 @@ export class RolesypermisosComponent {
   ngOnInit() {
     this.loadRoles();
     this.loadPermisosDisponibles();
+
+    this.canCreate = this.auth.hasPermission('crear_usuario');
+    this.canEdit = this.auth.hasPermission('editar_usuario');
+    this.canDelete = this.auth.hasPermission('eliminar_usuario');
+    this.actions = [
+      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar Rol' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Rol' }] : []),
+      ...(this.canEdit ? [{ id: 'permissions', tooltip: 'Editar Permisos' }] : [])
+    ];
   }
 
   // Normaliza un rol recibido de la API a la forma de UI
@@ -202,6 +219,10 @@ export class RolesypermisosComponent {
 
   // Nuevo rol
   onPrimary() {
+    if (!this.canCreate) {
+      console.warn('⛔ No tienes permiso para crear roles');
+      return;
+    }
     this.modalTitle = 'Nuevo Rol';
     this.editingRole = { nombre: '', descripcion: '', permissions: [], activo: true };
     this.modalOpen = true;
@@ -210,6 +231,7 @@ export class RolesypermisosComponent {
   // Acciones de fila
   onRowAction(event: { action: string; row: UiRole }) {
     if (event.action === 'edit') {
+      if (!this.canEdit) return;
       this.modalTitle = 'Editar Rol';
       const original = this.rows.find(r => r.id === event.row.id);
       if (original) {
@@ -226,6 +248,7 @@ export class RolesypermisosComponent {
     }
 
     if (event.action === 'delete') {
+      if (!this.canDelete) return;
       const toDel = this.rows.find(r => r.id === event.row.id) ?? null;
       this.roleToDelete = toDel;
       if (toDel) {
@@ -235,6 +258,7 @@ export class RolesypermisosComponent {
     }
 
     if (event.action === 'permissions') {
+      if (!this.canEdit) return;
       const original = this.rows.find(r => r.id === event.row.id);
       if (!original) return;
       this.permRole = { ...original };

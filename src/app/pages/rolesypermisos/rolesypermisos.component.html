@@ -13,6 +13,7 @@
       (tabChange)="onTabChange($event)"
       [primaryActionLabel]="primaryActionLabel"
       (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"
       [columns]="columns"
       [data]="tableRows"
       [actions]="actions"

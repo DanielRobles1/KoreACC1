@@ -66,6 +66,7 @@ export class UsuariosComponent implements OnInit {
     { key: 'correo', header: 'Correo' },
     { key: 'telefono', header: 'Teléfono' },
     { key: 'estatus', header: 'Estatus' },
+    { key: 'rol', header: 'Rol' }
   ];
 
   rows: Usuario[] = [];
@@ -99,14 +100,18 @@ export class UsuariosComponent implements OnInit {
 
   // ===== API CALLS =====
   cargarUsuarios() {
-    this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
-      next: (res) => {
-        this.rows = res.data;
-        this.totalPages = res.pagination.pages;
-      },
-      error: (err) => console.error('Error al cargar usuarios', err)
-    });
-  }
+  this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
+    next: (res) => {
+      this.rows = res.data.map(u => ({
+        ...u,
+        rol: u.Rols?.[0]?.nombre ?? 'Sin rol' // 👈 convierte el objeto a string
+      }));
+      this.totalPages = res.pagination.pages;
+    },
+    error: (err) => console.error('Error al cargar usuarios', err)
+  });
+}
+
 
   // ===== HANDLERS =====
   onTabChange(tabId: string) {
