@@ -52,14 +52,12 @@ export class RolesypermisosComponent {
   activeTabId = 'roles';
   primaryActionLabel = 'Nuevo Rol';
 
-  // =======================
-  // TABLA
-  // =======================
+ 
   columns: CrudColumn[] = [
     { key: 'id', header: 'ID', width: '64px' },
     { key: 'nombre', header: 'Nombre' },
     { key: 'descripcion', header: 'Descripción' },
-    { key: 'permissions', header: 'Permisos' },
+   { key: 'permissions', header: 'Permisos' },
   ];
 
   rows: UiRole[] = [];
@@ -76,47 +74,41 @@ export class RolesypermisosComponent {
   page = 1;
   totalPages = 1;
 
-  // =======================
-  // MODAL
-  // =======================
+ 
   modalOpen = false;
   modalTitle = '';
   modalSize: 'sm' | 'md' | 'lg' = 'md';
   editingRole: Partial<UiRole> | null = null;
 
-  // ===== CONFIRMACIÓN (DELETE) =====
+
   confirmOpen = false;
   confirmTitle = 'Confirmar eliminación';
   confirmMessage = '';
   roleToDelete: UiRole | null = null;
 
-  // ===== CONFIRMACIÓN (SAVE: crear/editar) =====
+ 
   saveConfirmOpen = false;
   saveConfirmTitle = '';
   saveConfirmMessage = '';
   private pendingSaveRole: Partial<UiRole> | null = null;
 
-  // ===== MODAL SOLO PERMISOS =====
+
   permOpen = false;
   permTitle = 'Editar permisos';
   permRole: UiRole | null = null;
   permSelections: string[] = []; // array temporal con los permisos seleccionados
 
-  // =======================
-  // PERMISOS DISPONIBLES
-  // =======================
+ 
   availablePermissions: string[] = [];
 
-  // Estados para el sidebar
+  
   sidebarOpen = true;
 
   onSidebarToggle(open: boolean) {
     this.sidebarOpen = open;
   }
 
-  // =======================
-  // BÚSQUEDA
-  // =======================
+ 
   searchTerm = '';
   get filteredRows() {
     if (!this.searchTerm) return this.rows;
@@ -146,9 +138,6 @@ export class RolesypermisosComponent {
   }
 
 
-  // =======================
-  // INIT
-  // =======================
   ngOnInit() {
     this.loadRoles();
     this.loadPermisosDisponibles();
@@ -183,9 +172,7 @@ export class RolesypermisosComponent {
     return (res && typeof res === 'object' && 'data' in res) ? res.data as T : res as T;
   }
 
-  // =======================
-  // CARGAS
-  // =======================
+  
   loadRoles() {
     this.rolesSvc.getRoles().subscribe({
       next: (res) => {
