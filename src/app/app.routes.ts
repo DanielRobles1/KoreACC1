@@ -19,7 +19,7 @@ export const routes: Routes = [
   { path: 'login/recuperar-password', component: RecuperarcontrComponent },
   { path: 'cambiar-password', component: CambiarPasswordComponent },
 
-  { path: 'acceso-restringido', component: AccesoRestringidoComponent },
+  { path: 'acceso-restringido', component: AccesoRestringidoComponent, canActivate: [AuthGuard], },
 
   {
     path: 'home',
