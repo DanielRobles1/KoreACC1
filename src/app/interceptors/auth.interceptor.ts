@@ -25,7 +25,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 401) {
         auth.clearSession();
         if (router.url !== '/login') {
           router.navigate(['/login']);
@@ -34,6 +34,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         if (router.url !== '/cambiar-password') {
           router.navigate(['/cambiar-password']);
         }
+      } else if (err.status === 403) {
+        router.navigate(['/acceso-restringido'], { state: { reason: 'No tienes permiso para acceder a este recurso.' } });
       }
 
       return throwError(() => err);

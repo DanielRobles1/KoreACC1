@@ -1,0 +1,42 @@
+<section class="page">
+  <div class="card" role="region" aria-labelledby="restrictedTitle">
+    <div class="icon-wrap" aria-hidden="true">
+      <!-- Candado en SVG, accesible y sin dependencias -->
+      <svg
+        class="icon-lock"
+        viewBox="0 0 24 24"
+        focusable="false"
+        aria-hidden="true"
+      >
+        <path
+          d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-8a2 2 0 00-2-2zm-6-2a3 3 0 016 0v2h-6V6zm7 12H6v-8h12v8z"
+        />
+        <circle cx="12" cy="14" r="1.75" />
+      </svg>
+    </div>
+
+    <h1 id="restrictedTitle" class="title">Acceso restringido</h1>
+
+    <p class="message">
+      {{
+        reason ||
+          "No cuentas con permisos suficientes para acceder a esta sección."
+      }}
+    </p>
+
+    <div class="actions">
+      <button class="btn btn-primary" (click)="goHome()">Ir al inicio</button>
+      <button class="btn btn-ghost" (click)="goLogin()">
+        Ir a iniciar sesión
+      </button>
+    </div>
+  </div>
+
+  <footer class="help">
+    <p>
+      Si crees que esto es un error, solicita acceso al administrador o verifica
+      tus
+      <strong>roles/permisos</strong>.
+    </p>
+  </footer>
+</section>

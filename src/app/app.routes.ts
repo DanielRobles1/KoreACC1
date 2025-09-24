@@ -6,20 +6,38 @@ import { LoginComponent } from './pages/login/login.component';
 import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.component';
 import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.component';
 import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
+import { AccesoRestringidoComponent } from './pages/acceso-restringido/acceso-restringido.component';
+
 import { AuthGuard } from './guards/auth.guard'; 
+import { RoleGuard } from './guards/role.guard';
+import { PermissionGuard } from './guards/permission.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
   { path: 'login', component: LoginComponent },
   { path: 'login/recuperar-password', component: RecuperarcontrComponent },
-
   { path: 'cambiar-password', component: CambiarPasswordComponent },
 
-  // Rutas protegidas con el guard
-  { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
-  { path: 'usuarios', component: UsuariosComponent, canActivate: [AuthGuard] },
-  { path: 'login/roles', component: RolesypermisosComponent, canActivate: [AuthGuard] },
+  { path: 'acceso-restringido', component: AccesoRestringidoComponent },
 
-  { path: '**', redirectTo: 'login' } 
+  {
+    path: 'home',
+    component: HomeComponent,
+    canActivate: [AuthGuard], // sólo logueado
+  },
+  {
+    path: 'usuarios',
+    component: UsuariosComponent,
+    canActivate: [AuthGuard, RoleGuard], // logueado + rol
+    data: { roles: ['Administrador', 'Contador'] }
+  },
+  {
+    path: 'login/roles',
+    component: RolesypermisosComponent,
+    canActivate: [AuthGuard, PermissionGuard], // logueado + permiso
+    data: { perms: ['consultar_usuario', 'editar_usuario'] } 
+  },
+
+  { path: '**', redirectTo: 'login' }
 ];
