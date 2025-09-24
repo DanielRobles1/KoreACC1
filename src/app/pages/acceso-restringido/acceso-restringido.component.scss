@@ -8,6 +8,19 @@
   --kore-muted:    #64748b;  /* texto secundario */
   --kore-ring:     rgba(15, 110, 154, 0.25);
 }
+/* sidebar ocupa el 100% en alto y su ancho lo manda la var */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;          /* importante para que no “asome” contenido */
+}
+
+/* cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
 
 .page {
   min-height: 100dvh;

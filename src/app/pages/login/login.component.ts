@@ -86,7 +86,7 @@ export class LoginComponent {
     this.auth.login(username, password, this.recaptchaToken!).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/home']); 
+        this.router.navigate(['/empresa']); 
       },
       error: (err) => {
         this.loading = false;

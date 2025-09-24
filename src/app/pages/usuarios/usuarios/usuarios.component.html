@@ -1,33 +1,29 @@
 <div class="layout">
-  <!-- 📌 SIDEBAR -->
   <app-sidebar class="sidebar"></app-sidebar>
 
-  <!-- 📌 CONTENIDO -->
   <div class="content">
-   <app-crud-panel
-  [title]="title"
-  [tabs]="tabs"
-  [activeTabId]="activeTabId"
-  (tabChange)="onTabChange($event)"
-  
-  [primaryActionLabel]="'Nuevo Usuario'"
-  (primaryAction)="onPrimary()"
-  [disablePrimary]="!canCreate"
+    <app-crud-panel
+      [title]="title"
+      [tabs]="tabs"
+      [activeTabId]="activeTabId"
+      (tabChange)="onTabChange($event)"
 
-  [columns]="columns"
-  [data]="rows"
-  [actions]="actions"
-  (action)="onRowAction($event)"
+      [primaryActionLabel]="'Nuevo Usuario'"
+      (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"  
 
-  [page]="page"
-  [totalPages]="totalPages"
->
-</app-crud-panel>
+      [columns]="columns"
+      [data]="rows"
+      [actions]="actions"           
+      (action)="onRowAction($event)"
 
+      [page]="page"
+      [totalPages]="totalPages">
+    </app-crud-panel>
   </div>
 </div>
 
-<!-- 📌 MODAL DE FORMULARIO -->
+<!-- MODAL DE FORMULARIO -->
 <app-modal
   [open]="modalOpen"
   [title]="modalTitle"
@@ -46,7 +42,7 @@
   ></app-user-form>
 </app-modal>
 
-<!-- 📌 MODAL DE CONFIRMACIÓN -->
+<!-- MODAL DE CONFIRMACIÓN -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -55,5 +51,5 @@
   (canceled)="cancelConfirm()"
   (confirmed)="confirmProceed()"
 >
-  <p class="m-0 mb-2">{{ confirmMessage }}</p>
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
 </app-modal>

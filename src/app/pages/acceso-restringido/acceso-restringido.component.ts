@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
 
 @Component({
   selector: 'app-acceso-restringido',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SidebarComponent],
   templateUrl: './acceso-restringido.component.html',
   styleUrls: ['./acceso-restringido.component.scss']
 })
@@ -18,7 +19,7 @@ export class AccesoRestringidoComponent {
   }
 
   goHome() {
-    this.router.navigateByUrl('/home');
+    this.router.navigateByUrl('/empresa');
   }
 
   goLogin() {
