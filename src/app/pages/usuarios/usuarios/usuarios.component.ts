@@ -22,29 +22,36 @@ export interface Rol {
   styleUrls: ['./usuarios.component.scss']
 })
 export class UsuariosComponent implements OnInit {
-  
+
   constructor(
     private router: Router,
     private http: HttpClient,
     private auth: AuthService
-  ) {}
+  ) { }
 
+  // MODAL "SIN PERMISOS"
+  noPermsOpen = false;
+  noPermsTitle = 'Acción no permitida';
+  noPermsMessage = 'No tienes permisos para realizar esta acción.';
+  private openNoPermisosModal(msg?: string) {
+    this.noPermsMessage = msg ?? 'No tienes permisos para realizar esta acción.';
+    this.noPermsOpen = true;
+  }
+  closeNoPerms() { this.noPermsOpen = false; }
 
   ngOnInit() {
     this.cargarUsuarios();
-
-   
     this.canCreate = this.auth.hasPermission('crear_usuario');
-    this.canEdit   = this.auth.hasPermission('editar_usuario');
+    this.canEdit = this.auth.hasPermission('editar_usuario');
     this.canDelete = this.auth.hasPermission('eliminar_usuario');
 
     this.actions = [
-      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar usuario' }] : []),
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar usuario' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar usuario' }] : [])
     ];
   }
 
- 
+
   private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
   // UI TEXT
@@ -77,7 +84,7 @@ export class UsuariosComponent implements OnInit {
 
   // PERMISOS
   canCreate = false;
-  canEdit   = false;
+  canEdit = false;
   canDelete = false;
 
   // PAGINATION
@@ -100,17 +107,17 @@ export class UsuariosComponent implements OnInit {
 
   // ===== API CALLS =====
   cargarUsuarios() {
-  this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
-    next: (res) => {
-      this.rows = res.data.map(u => ({
-        ...u,
-        rol: u.Rols?.[0]?.nombre ?? 'Sin rol' // 👈 convierte el objeto a string
-      }));
-      this.totalPages = res.pagination.pages;
-    },
-    error: (err) => console.error('Error al cargar usuarios', err)
-  });
-}
+    this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
+      next: (res) => {
+        this.rows = res.data.map(u => ({
+          ...u,
+          rol: u.Rols?.[0]?.nombre ?? 'Sin rol' // 👈 convierte el objeto a string
+        }));
+        this.totalPages = res.pagination.pages;
+      },
+      error: (err) => console.error('Error al cargar usuarios', err)
+    });
+  }
 
 
   // ===== HANDLERS =====
@@ -122,42 +129,54 @@ export class UsuariosComponent implements OnInit {
     }
   }
 
-  onPrimary() {
-    if (!this.canCreate) {
-      console.warn('⛔ No tienes permiso para crear usuarios');
-      return;
+  private requirePermission(
+    perm: 'crear_usuario' | 'editar_usuario' | 'eliminar_usuario',
+    onAllowed: () => void,
+    accionLabel: string
+  ) {
+    if (this.auth.hasPermission(perm)) {
+      onAllowed();
+    } else {
+      this.openNoPermisosModal(`No tienes permisos para ${accionLabel}.`);
     }
-    this.editing = null;
-    this.modalTitle = 'Añadir usuario';
-    this.modalSize = 'md';
-    this.modalOpen = true;
+  }
+
+  onPrimary() {
+    this.requirePermission('crear_usuario', () => {
+      this.editing = null;
+      this.modalTitle = 'Añadir usuario';
+      this.modalSize = 'md';
+      this.modalOpen = true;
+    }, 'crear usuarios');
   }
 
   onRowAction(evt: { action: string; row: Usuario }) {
     if (evt.action === 'edit') {
-      if (!this.canEdit) return;
-      this.editing = evt.row;
-      this.modalTitle = `Editar usuario #${evt.row.id_usuario}`;
-      this.modalSize = 'md';
-      this.modalOpen = true;
+      this.requirePermission('editar_usuario', () => {
+        this.editing = evt.row;
+        this.modalTitle = `Editar usuario #${evt.row.id_usuario}`;
+        this.modalSize = 'md';
+        this.modalOpen = true;
+      }, 'editar usuarios');
       return;
     }
 
     if (evt.action === 'delete') {
-      if (!this.canDelete) return;
-      const isInactive = !evt.row.estatus;
-      this.pendingRow = evt.row;
+      this.requirePermission('eliminar_usuario', () => {
+        const isInactive = !evt.row.estatus;
+        this.pendingRow = evt.row;
 
-      if (isInactive) {
-        this.pendingAction = 'reactivate';
-        this.confirmTitle = 'Confirmar reactivación';
-        this.confirmMessage = `¿Deseas reactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
-      } else {
-        this.pendingAction = 'inactivate';
-        this.confirmTitle = 'Confirmar inactivación';
-        this.confirmMessage = `¿Deseas inactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
-      }
-      this.confirmOpen = true;
+        if (isInactive) {
+          this.pendingAction = 'reactivate';
+          this.confirmTitle = 'Confirmar reactivación';
+          this.confirmMessage = `¿Deseas reactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
+        } else {
+          this.pendingAction = 'inactivate';
+          this.confirmTitle = 'Confirmar inactivación';
+          this.confirmMessage = `¿Deseas inactivar a “${evt.row.nombre}” (${evt.row.correo})?`;
+        }
+        this.confirmOpen = true;
+      }, 'inactivar o reactivar usuarios');
     }
   }
 

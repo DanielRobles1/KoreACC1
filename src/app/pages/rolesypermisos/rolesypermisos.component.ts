@@ -37,9 +37,9 @@ export class RolesypermisosComponent {
   @ViewChild('roleFormRef') roleFormRef!: RoleFormComponent;
 
   constructor(
-    private router: Router, 
+    private router: Router,
     private rolesSvc: RolesService,
-    private auth: AuthService ) { }
+    private auth: AuthService) { }
 
   // =======================
   // UI CONFIG
@@ -52,12 +52,12 @@ export class RolesypermisosComponent {
   activeTabId = 'roles';
   primaryActionLabel = 'Nuevo Rol';
 
- 
+
   columns: CrudColumn[] = [
     { key: 'id', header: 'ID', width: '64px' },
     { key: 'nombre', header: 'Nombre' },
     { key: 'descripcion', header: 'Descripción' },
-   { key: 'permissions', header: 'Permisos' },
+    { key: 'permissions', header: 'Permisos' },
   ];
 
   rows: UiRole[] = [];
@@ -67,14 +67,24 @@ export class RolesypermisosComponent {
     { id: 'permissions', label: 'Permisos' },
   ];
 
+  noPermsOpen = false;
+  noPermsTitle = 'Acción no permitida';
+  noPermsMessage = 'No tienes permisos para realizar esta acción.';
+
+  private openNoPermisosModal(msg?: string) {
+    this.noPermsMessage = msg ?? 'No tienes permisos para realizar esta acción.';
+    this.noPermsOpen = true;
+  }
+  closeNoPerms() { this.noPermsOpen = false; }
+
   canCreate = false;
-  canEdit   = false;
+  canEdit = false;
   canDelete = false;
 
   page = 1;
   totalPages = 1;
 
- 
+
   modalOpen = false;
   modalTitle = '';
   modalSize: 'sm' | 'md' | 'lg' = 'md';
@@ -86,7 +96,7 @@ export class RolesypermisosComponent {
   confirmMessage = '';
   roleToDelete: UiRole | null = null;
 
- 
+
   saveConfirmOpen = false;
   saveConfirmTitle = '';
   saveConfirmMessage = '';
@@ -98,17 +108,17 @@ export class RolesypermisosComponent {
   permRole: UiRole | null = null;
   permSelections: string[] = []; // array temporal con los permisos seleccionados
 
- 
+
   availablePermissions: string[] = [];
 
-  
+
   sidebarOpen = true;
 
   onSidebarToggle(open: boolean) {
     this.sidebarOpen = open;
   }
 
- 
+
   searchTerm = '';
   get filteredRows() {
     if (!this.searchTerm) return this.rows;
@@ -146,7 +156,7 @@ export class RolesypermisosComponent {
     this.canEdit = this.auth.hasPermission('editar_rol');
     this.canDelete = this.auth.hasPermission('eliminar_rol');
     this.actions = [
-      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar Rol' }] : []),
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Rol' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Rol' }] : []),
       ...(this.canEdit ? [{ id: 'permissions', tooltip: 'Editar Permisos' }] : [])
     ];
@@ -172,7 +182,7 @@ export class RolesypermisosComponent {
     return (res && typeof res === 'object' && 'data' in res) ? res.data as T : res as T;
   }
 
-  
+
   loadRoles() {
     this.rolesSvc.getRoles().subscribe({
       next: (res) => {
@@ -206,19 +216,22 @@ export class RolesypermisosComponent {
 
   // Nuevo rol
   onPrimary() {
-    if (!this.canCreate) {
-      console.warn('⛔ No tienes permiso para crear roles');
-      return;
-    }
-    this.modalTitle = 'Nuevo Rol';
-    this.editingRole = { nombre: '', descripcion: '', permissions: [], activo: true };
-    this.modalOpen = true;
+  if (!this.canCreate) {
+    this.openNoPermisosModal('No tienes permisos para crear roles.');
+    return;
   }
+  this.modalTitle = 'Nuevo Rol';
+  this.editingRole = { nombre: '', descripcion: '', permissions: [], activo: true };
+  this.modalOpen = true;
+}
 
   // Acciones de fila
   onRowAction(event: { action: string; row: UiRole }) {
     if (event.action === 'edit') {
-      if (!this.canEdit) return;
+      if (!this.canEdit) {
+      this.openNoPermisosModal('No tienes permisos para editar roles.');
+      return;
+      }
       this.modalTitle = 'Editar Rol';
       const original = this.rows.find(r => r.id === event.row.id);
       if (original) {
@@ -235,7 +248,10 @@ export class RolesypermisosComponent {
     }
 
     if (event.action === 'delete') {
-      if (!this.canDelete) return;
+      if (!this.canDelete) {
+      this.openNoPermisosModal('No tienes permisos para eliminar roles.');
+      return;
+    }
       const toDel = this.rows.find(r => r.id === event.row.id) ?? null;
       this.roleToDelete = toDel;
       if (toDel) {
@@ -245,7 +261,10 @@ export class RolesypermisosComponent {
     }
 
     if (event.action === 'permissions') {
-      if (!this.canEdit) return;
+      if (!this.canEdit) {
+      this.openNoPermisosModal('No tienes permisos para modificar permisos.');
+      return;
+    }
       const original = this.rows.find(r => r.id === event.row.id);
       if (!original) return;
       this.permRole = { ...original };
@@ -383,7 +402,7 @@ export class RolesypermisosComponent {
 
     return groups;
   }
-  
+
   confirmPermissionsOnly() {
     if (!this.permRole) { this.permOpen = false; return; }
     this.rolesSvc.replaceRolePermissions(this.permRole.id, this.permSelections).subscribe({
@@ -411,13 +430,13 @@ export class RolesypermisosComponent {
 
     if (checked) {
       const exists = (this.permSelections ?? []).some(x => this.canonical(x) === cand);
-      if (!exists) this.permSelections = [...(this.permSelections ?? []), p]; 
+      if (!exists) this.permSelections = [...(this.permSelections ?? []), p];
     } else {
       this.permSelections = (this.permSelections ?? []).filter(x => this.canonical(x) !== cand);
     }
   }
 
-  
+
   countSelectedInGroup(perms: string[] = []): number {
     if (!perms?.length) return 0;
     const sel = new Set((this.permSelections ?? []).map(x => this.canonical(x)));

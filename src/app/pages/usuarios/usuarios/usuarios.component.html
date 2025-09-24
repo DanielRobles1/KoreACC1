@@ -53,3 +53,14 @@
 >
   <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
 </app-modal>
+
+<!-- MODAL SIN PERMISOS -->
+<app-modal
+  [open]="noPermsOpen"
+  [title]="noPermsTitle"
+  size="sm"
+  (closed)="closeNoPerms()"
+  (canceled)="closeNoPerms()"
+>
+  <p style="margin:0 0 .5rem 0;">{{ noPermsMessage }}</p>
+</app-modal>
