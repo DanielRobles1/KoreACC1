@@ -29,14 +29,14 @@ export const routes: Routes = [
   {
     path: 'usuarios',
     component: UsuariosComponent,
-    canActivate: [AuthGuard, RoleGuard], // logueado + rol
-    data: { roles: ['Administrador', 'Contador'] }
+    canActivate: [AuthGuard, PermissionGuard], // logueado + rol
+   data: { perms: ['consultar_usuario'] } 
   },
   {
     path: 'login/roles',
     component: RolesypermisosComponent,
     canActivate: [AuthGuard, PermissionGuard], // logueado + permiso
-    data: { perms: ['consultar_usuario', 'editar_usuario'] } 
+    data: { perms: ['consultar_rol', 'editar_rol'] } 
   },
    {
     path: 'empresa',

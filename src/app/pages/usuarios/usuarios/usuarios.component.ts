@@ -28,6 +28,7 @@ export class UsuariosComponent implements OnInit {
     private http: HttpClient,
     private auth: AuthService
   ) { }
+roles: Rol[] = [];
 
   // MODAL "SIN PERMISOS"
   noPermsOpen = false;
@@ -41,6 +42,7 @@ export class UsuariosComponent implements OnInit {
 
   ngOnInit() {
     this.cargarUsuarios();
+    this.cargarRoles();
     this.canCreate = this.auth.hasPermission('crear_usuario');
     this.canEdit = this.auth.hasPermission('editar_usuario');
     this.canDelete = this.auth.hasPermission('eliminar_usuario');
@@ -50,7 +52,16 @@ export class UsuariosComponent implements OnInit {
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar usuario' }] : [])
     ];
   }
+private rolesApiUrl = 'http://localhost:3000/api/v1/roles'; // ajusta a tu endpoint
 
+cargarRoles() {
+  this.http.get<{ data: Rol[] }>(this.rolesApiUrl).subscribe({
+    next: (res) => {
+      this.roles = res.data;
+    },
+    error: (err) => console.error('Error al cargar roles', err)
+  });
+}
 
   private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
@@ -111,7 +122,7 @@ export class UsuariosComponent implements OnInit {
       next: (res) => {
         this.rows = res.data.map(u => ({
           ...u,
-          rol: u.Rols?.[0]?.nombre ?? 'Sin rol' // 👈 convierte el objeto a string
+          rol: u.Rols?.[0]?.nombre ?? 'Sin rol' 
         }));
         this.totalPages = res.pagination.pages;
       },

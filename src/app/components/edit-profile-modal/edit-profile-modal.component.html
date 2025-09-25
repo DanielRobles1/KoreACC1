@@ -25,10 +25,13 @@
 
         <!-- Apellidos -->
         <div class="form-field">
-          <label>Apellidos*</label>
-          <input [(ngModel)]="tempUser.apellidos" class="form-control" />
+          <label>Apellido paterno*</label>
+          <input [(ngModel)]="tempUser.apellido_p" class="form-control" />
         </div>
-
+ <div class="form-field">
+          <label>Apellido materno*</label>
+          <input [(ngModel)]="tempUser.apellido_m" class="form-control" />
+        </div>
         <!-- Correo -->
         <div class="form-field full">
           <label>Correo electrónico*</label>

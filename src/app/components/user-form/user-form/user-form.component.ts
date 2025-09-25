@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RolesService } from '@app/services/roles.service';
 
 export interface Usuario {
   id_usuario?: number;
@@ -33,17 +34,17 @@ type UsuarioForm = {
   templateUrl: './user-form.component.html',
   styleUrls: ['./user-form.component.scss']
 })
-export class UserFormComponent implements OnChanges {
+export class UserFormComponent implements OnChanges, OnInit {
   @Input() value: Usuario | null = null;
-  @Input() roles: string[] = ['Administrador', 'Contador', 'Auditor'];
   @Input() readonlyEmail = false;
 
   @Output() submitted = new EventEmitter<Usuario>();
   @Output() canceled = new EventEmitter<void>();
 
   form: FormGroup<UsuarioForm>;
+  roles: string[] = []; 
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private rolesService: RolesService) {
     this.form = this.fb.nonNullable.group({
       nombre: ['', [Validators.required, Validators.minLength(3)]],
       apellido_p: ['', [Validators.required, Validators.minLength(3)]],
@@ -55,10 +56,40 @@ export class UserFormComponent implements OnChanges {
     });
   }
 
+ngOnInit(): void {
+  this.rolesService.getRoles().subscribe({
+    next: (res: any) => {
+      console.log('Respuesta de roles:', res);
+
+      // Los roles reales están en res.data
+      const rolesArray = res.data || [];
+      this.roles = rolesArray.map((r: any) => r.nombre);
+
+      // Marcar rol si ya existe en el usuario
+      if (this.value?.rol) {
+        this.form.get('rol')?.setValue(this.value.rol);
+      }
+
+      console.log('Roles procesados:', this.roles);
+    },
+    error: (err) => console.error('Error cargando roles', err)
+  });
+}
+
+
+
+
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['value']) {
       const v: Usuario = this.value || { nombre: '', apellido_p: '', apellido_m: '', correo: '', telefono: '', usuario: '', rol: '' };
       this.form.reset(v);
+
+      // Marcar rol si ya existe
+      if (v.rol) {
+        this.form.get('rol')?.setValue(v.rol);
+      }
+
       if (this.readonlyEmail) this.form.get('correo')?.disable();
       else this.form.get('correo')?.enable();
     }
@@ -83,7 +114,6 @@ export class UserFormComponent implements OnChanges {
 
     this.submitted.emit(payload);
   }
-
 
   cancel() { this.canceled.emit(); }
 }

@@ -32,14 +32,14 @@
   (canceled)="cancelModal()"
   (confirmed)="userFormRef.submit()"
 >
-  <app-user-form
-    #userFormRef
-    [value]="editing"
-    [roles]="['Administrador','Contador','Auditor','Invitado']"
-    [readonlyEmail]="!!editing"
-    (submitted)="upsertUser($event)"
-    (canceled)="cancelModal()"
-  ></app-user-form>
+ <app-user-form
+  #userFormRef
+  [value]="editing"
+  [readonlyEmail]="!!editing"
+  (submitted)="upsertUser($event)"
+  (canceled)="cancelModal()"
+></app-user-form>
+
 </app-modal>
 
 <!-- MODAL DE CONFIRMACIÓN -->

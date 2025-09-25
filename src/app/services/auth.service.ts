@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { catchError, finalize, tap, switchMap } from 'rxjs/operators';
 import { Observable, throwError, of } from 'rxjs';
 
-export type UserRole = 'Administrador' | 'Contador' | 'Auditor' | string;
+export type UserRole =  string;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
