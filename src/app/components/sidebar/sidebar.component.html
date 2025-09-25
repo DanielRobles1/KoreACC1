@@ -23,13 +23,14 @@
         <p class="text-lg font-extrabold cursor-pointer" (click)="openEditProfile()">{{ user.nombre }}</p>
       </div>
 
-      <app-edit-profile-modal
-        [open]="editProfileOpen"
-        [user]="user"
-        (closed)="closeEditProfile()"
-        (saved)="saveProfile($event)">
-      </app-edit-profile-modal>
+     <app-edit-profile-modal
+  [open]="editProfileOpen"
+  [user]="tempUser"
+  (closed)="closeEditProfile()"
+  (saved)="saveProfile($event)">
+</app-edit-profile-modal>
     </div>
+
 
     <!-- Menú -->
     <ul class="space-y-2">
@@ -125,12 +126,36 @@
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="usuariosPermisosOpen">
           <li><a [routerLink]="['/usuarios']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
-            <img src="assets/svgs/usuarios.svg" class="icon-sm" alt="Usuarios">
+           <!-- Ícono de usuario -->
+<svg xmlns="http://www.w3.org/2000/svg" 
+     fill="none" 
+     viewBox="0 0 24 24" 
+     stroke-width="1.5" 
+     stroke="currentColor" 
+     class="w-6 h-6 text-slate-600">
+  <path stroke-linecap="round" 
+        stroke-linejoin="round" 
+        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 
+           3.75 0 017.5 0zM4.5 20.25a8.25 
+           8.25 0 1115 0v.75H4.5v-.75z" />
+</svg>
+
             <span class="ml-2">Usuarios</span>
           </a></li>
-          <li><a [routerLink]="['/roles']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
-            <img src="assets/svgs/roles.svg" class="icon-sm" alt="Permisos">
-            <span class="ml-2">Permisos</span>
+          <li><a [routerLink]="['/login/roles']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
+<svg xmlns="http://www.w3.org/2000/svg" 
+     fill="none" 
+     viewBox="0 0 24 24" 
+     stroke-width="1.5" 
+     stroke="currentColor" 
+     class="icon-sm text-slate-600">
+  <path stroke-linecap="round" 
+        stroke-linejoin="round" 
+        d="M9 12.75l2.25 2.25L15 9.75M12 
+           2.25c-4.97 0-9 2.686-9 
+           6v4.5c0 4.314 4.03 7.5 9 
+           7.5s9-3.186 9-7.5V8.25c0-3.314-4.03-6-9-6z" />
+</svg>            <span class="ml-2">Permisos</span>
           </a></li>
         </ul>
       </li>
@@ -193,20 +218,22 @@
         </ul>
       </li>
 
-      <!-- Cerrar sesión -->
-      <li>
-        <button type="button" class="subbtn text-red-600 flex items-center" (click)="openLogoutConfirm()">
-          🚪 <span class="ml-2">Cerrar sesión</span>
-        </button>
-      </li>
+   
     </ul>
   </div>
-
+ <div class="mt-4 p-4">
+    <button type="button" 
+            class="subbtn text-red-600 flex items-center w-full" 
+            (click)="openLogoutConfirm()">
+      🚪 <span class="ml-2">Cerrar sesión</span>
+    </button>
+  </div>
   <!-- Modal confirmación -->
   <app-modal
     [open]="confirmOpen"
     [title]="confirmTitle"
     size="sm"
+     
     (closed)="closeConfirm()"
     (canceled)="cancelConfirm()"
     (confirmed)="confirmProceed()">

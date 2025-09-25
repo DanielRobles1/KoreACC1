@@ -29,7 +29,7 @@ export class SidebarComponent {
   active: Item = 'configuracion';
   reportesOpen = false;
   configOpen = false;
-
+tempUser: any = {};
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
@@ -109,13 +109,24 @@ export class SidebarComponent {
     });
   }
 
-  openEditProfile() { this.editProfileOpen = true; }
+  openEditProfile() { 
+  if (this.user) {
+    this.tempUser = { ...this.user }; // copia de usuario actual
+  }
+  this.editProfileOpen = true; 
+}
+
+saveProfile(updated: any) {
+  this.users.updateMe(updated).subscribe({
+    next: (res: any) => {
+      this.user = res.usuario; // actualiza usuario real
+      this.editProfileOpen = false;
+    },
+    error: (err) => console.error('Error actualizando perfil', err)
+  });
+}
+
   closeEditProfile() { this.editProfileOpen = false; }
 
-  saveProfile(updated: any) {
-    this.users.updateMe(updated).subscribe({
-      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; this.ngOnInit(); },
-      error: (err) => console.error('Error actualizando perfil', err)
-    });
-  }
+  
 }
