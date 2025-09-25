@@ -1,5 +1,9 @@
-<div class="layout">
-  <app-sidebar class="sidebar"></app-sidebar>
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
 
   <div class="content">
     <app-crud-panel
@@ -54,13 +58,34 @@
   <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- MODAL SIN PERMISOS -->
-<app-modal
+<app-toast-message
   [open]="noPermsOpen"
   [title]="noPermsTitle"
-  size="sm"
+  [message]="noPermsMessage"
+  type="warning"
+  position="top-right"
+  [autoCloseMs]="3500"
   (closed)="closeNoPerms()"
-  (canceled)="closeNoPerms()"
->
-  <p style="margin:0 0 .5rem 0;">{{ noPermsMessage }}</p>
-</app-modal>
+/>
+
+<!-- TOAST ÉXITO -->
+<app-toast-message
+  [open]="successOpen"
+  [title]="successTitle"
+  [message]="successMessage"
+  type="success"
+  position="top-right"
+  [autoCloseMs]="3000"
+  (closed)="closeSuccess()"
+/>
+
+<!-- TOAST ERROR (sin autocierre) -->
+<app-toast-message
+  [open]="errorOpen"
+  [title]="errorTitle"
+  [message]="errorMessage"
+  type="error"
+  position="top-right"
+  [autoCloseMs]="0"
+  (closed)="closeError()"
+/>

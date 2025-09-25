@@ -1,0 +1,36 @@
+<div
+  class="toast"
+  *ngIf="open"
+  [class.top-right]="position === 'top-right'"
+  [class.top-left]="position === 'top-left'"
+  [class.bottom-right]="position === 'bottom-right'"
+  [class.bottom-left]="position === 'bottom-left'"
+  role="status"
+  aria-live="polite"
+  (mousedown)="$event.stopPropagation()"
+>
+  <div class="toast__content" [class]="type">
+    <div class="toast__icon" aria-hidden="true">
+      <span *ngIf="type === 'info'">ℹ️</span>
+      <span *ngIf="type === 'success'">✅</span>
+      <span *ngIf="type === 'warning'">⚠️</span>
+      <span *ngIf="type === 'error'">⛔</span>
+    </div>
+
+    <div class="toast__text">
+      <h3 class="toast__title" *ngIf="title">{{ title }}</h3>
+      <p class="toast__message">{{ message }}</p>
+    </div>
+
+    <button
+      *ngIf="showClose"
+      class="toast__close icon-btn light"
+      type="button"
+      (click)="close()"
+      aria-label="Cerrar"
+      title="Cerrar"
+    >
+      ✕
+    </button>
+  </div>
+</div>

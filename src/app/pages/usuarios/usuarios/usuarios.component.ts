@@ -6,6 +6,7 @@ import { AuthService } from '../../../services/auth.service';
 import { SidebarComponent } from '../../../components/sidebar/sidebar.component';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from '../../../components/crud-panel/crud-panel.component';
 import { ModalComponent } from '../../../components/modal/modal/modal.component';
+import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { UserFormComponent, Usuario } from '../../../components/user-form/user-form/user-form.component';
 
 export interface Rol {
@@ -17,7 +18,7 @@ export interface Rol {
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [SidebarComponent, CrudPanelComponent, ModalComponent, UserFormComponent],
+  imports: [SidebarComponent, CrudPanelComponent, ModalComponent, ToastMessageComponent, UserFormComponent],
   templateUrl: './usuarios.component.html',
   styleUrls: ['./usuarios.component.scss']
 })
@@ -28,7 +29,7 @@ export class UsuariosComponent implements OnInit {
     private http: HttpClient,
     private auth: AuthService
   ) { }
-roles: Rol[] = [];
+  roles: Rol[] = [];
 
   // MODAL "SIN PERMISOS"
   noPermsOpen = false;
@@ -39,6 +40,35 @@ roles: Rol[] = [];
     this.noPermsOpen = true;
   }
   closeNoPerms() { this.noPermsOpen = false; }
+
+  // ==== TOASTS GENÉRICOS ====
+  successOpen = false;
+  successTitle = 'Éxito';
+  successMessage = 'Operación realizada correctamente.';
+
+  errorOpen = false;
+  errorTitle = 'Error';
+  errorMessage = 'Ocurrió un error inesperado.';
+
+  showSuccess(message: string, title = 'Éxito') {
+    this.successTitle = title;
+    this.successMessage = message;
+    this.successOpen = true;
+  }
+  closeSuccess() { this.successOpen = false; }
+
+  showError(err: any, fallback = 'Ocurrió un error al procesar la solicitud.') {
+    const msg = this.extractErrorMessage(err) ?? fallback;
+    this.errorTitle = 'Error';
+    this.errorMessage = msg;
+    this.errorOpen = true;
+  }
+  closeError() { this.errorOpen = false; }
+
+  private extractErrorMessage(err: any): string | null {
+    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  }
+
 
   ngOnInit() {
     this.cargarUsuarios();
@@ -52,16 +82,7 @@ roles: Rol[] = [];
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar usuario' }] : [])
     ];
   }
-private rolesApiUrl = 'http://localhost:3000/api/v1/roles'; // ajusta a tu endpoint
-
-cargarRoles() {
-  this.http.get<{ data: Rol[] }>(this.rolesApiUrl).subscribe({
-    next: (res) => {
-      this.roles = res.data;
-    },
-    error: (err) => console.error('Error al cargar roles', err)
-  });
-}
+  private rolesApiUrl = 'http://localhost:3000/api/v1/roles'; // ajusta a tu endpoint
 
   private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
@@ -117,19 +138,25 @@ cargarRoles() {
   private pendingUser: Usuario | null = null;
 
   // ===== API CALLS =====
+  cargarRoles() {
+    this.http.get<{ data: Rol[] }>(this.rolesApiUrl).subscribe({
+      next: (res) => { this.roles = res.data; },
+      error: (err) => this.showError(err, 'No se pudieron cargar los roles.')
+    });
+  }
+
   cargarUsuarios() {
     this.http.get<{ data: Usuario[]; pagination: any }>(this.apiUrl).subscribe({
       next: (res) => {
         this.rows = res.data.map(u => ({
           ...u,
-          rol: u.Rols?.[0]?.nombre ?? 'Sin rol' 
+          rol: u.Rols?.[0]?.nombre ?? 'Sin rol'
         }));
         this.totalPages = res.pagination.pages;
       },
-      error: (err) => console.error('Error al cargar usuarios', err)
+      error: (err) => this.showError(err, 'No se pudieron cargar los usuarios.')
     });
   }
-
 
   // ===== HANDLERS =====
   onTabChange(tabId: string) {
@@ -216,10 +243,11 @@ cargarRoles() {
           this.rows = this.rows.map(r =>
             r.id_usuario === this.pendingRow!.id_usuario ? { ...r, estatus: false } : r
           );
-          this.resetConfirm();
           this.cargarUsuarios();
+          this.showSuccess(`Usuario “${this.pendingRow!.nombre}” inactivado correctamente.`);
+          this.resetConfirm();
         },
-        error: (err) => console.error('Error al inactivar', err)
+        error: (err) => this.showError(err, 'Error al inactivar el usuario.')
       });
       return;
     }
@@ -230,10 +258,11 @@ cargarRoles() {
           this.rows = this.rows.map(r =>
             r.id_usuario === this.pendingRow!.id_usuario ? (user ?? { ...r, estatus: true }) : r
           );
-          this.resetConfirm();
           this.cargarUsuarios();
+          this.showSuccess(`Usuario “${this.pendingRow!.nombre}” reactivado correctamente.`);
+          this.resetConfirm();
         },
-        error: (err) => console.error('Error al reactivar', err)
+        error: (err) => this.showError(err, 'Error al reactivar el usuario.')
       });
       return;
     }
@@ -241,23 +270,27 @@ cargarRoles() {
     if (this.pendingAction === 'save' && this.pendingUser) {
       const payload = this.pendingUser;
       if (this.editing?.id_usuario) {
+        // Actualizar
         this.http.put<Usuario>(`${this.apiUrl}/${this.editing.id_usuario}`, payload).subscribe({
           next: (user) => {
             this.rows = this.rows.map(r => r.id_usuario === this.editing!.id_usuario ? user : r);
-            this.resetConfirm();
             this.modalOpen = false;
             this.cargarUsuarios();
+            this.showSuccess(`Usuario “${user.nombre ?? this.pendingUser!.nombre}” actualizado correctamente.`);
+            this.resetConfirm();
           },
-          error: (err) => console.error('Error al actualizar', err)
+          error: (err) => this.showError(err, 'Error al actualizar el usuario.')
         });
       } else {
+        // Crear
         this.http.post<Usuario>(this.apiUrl, payload).subscribe({
           next: (user: any) => {
             this.rows = [...this.rows, user];
-            this.resetConfirm();
             this.modalOpen = false;
+            this.showSuccess(`Usuario “${user?.nombre ?? this.pendingUser!.nombre}” creado correctamente.`);
+            this.resetConfirm();
           },
-          error: (err) => console.error('Error al crear', err)
+          error: (err) => this.showError(err, 'Error al crear el usuario.')
         });
       }
     }
