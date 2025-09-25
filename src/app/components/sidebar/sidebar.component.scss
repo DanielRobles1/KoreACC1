@@ -2,34 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* === Sidebar container (no cambiamos la distribución de tus botones) === */
 :host {
   --accent: #2E5777;
-  --sidebar-w: 280px;       /* ancho por defecto en desktop */
+  --sidebar-w: 280px;
   display: block;
   height: 100%;
   width: var(--sidebar-w);
   border-right: 1px solid rgba(0,0,0,.08);
-  overflow: hidden;         /* evita que “asome” contenido al colapsar */
+  overflow: hidden; 
   transition: width .28s ease;
 }
 
-/* Cuando el padre añada .is-collapsed al <app-sidebar>, el ancho se vuelve 0 */
 :host(.is-collapsed) {
   --sidebar-w: 0px;
   border-right: none;
 }
 
-/* --- Móvil/Tablet: el sidebar se vuelve overlay deslizante --- */
 @media (max-width: 1024px) {
   :host {
     position: fixed;
-    inset: 0 auto 0 0;      /* top:0; left:0; bottom:0 */
-    width: 280px;           /* ancho fijo en móvil */
+    inset: 0 auto 0 0;  
+    width: 280px;   
     max-width: 86vw;
     height: 100vh;
     z-index: 50;
-    background: #fff;       /* asegura fondo al flotar */
+    background: #fff;
     border-right: 1px solid rgba(0,0,0,.08);
     transform: translateX(0);
     transition: transform .28s ease;
@@ -41,19 +38,16 @@
   }
 }
 
-/* Si tu template tiene un contenedor raíz interno, lo hacemos columna */
 .sidebar-shell {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* Para que el bloque inferior quede “pegado” abajo */
 .sidebar-shell .sidebar-bottom {
   margin-top: auto;
 }
 
-/* ====== TUS ESTILOS DE BOTONES (SIN CAMBIOS EN LA DISTRIBUCIÓN) ====== */
 .btn {
   @apply flex items-center w-full px-4 py-2 rounded-2xl transition select-none text-white bg-slate-800;
   &:hover {

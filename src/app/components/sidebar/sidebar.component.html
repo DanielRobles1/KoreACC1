@@ -60,15 +60,15 @@
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="reportesOpen">
-          <li><a href="#" class="subbtn">
+          <li><a href="#" class="subbtn flex items-center">
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balance general">
             <span class="ml-2">Balance general</span>
           </a></li>
-          <li><a href="#" class="subbtn">
+          <li><a href="#" class="subbtn flex items-center">
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balanza de comprobacion">
             <span class="ml-2">Balanza de comprobacion</span>
           </a></li>
-          <li><a href="#" class="subbtn">
+          <li><a href="#" class="subbtn flex items-center">
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Estado de resultados">
             <span class="ml-2">Estado de resultados</span>
           </a></li>
@@ -105,18 +105,101 @@
     </button>
 
     <ul class="mt-2 space-y-1 pl-10" *ngIf="configOpen">
-      <li><a href="/usuarios" class="subbtn">Usuarios / Permisos</a></li>
-      <li><a href="#" class="subbtn">Catálogos</a></li>
-      <li><a href="/empresa" class="subbtn">Empresa / Periodos</a></li>
-    </ul>
-  </div>
 
-  <!-- Cerrar sesión -->
-  <div class="px-4 py-4">
-    <button type="button" class="btn w-full text-red-600" (click)="openLogoutConfirm()">
-      <span>🚪</span>
-      <span class="ml-2">Cerrar sesión</span>
-    </button>
+      <!-- Usuarios / Permisos -->
+      <li>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='usuarios-permisos'"
+                (click)="toggleUsuariosPermisos()">
+          <span>👤</span>
+          <span class="ml-2 flex-1 text-left">Usuarios / Permisos</span>
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-4 w-4 caret transition-transform"
+               [class.rotate-180]="usuariosPermisosOpen"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <ul class="mt-2 space-y-1 pl-10" *ngIf="usuariosPermisosOpen">
+          <li><a [routerLink]="['/usuarios']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
+            <img src="assets/svgs/usuarios.svg" class="icon-sm" alt="Usuarios">
+            <span class="ml-2">Usuarios</span>
+          </a></li>
+          <li><a [routerLink]="['/roles']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
+            <img src="assets/svgs/roles.svg" class="icon-sm" alt="Permisos">
+            <span class="ml-2">Permisos</span>
+          </a></li>
+        </ul>
+      </li>
+
+      <!-- Catálogos -->
+      <li>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='catalogos'"
+                (click)="toggleCatalogos()">
+          <span>📚</span>
+          <span class="ml-2 flex-1 text-left">Catálogos</span>
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-4 w-4 caret transition-transform"
+               [class.rotate-180]="catalogosOpen"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <ul class="mt-2 space-y-1 pl-10" *ngIf="catalogosOpen">
+          <li><a [routerLink]="['/catalogos/cuentas']" class="subbtn flex items-center" (click)="setActive('catalogos')">
+            <img src="assets/svgs/cuentas.svg" class="icon-sm" alt="Cuentas">
+            <span class="ml-2">Cuentas</span>
+          </a></li>
+          <li><a [routerLink]="['/catalogos/cc']" class="subbtn flex items-center" (click)="setActive('catalogos')">
+            <img src="assets/svgs/cc.svg" class="icon-sm" alt="Centros de costo">
+            <span class="ml-2">Centros de costo</span>
+          </a></li>
+        </ul>
+      </li>
+
+      <!-- Empresa / Periodos -->
+      <li>
+        <button type="button"
+                class="btn"
+                [class.btn--active]="active==='empresa'"
+                (click)="toggleEmpresa()">
+          <span>🏢</span>
+          <span class="ml-2 flex-1 text-left">Empresa / Periodos</span>
+          <svg xmlns="http://www.w3.org/2000/svg"
+               class="h-4 w-4 caret transition-transform"
+               [class.rotate-180]="empresaOpen"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <ul class="mt-2 space-y-1 pl-10" *ngIf="empresaOpen">
+          <li><a [routerLink]="['/empresa']" class="subbtn flex items-center" (click)="setActive('empresa')">
+            <img src="assets/svgs/empresa.svg" class="icon-sm" alt="Empresa">
+            <span class="ml-2">Empresa</span>
+          </a></li>
+          <li><a [routerLink]="['/periodos']" class="subbtn flex items-center" (click)="setActive('empresa')">
+            <img src="assets/svgs/periodos.svg" class="icon-sm" alt="Periodos">
+            <span class="ml-2">Periodos</span>
+          </a></li>
+        </ul>
+      </li>
+
+      <!-- Cerrar sesión -->
+      <li>
+        <button type="button" class="subbtn text-red-600 flex items-center" (click)="openLogoutConfirm()">
+          🚪 <span class="ml-2">Cerrar sesión</span>
+        </button>
+      </li>
+    </ul>
   </div>
 
   <!-- Modal confirmación -->
@@ -127,6 +210,6 @@
     (closed)="closeConfirm()"
     (canceled)="cancelConfirm()"
     (confirmed)="confirmProceed()">
-    <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+    <p class="mb-2">{{ confirmMessage }}</p>
   </app-modal>
 </div>

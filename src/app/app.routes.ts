@@ -8,7 +8,7 @@ import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.c
 import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
 import { AccesoRestringidoComponent } from './pages/acceso-restringido/acceso-restringido.component';
 
-import { AuthGuard } from './guards/auth.guard'; 
+import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { PermissionGuard } from './guards/permission.guard';
 import { EmpresaComponent } from './pages/empresa/empresa.component';
@@ -30,19 +30,19 @@ export const routes: Routes = [
     path: 'usuarios',
     component: UsuariosComponent,
     canActivate: [AuthGuard, PermissionGuard], // logueado + rol
-   data: { perms: ['consultar_usuario'] } 
+    data: { perms: ['consultar_usuario'] }
   },
   {
     path: 'login/roles',
     component: RolesypermisosComponent,
     canActivate: [AuthGuard, PermissionGuard], // logueado + permiso
-    data: { perms: ['consultar_rol', 'editar_rol'] } 
+    data: { perms: ['consultar_rol', 'editar_rol'] }
   },
-   {
+  {
     path: 'empresa',
     component: EmpresaComponent,
     canActivate: [AuthGuard],// logueado 
-    
+
   },
 
   { path: '**', redirectTo: 'login' }

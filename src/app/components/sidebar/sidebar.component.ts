@@ -3,15 +3,15 @@ import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
 import { UsuariosService } from '@app/services/usuarios.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { EditProfileModalComponent } from '../edit-profile-modal/edit-profile-modal.component';
 
-type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion';
+type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion' | 'usuarios-permisos' | 'catalogos' | 'empresa';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ModalComponent, EditProfileModalComponent],
+  imports: [CommonModule, RouterModule, ModalComponent, EditProfileModalComponent],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
@@ -23,7 +23,7 @@ export class SidebarComponent {
     private auth: AuthService,
     private router: Router,
     private users: UsuariosService
-  ) {}
+  ) { }
 
   user: any = null;
   active: Item = 'configuracion';
@@ -37,6 +37,25 @@ export class SidebarComponent {
 
   editProfileOpen = false;
 
+  private toggleUsuarios = true;
+
+  usuariosPermisosOpen = false;
+  catalogosOpen = false;
+  empresaOpen = false;
+
+  toggleUsuariosPermisos() {
+    this.usuariosPermisosOpen = !this.usuariosPermisosOpen;
+    this.active = 'usuarios-permisos';
+  }
+  toggleCatalogos() {
+    this.catalogosOpen = !this.catalogosOpen;
+    this.active = 'catalogos';
+  }
+  toggleEmpresa() {
+    this.empresaOpen = !this.empresaOpen;
+    this.active = 'empresa';
+  }
+
   toggleSidebar() {
     this.open = !this.open;
     this.openChange.emit(this.open);
@@ -46,6 +65,9 @@ export class SidebarComponent {
     this.active = item;
     if (item !== 'reportes') this.reportesOpen = false;
     if (item !== 'configuracion') this.configOpen = false;
+    if (item !== 'usuarios-permisos') this.usuariosPermisosOpen = false;
+    if (item !== 'catalogos') this.catalogosOpen = false;
+    if (item !== 'empresa') this.empresaOpen = false;
   }
 
   toggleReportes() {
@@ -82,7 +104,7 @@ export class SidebarComponent {
 
   ngOnInit() {
     this.users.getMe().subscribe({
-      next: (data) => this.user = data,
+      next: (data) => { this.user = data, console.log('Usuario cargado:', data); },
       error: (err) => console.error('Error cargando usuario', err)
     });
   }
@@ -92,7 +114,7 @@ export class SidebarComponent {
 
   saveProfile(updated: any) {
     this.users.updateMe(updated).subscribe({
-      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; this.ngOnInit();},
+      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; this.ngOnInit(); },
       error: (err) => console.error('Error actualizando perfil', err)
     });
   }
