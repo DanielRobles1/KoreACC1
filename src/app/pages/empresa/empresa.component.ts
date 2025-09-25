@@ -11,5 +11,6 @@ import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
   styleUrl: './empresa.component.scss'
 })
 export class EmpresaComponent {
-
+sidebarOpen = true;
+  onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 }

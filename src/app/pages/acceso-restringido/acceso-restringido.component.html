@@ -1,42 +1,41 @@
-<section class="page">
 
-  <div class="card" role="region" aria-labelledby="restrictedTitle">
-     
-    <div class="icon-wrap" aria-hidden="true">
-      <!-- Candado en SVG, accesible y sin dependencias -->
-      <svg
-        class="icon-lock"
-        viewBox="0 0 24 24"
-        focusable="false"
-        aria-hidden="true"
-      >
-        <path
-          d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-8a2 2 0 00-2-2zm-6-2a3 3 0 016 0v2h-6V6zm7 12H6v-8h12v8z"
-        />
-        <circle cx="12" cy="14" r="1.75" />
-      </svg>
-    </div>
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <!-- Sidebar -->
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
 
-    <h1 id="restrictedTitle" class="title">Acceso restringido</h1>
+  <!-- Contenido principal -->
+  <main class="layout__content grid place-items-center overflow-auto bg-gray-100 p-6" role="main">
+    <!-- quita mt-8 para que no “empuje” hacia abajo -->
+    <section class="page max-w-4xl w-full mx-auto">
+      <div class="card p-6 shadow-md rounded-lg bg-white" role="region" aria-labelledby="restrictedTitle">
+        <div class="icon-wrap mb-4" aria-hidden="true">
+          <svg class="icon-lock w-12 h-12 text-blue-600" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <path d="M17 8h-1V6a4 4 0 10-8 0v2H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-8a2 2 0 00-2-2zm-6-2a3 3 0 016 0v2h-6V6zm7 12H6v-8h12v8z"/>
+            <circle cx="12" cy="14" r="1.75"/>
+          </svg>
+        </div>
 
-    <p class="message">
-      {{
-        reason ||
-          "No cuentas con permisos suficientes para acceder a esta sección."
-      }}
-    </p>
+        <h1 id="restrictedTitle" class="title text-2xl font-bold mb-2">Acceso restringido</h1>
 
-    <div class="actions">
-      <button class="btn btn-primary" (click)="goHome()">Ir al inicio</button>
-     
-    </div>
-  </div>
+        <p class="message mb-4 text-gray-600">
+          {{ reason || "No cuentas con permisos suficientes para acceder a esta sección." }}
+        </p>
 
-  <footer class="help">
-    <p>
-      Si crees que esto es un error, solicita acceso al administrador o verifica
-      tus
-      <strong>roles/permisos</strong>.
-    </p>
-  </footer>
-</section>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" (click)="goHome()">Ir al inicio</button>
+        </div>
+      </div>
+
+      <footer class="help mt-4 text-gray-500">
+        <p>
+          Si crees que esto es un error, solicita acceso al administrador o verifica
+          tus <strong>roles/permisos</strong>.
+        </p>
+      </footer>
+    </section>
+  </main>
+</div>

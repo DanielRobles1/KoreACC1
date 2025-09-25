@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
+import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
+
+
 
 @Component({
   selector: 'app-acceso-restringido',
@@ -10,6 +12,7 @@ import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
   templateUrl: './acceso-restringido.component.html',
   styleUrls: ['./acceso-restringido.component.scss']
 })
+
 export class AccesoRestringidoComponent {
   reason: string = '';
 
@@ -21,8 +24,12 @@ export class AccesoRestringidoComponent {
   goHome() {
     this.router.navigateByUrl('/empresa');
   }
-
+sidebarOpen = true;
+  onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
   goLogin() {
     this.router.navigateByUrl('/login');
   }
+
+
+
 }
