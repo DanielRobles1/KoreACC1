@@ -427,7 +427,8 @@ export class RolesypermisosComponent {
     'Usuarios': ['usuario', 'user'],
     'Pólizas': ['poliza', 'póliza'],
     'Reportes': ['reporte', 'report'],
-    'Roles': ['rol', 'rol']
+    'Roles': ['rol', 'rol'],
+    'Empresa': ['empresa', 'company', 'Empresa']
   };
 
   // Devuelve objeto {categoria: permisos[]}
@@ -436,7 +437,8 @@ export class RolesypermisosComponent {
       'Usuarios': [],
       'Pólizas': [],
       'Reportes': [],
-      'Roles': []
+      'Roles': [],
+      'Empresa': [],
     };
 
     for (const perm of this.availablePermissions) {

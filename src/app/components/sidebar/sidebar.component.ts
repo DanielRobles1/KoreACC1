@@ -104,7 +104,18 @@ tempUser: any = {};
 
   ngOnInit() {
     this.users.getMe().subscribe({
-      next: (data) => { this.user = data, console.log('Usuario cargado:', data); },
+      next: (data) => {
+        console.log('Usuario cargado:', data);
+        const [apellido_p, apellido_m = ''] = data.apellidos.split(' ');
+
+        this.user = {
+          ...data,
+          apellido_p,
+          apellido_m
+        };
+
+        console.log('Usuario descompuesto:', this.user);
+      },
       error: (err) => console.error('Error cargando usuario', err)
     });
   }

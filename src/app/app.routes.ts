@@ -41,7 +41,8 @@ export const routes: Routes = [
   {
     path: 'empresa',
     component: EmpresaComponent,
-    canActivate: [AuthGuard],// logueado 
+    canActivate: [AuthGuard, PermissionGuard],
+    data: { perms: ['consultar_empresa']}
 
   },
 
