@@ -24,7 +24,7 @@
         [data]="rows"
         [actions]="actions"
         [showSearch]="false"
-        [hidePrimary]="false"
+        [hidePrimary]="true"
 
         (edit)="onEdit($event)"
         (action)="onRowAction($event)">
@@ -33,7 +33,7 @@
       <!-- CRUD Períodos -->
       <app-crud-panel
                 [title]="'Períodos Contables'"
-        [tabs]="tabs"
+       
         [activeTabId]="activeTabId"
         (tabChange)="onTabChange($event)"
 
