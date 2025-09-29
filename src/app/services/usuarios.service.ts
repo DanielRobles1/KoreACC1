@@ -37,7 +37,7 @@ updateMe(data: any) {
 
 
 
-  // usuarios.service.ts
+
   updateUsuario(id: number, payload: Partial<Usuario>) {
     return this.http.put<{ message: string; usuario: Usuario }>(`${this.apiUrl}/${id}`, payload);
   }

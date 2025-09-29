@@ -7,7 +7,7 @@ export interface UserProfile {
   apellido_p: string; // paterno
   apellido_m: string; // materno
   correo: string;
-  // ...otros campos
+ 
 }
 
 @Component({

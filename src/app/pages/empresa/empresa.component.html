@@ -6,61 +6,167 @@
   </app-sidebar>
 
   <div class="content">
-    <app-crud-panel
-      [title]="title"
-      [tabs]="tabs"
-      (activeTabId)="activeTabId"
-      (tabChange)="onTabChange($event)"
-      [primaryActionLabel]="primaryActionLabel"
-      (primaryAction)="onPrimary()"
-      [disablePrimary]="!canCreate"
-      [columns]="columns"
-      [data]="rows"
-      [actions]="actions"
-      (action)="onRowAction($event)">
-    </app-crud-panel>
+    <div class="crud-wrapper">
+
+      <!-- CRUD Empresa -->
+      <app-crud-panel
+        *ngIf="activeTabId === 'datos'"
+        [title]="title"
+        [tabs]="tabs"
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+
+        [primaryActionLabel]="primaryActionLabel"
+        (primaryAction)="onPrimary()"
+        [disablePrimary]="!canEdit"
+
+        [columns]="columns"
+        [data]="rows"
+        [actions]="actions"
+        [showSearch]="false"
+        [hidePrimary]="false"
+
+        (edit)="onEdit($event)"
+        (action)="onRowAction($event)">
+      </app-crud-panel>
+
+      <!-- CRUD Períodos -->
+      <app-crud-panel
+                [title]="'Períodos Contables'"
+        [tabs]="tabs"
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+
+        [primaryActionLabel]="primaryActionLabel2"
+        (primaryAction)="onPrimaryPeriodo()"
+        [disablePrimary]="!canEdit"
+
+        [columns]="columns2"
+        [data]="periodos"
+        [actions]="actions2"
+        [showSearch]="false"
+        [hidePrimary]="false"
+
+        (action)="onPeriodoAction($event)">
+      </app-crud-panel>
+
+    </div>
   </div>
 </div>
 
-<app-toast-message
-  [open]="noPermsOpen"
-  [title]="noPermsTitle"
-  [message]="noPermsMessage"
-  type="warning"
-  position="top-right"
-  [autoCloseMs]="3500"
-  (closed)="closeNoPerms()"
-/>
+<!-- MODAL: Empresa -->
+<app-modal
+  [open]="editOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  [showClose]="showClose"
+  (closed)="closeModal()"
+  (canceled)="cancelModal()"
+  (confirmed)="confirmModal()">
+  <form #empresaForm="ngForm" style="display: grid; gap: 10px;">
+    <div>
+      <label class="field-label required">Razón social</label>
+      <input class="field-input" type="text" [(ngModel)]="formEmpresa.razon_social" name="razon_social" required />
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label class="field-label required">RFC</label>
+        <input class="field-input" type="text" [(ngModel)]="formEmpresa.rfc" name="rfc" required />
+      </div>
+      <div>
+        <label class="field-label">Teléfono</label>
+        <input class="field-input" type="text" [(ngModel)]="formEmpresa.telefono" name="telefono" />
+      </div>
+    </div>
+    <div>
+      <label class="field-label">Domicilio fiscal</label>
+      <input class="field-input" type="text" [(ngModel)]="formEmpresa.domicilio_fiscal" name="domicilio_fiscal" />
+    </div>
+    <div>
+      <label class="field-label">Correo de contacto</label>
+      <input class="field-input" type="email" [(ngModel)]="formEmpresa.correo_contacto" name="correo_contacto" />
+    </div>
+  </form>
+</app-modal>
 
-<!-- Modal Confirmación: ELIMINAR -->
+<!-- MODAL: Período -->
+<app-modal
+  [open]="modalPeriodoOpen"
+  [title]="modalPeriodoTitle"
+  [size]="'md'"
+  [showClose]="true"
+  (closed)="closePeriodoModal()"
+  (canceled)="cancelPeriodoModal()"
+  (confirmed)="confirmPeriodoModal()">
+  <form #periodoForm="ngForm" style="display: grid; gap: 10px;">
+    <div>
+      <label class="field-label required">Tipo de período</label>
+      <select
+        class="field-input"
+        [(ngModel)]="formPeriodo.tipo_periodo"
+        name="tipo_periodo"
+        required
+        (ngModelChange)="onTipoPeriodoChange($event)">
+        <option value="SEMANAL">SEMANAL</option>
+        <option value="MENSUAL">MENSUAL</option>
+        <option value="ANUAL">ANUAL</option>
+        <option value="PERSONALIZADO">PERSONALIZADO</option>
+      </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label class="field-label required">Fecha inicio</label>
+        <input
+          class="field-input"
+          type="date"
+          [(ngModel)]="formPeriodo.fecha_inicio"
+          name="fecha_inicio"
+          required
+          (ngModelChange)="onFechaInicioChange($event)"
+          [readonly]="formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+      </div>
+      <div>
+        <label class="field-label required">Fecha fin</label>
+        <input
+          class="field-input"
+          type="date"
+          [(ngModel)]="formPeriodo.fecha_fin"
+          name="fecha_fin"
+          required
+          [readonly]="formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+      </div>
+    </div>
+
+    <div>
+      <label class="field-label">Estado</label>
+      <select class="field-input" [(ngModel)]="formPeriodo.esta_abierto" name="esta_abierto">
+        <option [ngValue]="true">Abierto</option>
+        <option [ngValue]="false">Cerrado</option>
+      </select>
+    </div>
+  </form>
+</app-modal>
+
+<!-- MODAL: Confirmación genérico -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
-  size="sm"
+  [size]="'sm'"
+  [showClose]="true"
   (closed)="closeConfirm()"
   (canceled)="cancelConfirm()"
   (confirmed)="confirmProceed()">
-  <p class="mb-2">{{ confirmMessage }}</p>
+  <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- TOAST ÉXITO -->
-<app-toast-message
-  [open]="successOpen"
-  [title]="successTitle"
-  [message]="successMessage"
-  type="success"
-  position="top-right"
-  [autoCloseMs]="3000"
-  (closed)="closeSuccess()"
-/>
+<!-- Toasts inline -->
+<div *ngIf="successOpen" class="toast toast--success" (click)="successOpen=false"
+     style="position: fixed; right: 16px; bottom: 16px; z-index: 2000; background:#16a34a; color:#fff; padding:12px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2); cursor:pointer;">
+  <strong style="margin-right:8px;">{{ successTitle }}:</strong> {{ successMessage }}
+</div>
 
-<!-- TOAST ERROR (sin autocierre) -->
-<app-toast-message
-  [open]="errorOpen"
-  [title]="errorTitle"
-  [message]="errorMessage"
-  type="error"
-  position="top-right"
-  [autoCloseMs]="0"
-  (closed)="closeError()"
-/>
+<div *ngIf="errorOpen" class="toast toast--error" (click)="errorOpen=false"
+     style="position: fixed; right: 16px; bottom: 72px; z-index: 2000; background:#ef4444; color:#fff; padding:12px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2); cursor:pointer;">
+  <strong style="margin-right:8px;">{{ errorTitle }}:</strong> {{ errorMessage }}
+</div>

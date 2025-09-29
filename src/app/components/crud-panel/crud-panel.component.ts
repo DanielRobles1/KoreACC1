@@ -11,6 +11,7 @@ export type CrudTab = {
   icon?: string;
   iconAlt?: string;
   route?: string;
+  type?: 'text' | 'radio' | 'checkbox' | 'actions';
 };
 export type CrudColumn = { key: string; header: string; width?: string };
 export type CrudAction = { id: string; label?: string; tooltip?: string };
@@ -26,7 +27,18 @@ export class CrudPanelComponent {
   /** Header */
   @Input() title = '';
   @Input() disablePrimary = false;
+ @Input() hidePrimary = false;
 
+ // Emite la fila seleccionada cuando cambia el radio
+  @Output() selection = new EventEmitter<any>();
+
+  // guarda el id de la fila seleccionada (por simplicidad usamos 'id')
+  selectedRowId: any = null;
+
+  onRadioChange(row: any) {
+    this.selectedRowId = row.id;
+    this.selection.emit(row);
+  }
  route?: string; //
   /** Tabs (Usuarios / Roles y permisos / etc.) */
   @Input() tabs: CrudTab[] = [];
