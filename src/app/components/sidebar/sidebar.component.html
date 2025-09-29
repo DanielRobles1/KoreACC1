@@ -179,11 +179,11 @@
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="catalogosOpen">
           <li><a [routerLink]="['/catalogos/cuentas']" class="subbtn flex items-center" (click)="setActive('catalogos')">
-            <img src="assets/svgs/cuentas.svg" class="icon-sm" alt="Cuentas">
+            <img src="assets/svgs/catalog-cuentas.svg" class="icon-sm" alt="Cuentas">
             <span class="ml-2">Cuentas</span>
           </a></li>
           <li><a [routerLink]="['/catalogos/cc']" class="subbtn flex items-center" (click)="setActive('catalogos')">
-            <img src="assets/svgs/cc.svg" class="icon-sm" alt="Centros de costo">
+            <img src="assets/svgs/catalogue-catalog.svg" class="icon-sm" alt="Centros de costo">
             <span class="ml-2">Centros de costo</span>
           </a></li>
         </ul>
@@ -208,12 +208,12 @@
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="empresaOpen">
           <li><a [routerLink]="['/empresa']" class="subbtn flex items-center" (click)="setActive('empresa')">
-            <img src="assets/svgs/empresa.svg" class="icon-sm" alt="Empresa">
+            <img src="assets/svgs/company.svg" class="icon-sm" alt="Empresa">
             <span class="ml-2">Empresa</span>
           </a></li>
-          <li><a [routerLink]="['/periodos']" class="subbtn flex items-center" (click)="setActive('empresa')">
-            <img src="assets/svgs/periodos.svg" class="icon-sm" alt="Periodos">
-            <span class="ml-2">Periodos</span>
+          <li><a [routerLink]="['/impuestos']" class="subbtn flex items-center" (click)="setActive('empresa')">
+            <img src="assets/svgs/taxes.svg" class="icon-sm" alt="Periodos">
+            <span class="ml-2">Impuestos</span>
           </a></li>
         </ul>
       </li>

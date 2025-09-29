@@ -43,7 +43,7 @@ export class EmpresaComponent implements OnInit {
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
     { id: 'datos',    label: 'Datos de la Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
-    { id: 'periodos', label: 'Períodos Contables',  icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresa/periodos' },
+    { id: 'periodos', label: 'Períodos Contables',  icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 

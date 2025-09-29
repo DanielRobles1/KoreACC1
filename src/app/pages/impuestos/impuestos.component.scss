@@ -1,0 +1,48 @@
+/* usuarios.component.scss (o global) */
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr; /* la 1a col toma el ancho del sidebar */
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* sidebar ocupa el 100% en alto y su ancho lo manda la var */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;          /* importante para que no “asome” contenido */
+}
+
+/* cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+/* content debe permitir encogerse correctamente */
+.content {
+  min-width: 0;              /* evita overflow horizontal de grids */
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Móvil: el sidebar se vuelve overlay deslizante */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr; /* sólo una columna */
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0; /* top:0; right:auto; bottom:0; left:0 */
+    height: 100vh;
+    width: 280px;      /* ancho fijo en móvil */
+    transform: translateX(0);
+    transition: transform .3s ease;
+    z-index: 50;
+  }
+  .layout.is-collapsed .sidebar {
+    transform: translateX(-100%);
+  }
+}

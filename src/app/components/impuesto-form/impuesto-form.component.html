@@ -1,0 +1,65 @@
+<!-- impuesto-form.component.html -->
+<form [formGroup]="form" (ngSubmit)="submit()" class="impuesto-form">
+  <div class="grid">
+    <label>
+      <span>Nombre*</span>
+      <input type="text" placeholder="Nombre de impuesto" formControlName="nombre" />
+      <small class="err" *ngIf="f.nombre.touched && f.nombre.invalid">Campo requerido</small>
+    </label>
+
+    <label>
+        <span>Tipo*</span>
+        <select formControlName="tipo">
+            <option value="" disabled>— Selecciona tipo —</option>
+            <option *ngFor="let t of tipoOpts" [value]="t">{{ t }}</option>
+        </select>
+        <small class="err" *ngIf="f.tipo.touched && f.tipo.invalid">Campo requerido</small>
+    </label>
+
+    <label>
+        <span>Modo*</span>
+        <select formControlName="modo">
+            <option value="" disabled>— Selecciona modo —</option>
+            <option *ngFor="let m of modoOpts" [value]="m">{{ m }}</option>
+        </select>
+        <small class="err" *ngIf="f.modo.touched && f.modo.invalid">Campo requerido</small>
+    </label>
+
+    <label>
+      <span>Tasa*</span>
+      <input type="number" step="any" placeholder="Tasa" formControlName="tasa" />
+      <small class="err" *ngIf="f.tasa.touched && f.tasa.invalid">
+        {{ f.tasa.errors?.['required'] ? 'Campo requerido' : '' }}
+        {{ f.tasa.errors?.['min'] ? 'No puede ser negativa' : '' }}
+        {{ f.tasa.errors?.['max'] ? 'No puede ser mayor a 100': '' }}
+      </small>
+    </label>
+
+    <label>
+        <span>Aplica en*</span>
+        <select formControlName="aplica_en">
+            <option value="" disabled>— Selecciona —</option>
+            <option *ngFor="let a of aplicaEnOpts" [value]="a">{{ a }}</option>
+        </select>
+        <small class="err" *ngIf="f.aplica_en.touched && f.aplica_en.invalid">Campo requerido</small>
+    </label>
+
+    <label class="checkbox">
+      <span>Estándar*</span>
+      <input type="checkbox" formControlName="es_estandar" />
+      <small class="err" *ngIf="f.es_estandar.touched && f.es_estandar.invalid">Debe estar activado</small>
+    </label>
+
+    <label>
+      <span>Vigencia inicio*</span>
+      <input type="date" formControlName="vigencia_inicio" />
+      <small class="err" *ngIf="f.vigencia_inicio.touched && f.vigencia_inicio.invalid">Campo requerido</small>
+    </label>
+
+    <label>
+      <span>Cuenta relacionada*</span>
+      <input type="text" placeholder="Cuenta contable" formControlName="cuenta_relacionada" />
+      <small class="err" *ngIf="f.cuenta_relacionada.touched && f.cuenta_relacionada.invalid">Campo requerido</small>
+    </label>
+  </div>
+</form>

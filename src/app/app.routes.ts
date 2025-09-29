@@ -12,6 +12,7 @@ import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { PermissionGuard } from './guards/permission.guard';
 import { EmpresaComponent } from './pages/empresa/empresa.component';
+import { ImpuestosComponent } from './pages/impuestos/impuestos.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -43,7 +44,12 @@ export const routes: Routes = [
     component: EmpresaComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: { perms: ['consultar_empresa']}
-
+  },
+  {
+    path: 'impuestos',
+    component: ImpuestosComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: { perms: ['consultar_empresa']}
   },
 
   { path: '**', redirectTo: 'login' }
