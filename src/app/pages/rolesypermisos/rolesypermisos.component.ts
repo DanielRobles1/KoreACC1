@@ -52,9 +52,6 @@ export class RolesypermisosComponent {
     private auth: AuthService
   ) {}
 
-  // =======================
-  // UI CONFIG
-  // =======================
   title = 'Roles y permisos';
   tabs: CrudTab[] = [
     { id: 'usuarios', label: 'Usuarios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Usuarios', route: '/usuarios' },
@@ -77,7 +74,7 @@ export class RolesypermisosComponent {
     { id: 'permissions', label: 'Permisos' },
   ];
 
-  // ==== TOASTS GENÉRICOS ====
+  
   successOpen = false;
   successTitle = 'Éxito';
   successMessage = 'Operación realizada correctamente.';
@@ -122,7 +119,7 @@ export class RolesypermisosComponent {
   }
   closeNoPerms() { this.noPermsOpen = false; }
 
-  // ===== Modales de CRUD =====
+  // Modales de CRUD 
   modalOpen = false;
   modalTitle = '';
   modalSize: 'sm' | 'md' | 'lg' = 'md';
@@ -138,13 +135,13 @@ export class RolesypermisosComponent {
   saveConfirmMessage = '';
   private pendingSaveRole: Partial<UiRole> | null = null;
 
-  // ===== Permisos de un rol =====
+  //Permisos de un rol 
   permOpen = false;
   permTitle = 'Editar permisos';
   permRole: UiRole | null = null;
   permSelections: string[] = []; // array temporal con los permisos seleccionados
 
-  // ===== Catálogo de permisos (disponibles) =====
+  // Catálogo de permisos (disponibles) 
   availablePermissions: string[] = [];
 
   sidebarOpen = true;
@@ -224,7 +221,7 @@ export class RolesypermisosComponent {
   }
 
 loadPermisosDisponibles() {
-  this.rolesSvc.getPermisosAll(/* pageSize opcional: 500 */).subscribe({
+  this.rolesSvc.getPermisosAll().subscribe({
     next: (perms: string[]) => {
       this.availablePermissions = (perms ?? []).filter(Boolean);
     },
@@ -232,9 +229,7 @@ loadPermisosDisponibles() {
   });
 }
 
-  // =======================
-  // HANDLERS
-  // =======================
+ 
   onTabChange(tabId: string) {
     this.activeTabId = tabId;
     const selected = this.tabs.find(t => t.id === tabId);
@@ -422,7 +417,7 @@ loadPermisosDisponibles() {
     this.searchTerm = term;
   }
 
-  // ====== AGRUPACIÓN DE PERMISOS (CORREGIDA) ======
+  // AGRUPACIÓN DE PERMISOS (CORREGIDA)
   private permissionGroupsMap: Record<string, string[]> = {
     'Usuarios': ['usuario', 'user'],
     'Pólizas':  ['poliza', 'póliza'],
@@ -439,7 +434,7 @@ loadPermisosDisponibles() {
       'Reportes': [],
       'Roles':    [],
       'Empresa':  [],
-      'Otros':    [],   // 👈 inicializado para evitar 'push' sobre undefined
+      'Otros':    [],   
     };
 
     for (const raw of this.availablePermissions ?? []) {
@@ -460,7 +455,7 @@ loadPermisosDisponibles() {
     return groups;
   }
 
-  // === Buscador de permisos (en modal) ===
+  // Buscador de permisos (en modal) 
   permissionSearch = '';
 
   filterPerms(perms: string[] = []): string[] {
