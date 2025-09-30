@@ -71,7 +71,8 @@
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label class="field-label required">RFC</label>
-        <input class="field-input" type="text" [(ngModel)]="formEmpresa.rfc" name="rfc" required />
+        <input class="field-input" type="text" [(ngModel)]="formEmpresa.rfc" name="rfc" required 
+        pattern="^[A-ZÑ&]{3}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z0-9]{2}[0-9A]$|^[A-ZÑ&]{4}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z0-9]{2}[0-9A]$" />
       </div>
       <div>
         <label class="field-label">Teléfono</label>
@@ -160,13 +161,13 @@
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- Toasts inline -->
-<div *ngIf="successOpen" class="toast toast--success" (click)="successOpen=false"
-     style="position: fixed; right: 16px; bottom: 16px; z-index: 2000; background:#16a34a; color:#fff; padding:12px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2); cursor:pointer;">
-  <strong style="margin-right:8px;">{{ successTitle }}:</strong> {{ successMessage }}
-</div>
-
-<div *ngIf="errorOpen" class="toast toast--error" (click)="errorOpen=false"
-     style="position: fixed; right: 16px; bottom: 72px; z-index: 2000; background:#ef4444; color:#fff; padding:12px 14px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.2); cursor:pointer;">
-  <strong style="margin-right:8px;">{{ errorTitle }}:</strong> {{ errorMessage }}
-</div>
+<!-- TOAST ÚNICO (servicio) -->
+<app-toast-message
+  [open]="vm?.open ?? false"
+  [title]="vm?.title ?? ''"
+  [message]="vm?.message ?? ''"
+  [type]="vm?.type ?? 'info'"
+  position="top-right"
+  [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+  (closed)="toast.close()"
+/>

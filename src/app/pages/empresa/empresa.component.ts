@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from 'src/app/components/crud-panel/crud-panel.component';
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
+import { ToastService, ToastState } from '@app/services/toast-service.service';
+import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 
 import { EmpresaServiceTsService } from '@app/services/empresa.service.ts.service';
 import { AuthService } from '@app/services/auth.service';
@@ -25,7 +27,7 @@ type ConfirmKind = 'empresa-save' | 'periodo-save' | 'periodo-delete' | null;
 @Component({
   selector: 'app-empresa',
   standalone: true,
-  imports: [CommonModule, FormsModule, CrudPanelComponent, SidebarComponent, ModalComponent],
+  imports: [CommonModule, FormsModule, CrudPanelComponent, SidebarComponent, ModalComponent, ToastMessageComponent],
   templateUrl: './empresa.component.html',
   styleUrls: ['./empresa.component.scss'],
 })
@@ -33,7 +35,8 @@ export class EmpresaComponent implements OnInit {
   constructor(
     private empresaService: EmpresaServiceTsService,
     private periodosService: PeriodoContableService,
-    private auth: AuthService
+    private auth: AuthService,
+    public toast: ToastService
   ) {}
 
   
@@ -42,8 +45,8 @@ export class EmpresaComponent implements OnInit {
   
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
-    { id: 'datos',    label: 'Datos de la Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
-    { id: 'periodos', label: 'Períodos Contables',  icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+    { id: 'datos',    label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
+    { id: 'periodos', label: 'Impuestos',  icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 
@@ -64,6 +67,8 @@ export class EmpresaComponent implements OnInit {
   canEdit = false;
   canDelete = false;
 
+  // Lógica nuevo modal
+  vm!: ToastState;
   // Modal empresa (edición)
   editOpen = false;
   modalTitle = 'Editar Empresa';
@@ -111,18 +116,36 @@ export class EmpresaComponent implements OnInit {
   private confirmKind: ConfirmKind = null;
   private confirmPayload: any = null;
 
-  
-  successOpen = false;
   successTitle = 'Éxito';
   successMessage = '';
-  errorOpen = false;
   errorTitle = 'Error';
   errorMessage = '';
 
+  private extractErrorMessage(err: any): string | null {
+    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  }
+
   ngOnInit() {
+    this.toast.state$.subscribe(s => this.vm = s);
     this.canEdit   = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
     this.loadDataEmpresa();
+    this.actions = [
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Empresa' }] : []),
+    ];
+    this.actions2 = [
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []),
+    ];
+  }
+
+  openSuccess(message: string) {
+    this.toast.success(message, 'Éxito', 3000);
+  }
+  openError(message: string, err?: unknown) {
+    if (err) console.error('[EmpresaComponent] Error:', err);
+    this.toast.error(message, 'Error', 0); // sin autocierre
   }
 
   //EMPRESA 
@@ -133,7 +156,7 @@ export class EmpresaComponent implements OnInit {
         this.rows = one ? [one as UiEmpresa] : [];
         if (this.rows[0]) this.loadPeriodos();
       },
-      error: (err) => this.openError('Error al cargar los datos de la empresa', err),
+      error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
     });
   }
 
@@ -381,17 +404,4 @@ export class EmpresaComponent implements OnInit {
   }
 
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
-
-  
-  openSuccess(message: string) {
-    this.successMessage = message;
-    this.successOpen = true;
-    setTimeout(() => this.successOpen = false, 3000);
-  }
-  openError(message: string, err?: unknown) {
-    this.errorMessage = message;
-    this.errorOpen = true;
-    if (err) console.error('[EmpresaComponent] Error:', err);
-    setTimeout(() => this.errorOpen = false, 4000);
-  }
 }

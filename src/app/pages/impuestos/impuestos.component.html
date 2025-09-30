@@ -11,13 +11,14 @@
             [tabs]="tabs"
             [activeTabId]="activeTabId"
             (tabChange)="onTabChange($event)"
-            [primaryActionLabel]="primaryActioLabel"
+            [primaryActionLabel]="primaryActionLabel"
             (primaryAction)="onPrimary()"
             [disablePrimary]="!canCreate"
             [columns]="columns"
-            [data]="rows"
+            [data]="filteredRows"
             [actions]="actions"
-            (action)="onRowAction($event)">
+            (action)="onRowAction($event)"
+            (search)="onSearch($event)">
         </app-crud-panel>
     </div>
 </div>
@@ -28,24 +29,14 @@
     [size]="modalSize"
     (closed)="closeModal()"
     (canceled)="cancelModal()"
-    (confirmed)="rolFormRef.submit()">
+    (confirmed)="impuestoFormRef.submit()">
     <app-impuesto-form
-        #rolFormRef
+        #impuestoFormRef
         [value]="editingImpuesto"
         (submitted)="upsertImpuesto($event)"
         (candeled)="cancelModal()">
     </app-impuesto-form>
 </app-modal>
-
-<app-toast-message
-  [open]="noPermsOpen"
-  [title]="noPermsTitle"
-  [message]="noPermsMessage"
-  type="warning"
-  position="top-right"
-  [autoCloseMs]="3500"
-  (closed)="closeNoPerms()"
-/>
 
 <!-- MODAL DE CONFIRMACIÓN -->
 <app-modal
@@ -59,24 +50,13 @@
   <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- TOAST ÉXITO -->
+<!-- instancia única del toast -->
 <app-toast-message
-  [open]="successOpen"
-  [title]="successTitle"
-  [message]="successMessage"
-  type="success"
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
   position="top-right"
-  [autoCloseMs]="3000"
-  (closed)="closeSuccess()"
-/>
-
-<!-- TOAST ERROR (sin autocierre) -->
-<app-toast-message
-  [open]="errorOpen"
-  [title]="errorTitle"
-  [message]="errorMessage"
-  type="error"
-  position="top-right"
-  [autoCloseMs]="0"
-  (closed)="closeError()"
+  [autoCloseMs]="vm.autoCloseMs"
+  (closed)="toast.close()"
 />

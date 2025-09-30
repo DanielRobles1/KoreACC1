@@ -1,58 +1,64 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from '@app/components/crud-panel/crud-panel.component';
-import { ImpuestoServiceTsService } from '@app/services/impuesto.service.ts.service';
-import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
+import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ImpuestoFormComponent, Impuestos } from '@app/components/impuesto-form/impuesto-form.component';
+import { ImpuestoServiceTsService } from '@app/services/impuesto.service.ts.service';
 import { AuthService } from '@app/services/auth.service';
-
+import { ToastService, ToastState } from '@app/services/toast-service.service';
 
 @Component({
   selector: 'app-impuestos',
   standalone: true,
   imports: [SidebarComponent, CrudPanelComponent, ModalComponent, ToastMessageComponent, ImpuestoFormComponent],
   templateUrl: './impuestos.component.html',
-  styleUrl: './impuestos.component.scss'
+  styleUrls: ['./impuestos.component.scss']
 })
 export class ImpuestosComponent {
-
   constructor(
     private impuestoService: ImpuestoServiceTsService,
     private router: Router,
-    private http: HttpClient,
     private auth: AuthService,
-  ) { }
+    public toast: ToastService
+  ) {}
 
-  // FORM MODAL
-  confirmOpen = false;
-  confirmTitle = '';
-  confirmMessage = '';
-  impuestoToDelete: Impuestos | null = null;
-  private pendingAction = 'save';
-  private pendingImpuesto: Impuestos | null = null;
-  closeModal() { this.modalOpen = false; }
-  cancelModal() { this.modalOpen = false; }
+  // ==== TOAST VM (servicio centralizado) ====
+  vm!: ToastState;
 
-  canCreate = false;
-  canEdit = false;
-  canDelete = false;
-
+  // ==== MODAL PRINCIPAL ====
   modalOpen = false;
   modalTitle = 'Crear nuevo impuesto';
   modalSize: 'sm' | 'md' | 'lg' = 'md';
   editingImpuesto: Impuestos | null = null;
 
-  // CONFIGURACIÓN DEL CRUD
+  closeModal() { this.modalOpen = false; }
+  cancelModal() { this.modalOpen = false; }
+
+  // ==== CONFIRMACIÓN ====
+  confirmOpen = false;
+  confirmTitle = '';
+  confirmMessage = '';
+  impuestoToDelete: Impuestos | null = null;
+  private pendingAction: 'save' | 'delete' = 'save';
+  private pendingImpuesto: Impuestos | null = null;
+
+  // ==== PERMISOS ====
+  canCreate = false;
+  canEdit = false;
+  canDelete = false;
+
+  // ==== CRUD CONFIG ====
   title = 'Impuestos';
   tabs: CrudTab[] = [
-    { id: 'empresa', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Usuarios', route: '/empresa' },
-    { id: 'impuestos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Roles y permisos', route: '/impuestos' },
+    { id: 'empresa',   label: 'Empresa',   icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',   route: '/empresa' },
+    { id: 'impuestos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Impuestos', route: '/impuestos' },
   ];
-  activeTabId = "impuestos";
-  primaryActioLabel = 'Nuevo impuesto';
+  activeTabId = 'impuestos';
+
+  primaryActionLabel = 'Nuevo impuesto';
+
   columns: CrudColumn[] = [
     { key: 'id_impuesto', header: 'ID', width: '5%' },
     { key: 'nombre', header: 'Nombre' },
@@ -64,58 +70,66 @@ export class ImpuestosComponent {
     { key: 'vigencia_inicio', header: 'Vigencia inicio', width: '15%' },
     { key: 'cuenta_relacionada', header: 'Cuenta relacionada' },
   ];
+
   rows: Impuestos[] = [];
+
   actions: CrudAction[] = [
-    { id: 'edit', label: 'Editar' },
-    { id: 'delete', label: 'Eliminar' },
+    { id: 'edit',   label: 'Editar',   tooltip: 'Editar impuesto' },
+    { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar impuesto' },
   ];
 
-  // MODAL "SIN PERMISOS"
-  noPermsOpen = false;
-  noPermsTitle = 'Acción no permitida';
-  noPermsMessage = 'No tienes permisos para realizar esta acción.';
-  private openNoPermisosModal(msg?: string) {
-    this.noPermsMessage = msg ?? 'No tienes permisos para realizar esta acción.';
-    this.noPermsOpen = true;
+  // ==== BÚSQUEDA ====
+  private norm = (v: unknown) =>
+    (v ?? '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  searchTerm = '';
+
+  get filteredRows(): Impuestos[] {
+    if (!this.searchTerm) return this.rows;
+    const term = this.norm(this.searchTerm);
+
+    return this.rows.filter(r => {
+      const nombre = this.norm(r.nombre);
+      const tipo = this.norm(r.tipo);
+      const modo = this.norm(r.modo);
+      const aplica = this.norm(r.aplica_en);
+      const tasa = this.norm(r.tasa);
+      const cuenta = this.norm(r.cuenta_relacionada);
+
+      return (
+        nombre.includes(term) ||
+        tipo.includes(term) ||
+        modo.includes(term) ||
+        aplica.includes(term) ||
+        tasa.includes(term) ||
+        cuenta.includes(term)
+      );
+    });
   }
-  closeNoPerms() { this.noPermsOpen = false; }
 
-  // ==== TOASTS GENÉRICOS ====
-  successOpen = false;
-  successTitle = 'Éxito';
-  successMessage = 'Operación realizada correctamente.';
-
-  errorOpen = false;
-  errorTitle = 'Error';
-  errorMessage = 'Ocurrió un error inesperado.';
-
-  showSuccess(message: string, title = 'Éxito') {
-    this.successTitle = title;
-    this.successMessage = message;
-    this.successOpen = true;
-  }
-  closeSuccess() { this.successOpen = false; }
-
-  showError(err: any, fallback = 'Ocurrió un error al procesar la solicitud.') {
-    const msg = this.extractErrorMessage(err) ?? fallback;
-    this.errorTitle = 'Error';
-    this.errorMessage = msg;
-    this.errorOpen = true;
-  }
-  closeError() { this.errorOpen = false; }
-
-  private extractErrorMessage(err: any): string | null {
-    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  onSearch(term: string) {
+    this.searchTerm = term;
   }
 
   ngOnInit() {
+    this.toast.state$.subscribe(s => (this.vm = s));
     this.cargaImpuestos();
+
+    // Mantener permisos de impuestos
     this.canCreate = this.auth.hasPermission('crear_empresa');
-    this.canEdit = this.auth.hasPermission('editar_empresa');
+    this.canEdit   = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
+
+    // Ajustar acciones según permisos (con label + tooltip)
     this.actions = [
-      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Impuesto' }] : []),
-      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Impuesto' }] : []),
+      ...(this.canEdit   ? [{ id: 'edit',   label: 'Editar',   tooltip: 'Editar impuesto' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', label: 'Eliminar', tooltip: 'Eliminar impuesto' }] : []),
     ];
   }
 
@@ -125,15 +139,15 @@ export class ImpuestosComponent {
         this.rows = data;
       },
       error: (err) => {
-        this.showError(err, 'No se pudieron cargar los impuestos.');
+        this.toast.error(this.extractErrorMessage(err) ?? 'No se pudieron cargar los impuestos.', 'Error', 0);
       }
-    })
+    });
   }
 
-  // Nuevo impuesto
+  // ==== PRIMARIA (Crear) ====
   onPrimary() {
     if (!this.canCreate) {
-      this.openNoPermisosModal('No tienes permisos para crear roles.');
+      this.toast.warning('No tienes permisos para crear impuestos.', 'Acción no permitida');
       return;
     }
     this.modalTitle = 'Crear nuevo impuesto';
@@ -141,10 +155,11 @@ export class ImpuestosComponent {
     this.modalOpen = true;
   }
 
-  onRowAction(evt: { action: string, row: Impuestos }) {
+  // ==== ACCIONES POR FILA ====
+  onRowAction(evt: { action: string; row: Impuestos }) {
     if (evt.action === 'edit') {
       if (!this.canEdit) {
-        this.openNoPermisosModal('No tienes permisos para editar impuestos.');
+        this.toast.warning('No tienes permisos para editar impuestos.', 'Acción no permitida');
         return;
       }
       this.modalTitle = `Editar impuesto: ${evt.row.nombre}`;
@@ -155,20 +170,18 @@ export class ImpuestosComponent {
 
     if (evt.action === 'delete') {
       if (!this.canDelete) {
-        this.openNoPermisosModal('No tienes permisos para eliminar los impuestos registrados.');
+        this.toast.warning('No tienes permisos para eliminar los impuestos registrados.', 'Acción no permitida');
         return;
       }
-      const toDel = this.rows.find(r => r.id_impuesto === evt.row.id_impuesto);
-      this.impuestoToDelete = toDel ?? null;
+      this.impuestoToDelete = evt.row;
       this.pendingAction = 'delete';
-      if (toDel) {
-        this.confirmTitle = 'Confirmar eliminación';
-        this.confirmMessage = `¿Estás seguro de que deseas eliminar el impuesto "${toDel.nombre}"? Esta acción no se puede deshacer.`;
-        this.confirmOpen = true;
-      }
+      this.confirmTitle = 'Confirmar eliminación';
+      this.confirmMessage = `¿Estás seguro de que deseas eliminar el impuesto "${evt.row.nombre}"? Esta acción no se puede deshacer.`;
+      this.confirmOpen = true;
     }
   }
 
+  // ==== UPSERT ====
   upsertImpuesto(impuesto: Impuestos) {
     this.pendingAction = 'save';
     this.pendingImpuesto = impuesto;
@@ -182,28 +195,26 @@ export class ImpuestosComponent {
     this.confirmOpen = true;
   }
 
-  // ===== CONFIRM MODAL =====
+  // ==== CONFIRM MODAL ====
   closeConfirm() { this.confirmOpen = false; }
   cancelConfirm() { this.confirmOpen = false; }
+
   confirmProceed() {
     if (this.pendingAction === 'delete' && this.impuestoToDelete) {
       this.impuestoService.eliminarImpuesto(this.impuestoToDelete.id_impuesto!)
         .subscribe({
           next: () => {
-            // Actualizar lista
-            this.rows = this.rows.filter(r => r.id_impuesto !== this.impuestoToDelete?.id_impuesto);
-
-            this.showSuccess(`El impuesto "${this.impuestoToDelete?.nombre}" fue eliminado correctamente.`);
+            this.rows = this.rows.filter(r => r.id_impuesto !== this.impuestoToDelete!.id_impuesto);
+            this.toast.success(`El impuesto "${this.impuestoToDelete!.nombre}" fue eliminado correctamente.`);
             this.impuestoToDelete = null;
             this.confirmOpen = false;
           },
           error: (err) => {
-            this.showError(err, `No se pudo eliminar el impuesto "${this.impuestoToDelete?.nombre}".`);
+            this.toast.error(this.extractErrorMessage(err) ?? `No se pudo eliminar el impuesto "${this.impuestoToDelete!.nombre}".`);
             this.confirmOpen = false;
           }
         });
-    }
-    else if (this.pendingAction === 'save' && this.pendingImpuesto) {
+    } else if (this.pendingAction === 'save' && this.pendingImpuesto) {
       const esEdicion = !!this.editingImpuesto?.id_impuesto;
 
       const request$ = esEdicion
@@ -213,30 +224,27 @@ export class ImpuestosComponent {
       request$.subscribe({
         next: (res) => {
           if (esEdicion) {
-            // Reemplazar en la lista
-            this.rows = this.rows.map(r =>
-              r.id_impuesto === res.id_impuesto ? res : r
-            );
-            this.showSuccess(`El impuesto "${res.nombre}" fue actualizado correctamente.`);
+            this.rows = this.rows.map(r => (r.id_impuesto === res.id_impuesto ? res : r));
+            this.toast.success(`El impuesto "${res.nombre}" fue actualizado correctamente.`);
           } else {
-            // Agregar a la lista
             this.rows = [...this.rows, res];
-            this.showSuccess(`El impuesto "${res.nombre}" fue creado correctamente.`);
+            this.toast.success(`El impuesto "${res.nombre}" fue creado correctamente.`);
           }
           this.modalOpen = false;
           this.confirmOpen = false;
         },
         error: (err) => {
-          this.showError(err, esEdicion
+          const fallback = esEdicion
             ? `No se pudo actualizar el impuesto "${this.pendingImpuesto?.nombre}".`
-            : `No se pudo crear el impuesto "${this.pendingImpuesto?.nombre}".`
-          );
+            : `No se pudo crear el impuesto "${this.pendingImpuesto?.nombre}".`;
+          this.toast.error(this.extractErrorMessage(err) ?? fallback);
           this.confirmOpen = false;
         }
       });
     }
   }
 
+  // ==== NAV TABS / SIDEBAR ====
   onTabChange(tabId: string) {
     this.activeTabId = tabId;
     const selected = this.tabs.find(t => t.id === tabId);
@@ -245,4 +253,9 @@ export class ImpuestosComponent {
 
   sidebarOpen = true;
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
+
+  // ==== UTIL ====
+  private extractErrorMessage(err: any): string | null {
+    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  }
 }
