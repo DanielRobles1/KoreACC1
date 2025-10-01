@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -39,18 +39,18 @@ export class EmpresaComponent implements OnInit {
     public toast: ToastService
   ) {}
 
-  
+  // ===== Layout =====
   sidebarOpen = true;
 
-  
+  // ===== Tabs =====
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
-    { id: 'datos',    label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
-    { id: 'periodos', label: 'Impuestos',  icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+    { id: 'datos',    label: 'Empresa',   icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
+    { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 
-  
+  // ===== Empresa =====
   primaryActionLabel = 'Editar datos';
   columns: CrudColumn[] = [
     { key: 'id', header: '#', width: '64px' },
@@ -67,9 +67,10 @@ export class EmpresaComponent implements OnInit {
   canEdit = false;
   canDelete = false;
 
-  // Lógica nuevo modal
+  // Toast (estado)
   vm!: ToastState;
-  // Modal empresa (edición)
+
+  // Modal empresa
   editOpen = false;
   modalTitle = 'Editar Empresa';
   modalSize: 'sm' | 'md' | 'lg' | 'xl' = 'md';
@@ -83,7 +84,7 @@ export class EmpresaComponent implements OnInit {
     correo_contacto: '',
   };
 
-  // peridodo
+  // ===== Períodos =====
   primaryActionLabel2 = 'Nuevo período';
   columns2: CrudColumn[] = [
     { key: 'id_periodo',   header: '#', width: '72px' },
@@ -98,7 +99,7 @@ export class EmpresaComponent implements OnInit {
     { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
   ];
 
-  // Modal período (crear/editar)
+  // Modal período
   modalPeriodoOpen = false;
   modalPeriodoTitle = 'Crear período';
   formPeriodo: Partial<PeriodoContableDto> = {
@@ -109,35 +110,105 @@ export class EmpresaComponent implements OnInit {
   };
   editPeriodoId: number | null = null;
 
-  // Modal de confirmación genérico
+  // Modal confirm genérico
   confirmOpen = false;
   confirmTitle = 'Confirmar acción';
   confirmMessage = '';
   private confirmKind: ConfirmKind = null;
   private confirmPayload: any = null;
 
-  successTitle = 'Éxito';
-  successMessage = '';
-  errorTitle = 'Error';
-  errorMessage = '';
+  // ===== Fechas/validación =====
+  minDate: string = '';
 
-  private extractErrorMessage(err: any): string | null {
-    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  // ===== Utils de fechas (local-safe) =====
+  private pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
+  private toISO(d: Date) {
+    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+  }
+  private todayLocal(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  private parseISODateLocal(iso: string): Date {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, (m ?? 1) - 1, d ?? 1);
+  }
+  private isPast(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const d = this.parseISODateLocal(dateStr);
+    return d < this.todayLocal();
   }
 
+  private startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+  private endOfMonth(d: Date)   { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+  private startOfYear(d: Date)  { return new Date(d.getFullYear(), 0, 1); }
+  private endOfYear(d: Date)    { return new Date(d.getFullYear(), 12, 0); }
+  private addDays(d: Date, days: number)   { const r = new Date(d); r.setDate(r.getDate() + days); return r; }
+
+  // Semana Lunes-Domingo
+  private startOfWeek(d: Date) {
+    const wd = d.getDay();                 // 0=Dom, 1=Lun,...6=Sáb
+    const diff = (wd === 0 ? -6 : 1 - wd); // llevar a lunes
+    const res = new Date(d);
+    res.setDate(d.getDate() + diff);
+    return new Date(res.getFullYear(), res.getMonth(), res.getDate());
+  }
+
+  // ==== Período COMPLETO que contiene la fecha de referencia ====
+  private computeCurrentPeriod(
+    type: PeriodoTipo,
+    ref?: Date
+  ): { start: Date; end: Date } | null {
+    if (type === 'PERSONALIZADO') return null;
+
+    const base = ref ?? this.todayLocal();
+    let start: Date;
+    let end: Date;
+
+    switch (type) {
+      case 'SEMANAL':
+        start = this.startOfWeek(base);
+        end   = this.addDays(start, 6);
+        break;
+      case 'MENSUAL':
+        start = this.startOfMonth(base);
+        end   = this.endOfMonth(base);
+        break;
+      case 'ANUAL':
+        start = this.startOfYear(base);
+        end   = this.endOfYear(base);
+        break;
+    }
+    return { start, end };
+  }
+
+  /** Establece fechas según el tipo, usando el período COMPLETO actual
+   * (el que contiene la fecha de referencia; por defecto, HOY). */
+  private setDatesByType(type: PeriodoTipo, referenceDate?: Date) {
+    if (type === 'PERSONALIZADO') return;
+    const range = this.computeCurrentPeriod(type, referenceDate ?? this.todayLocal());
+    if (!range) return;
+    this.formPeriodo.fecha_inicio = this.toISO(range.start);
+    this.formPeriodo.fecha_fin    = this.toISO(range.end);
+  }
+
+  // ===== Ciclo de vida =====
   ngOnInit() {
     this.toast.state$.subscribe(s => this.vm = s);
     this.canEdit   = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
-    this.loadDataEmpresa();
+
     this.actions = [
-      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []),
+      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Empresa' }] : []),
     ];
     this.actions2 = [
-      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []),
+      ...(this.canEdit   ? [{ id: 'edit',   tooltip: 'Editar Periodo' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []),
     ];
+
+    this.minDate = this.toISO(this.todayLocal());
+    this.loadDataEmpresa();
   }
 
   openSuccess(message: string) {
@@ -145,10 +216,14 @@ export class EmpresaComponent implements OnInit {
   }
   openError(message: string, err?: unknown) {
     if (err) console.error('[EmpresaComponent] Error:', err);
-    this.toast.error(message, 'Error', 0); // sin autocierre
+    this.toast.error(message, 'Error', 0);
   }
 
-  //EMPRESA 
+  // ===== Empresa =====
+  private extractErrorMessage(err: any): string | null {
+    return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
+  }
+
   loadDataEmpresa() {
     this.empresaService.getEmpresa().subscribe({
       next: (data) => {
@@ -159,13 +234,12 @@ export class EmpresaComponent implements OnInit {
       error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
     });
   }
-
   onTabChange(id: string) {
     if (id === 'datos' || id === 'periodos') this.activeTabId = id;
     if (id === 'periodos') this.loadPeriodos();
   }
 
-  // EMPRESA: abrir modal de edición
+  // Editar empresa
   onPrimary() {
     if (!this.canEdit) return this.openError('No tienes permisos para editar la empresa');
     const empresa = this.rows[0];
@@ -173,33 +247,27 @@ export class EmpresaComponent implements OnInit {
     this.formEmpresa = { ...empresa };
     this.editOpen = true;
   }
-
   onEdit(row: UiEmpresa) {
     if (!this.canEdit) return this.openError('No tienes permisos para editar');
     this.formEmpresa = { ...row };
     this.editOpen = true;
   }
-
-  // Modal empresa (acciones del modal)
   closeModal()  { this.editOpen = false; }
   cancelModal() { this.editOpen = false; }
-
-  
   confirmModal() {
     this.confirmTitle = 'Confirmar guardado';
     this.confirmMessage = '¿Deseas guardar los cambios de la empresa?';
     this.confirmKind = 'empresa-save';
     this.confirmPayload = null;
-    this.confirmOpen = true; // abre confirm encima del modal de edición
+    this.confirmOpen = true;
   }
 
-  // periodos
+  // ===== Períodos =====
   private empresaId(): number | null {
     const e = this.rows[0];
     const id = (e?.id_empresa ?? e?.id) as number | undefined;
     return id ?? null;
   }
-
   loadPeriodos() {
     const idEmp = this.empresaId();
     if (!idEmp) return;
@@ -209,76 +277,78 @@ export class EmpresaComponent implements OnInit {
     });
   }
 
-  // AUTO-CÁLCULO DE FECHAS semna, mes, añom
-  private pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
-  private toISO(d: Date) {
-    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
-  }
-  private startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-  private endOfMonth(d: Date)   { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-  private startOfYear(d: Date)  { return new Date(d.getFullYear(), 0, 1); }
-  private endOfYear(d: Date)    { return new Date(d.getFullYear(), 12, 0); }
-
-  // Semana Lunes-Domingo
-  private startOfWeek(d: Date) {
-    const day = d.getDay(); // 0=Dom, 1=Lun,...6=Sab
-    const diff = (day === 0 ? -6 : 1 - day);
-    const res = new Date(d);
-    res.setDate(d.getDate() + diff);
-    return new Date(res.getFullYear(), res.getMonth(), res.getDate());
-  }
-  private endOfWeek(d: Date) {
-    const start = this.startOfWeek(d);
-    const res = new Date(start);
-    res.setDate(start.getDate() + 6);
-    return res;
-  }
-
-  private setDatesByType(type: PeriodoTipo, ref: Date) {
-    let start: Date;
-    let end: Date;
-
-    switch (type) {
-      case 'SEMANAL':
-        start = this.startOfWeek(ref);
-        end = this.endOfWeek(ref);
-        break;
-      case 'MENSUAL':
-        start = this.startOfMonth(ref);
-        end = this.endOfMonth(ref);
-        break;
-      case 'ANUAL':
-        start = this.startOfYear(ref);
-        end = this.endOfYear(ref);
-        break;
-      case 'PERSONALIZADO':
-        return; // no tocar fechas en personalizado
-    }
-
-    this.formPeriodo.fecha_inicio = this.toISO(start);
-    this.formPeriodo.fecha_fin    = this.toISO(end);
-  }
-
+  // Cambios de tipo/fecha en el modal de período
   onTipoPeriodoChange(newType: PeriodoTipo) {
     this.formPeriodo.tipo_periodo = newType;
-    const ref = this.formPeriodo.fecha_inicio ? new Date(this.formPeriodo.fecha_inicio) : new Date();
-    if (newType !== 'PERSONALIZADO') this.setDatesByType(newType, ref);
+    if (newType === 'PERSONALIZADO') return;
+
+    // Si hay fecha de inicio úsala como referencia; si no, hoy.
+    const ref = this.formPeriodo.fecha_inicio
+      ? this.parseISODateLocal(this.formPeriodo.fecha_inicio)
+      : this.todayLocal();
+
+     this.setDatesByType(newType, this.todayLocal());
   }
 
   onFechaInicioChange(newStartStr: string) {
     this.formPeriodo.fecha_inicio = newStartStr;
+
     const t = this.formPeriodo.tipo_periodo as PeriodoTipo;
-    if (t && t !== 'PERSONALIZADO') this.setDatesByType(t, new Date(newStartStr));
+    if (t && t !== 'PERSONALIZADO') {
+      // Para tipos automáticos, tomar el período COMPLETO que contiene esa fecha
+      const ref = this.parseISODateLocal(newStartStr);
+      this.setDatesByType(t, ref);
+    } else {
+      // PERSONALIZADO: validar no pasado y fin >= inicio
+      if (this.isPast(newStartStr)) {
+        const todayStr = this.minDate;
+        this.formPeriodo.fecha_inicio = todayStr;
+        this.openError('La fecha de inicio no puede ser pasada. Se ajustó a hoy.');
+      }
+      const fi = this.formPeriodo.fecha_inicio!;
+      const ff = this.formPeriodo.fecha_fin;
+      if (ff && this.parseISODateLocal(ff) < this.parseISODateLocal(fi)) {
+        this.formPeriodo.fecha_fin = fi;
+      }
+    }
   }
 
-  // primary del panel de periodos
+  onFechaFinChange(newEndStr: string) {
+    const t = this.formPeriodo.tipo_periodo as PeriodoTipo;
+
+    if (t && t !== 'PERSONALIZADO') {
+      // En automáticos, ignoramos cambios manuales y forzamos el fin correcto
+      const ref = this.formPeriodo.fecha_inicio
+        ? this.parseISODateLocal(this.formPeriodo.fecha_inicio)
+        : this.todayLocal();
+      this.setDatesByType(t, ref);
+      return;
+    }
+
+    // PERSONALIZADO: validaciones
+    this.formPeriodo.fecha_fin = newEndStr;
+    if (this.isPast(newEndStr)) {
+      const todayStr = this.minDate;
+      this.formPeriodo.fecha_fin = todayStr;
+      this.openError('La fecha de fin no puede ser pasada. Se ajustó a hoy.');
+    }
+    const fi = this.formPeriodo.fecha_inicio;
+    if (fi && this.parseISODateLocal(newEndStr) < this.parseISODateLocal(fi)) {
+      this.formPeriodo.fecha_fin = fi;
+      this.openError('La fecha de fin no puede ser anterior a la fecha de inicio.');
+    }
+  }
+
+  // Abrir creación de período
   onPrimaryPeriodo() {
     if (!this.canEdit) return this.openError('No tienes permisos para crear períodos');
     this.modalPeriodoTitle = 'Crear período';
     this.editPeriodoId = null;
     this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
-    // Autocalcular al abrir (usando hoy)
-    this.onTipoPeriodoChange(this.formPeriodo.tipo_periodo as PeriodoTipo);
+
+    // Mes ACTUAL completo (del 1 al último día)
+    this.setDatesByType('MENSUAL', this.todayLocal());
+
     this.modalPeriodoOpen = true;
   }
 
@@ -288,8 +358,7 @@ export class EmpresaComponent implements OnInit {
         if (!this.canEdit) return this.openError('No tienes permisos para editar períodos');
         this.modalPeriodoTitle = 'Editar período';
         this.editPeriodoId = evt.row.id_periodo ?? null;
-        // Al editar, cargamos tal cual  
-        this.formPeriodo = { ...evt.row };
+        this.formPeriodo = { ...evt.row }; // respetar lo guardado
         this.modalPeriodoOpen = true;
         break;
 
@@ -307,15 +376,29 @@ export class EmpresaComponent implements OnInit {
     }
   }
 
-  // Modal período (acciones del modal)
+  // Cierre modal período
   closePeriodoModal()  { this.modalPeriodoOpen = false; }
   cancelPeriodoModal() { this.modalPeriodoOpen = false; }
 
-  // Antes de guardar período -pedir confirmación
+  // Confirmación antes de guardar período
   confirmPeriodoModal() {
     if (!this.formPeriodo.tipo_periodo || !this.formPeriodo.fecha_inicio || !this.formPeriodo.fecha_fin) {
       return this.openError('Completa tipo de período, fecha de inicio y fin.');
     }
+
+    const t = this.formPeriodo.tipo_periodo as PeriodoTipo;
+
+    // Solo PERSONALIZADO prohíbe pasado; los demás pueden abarcar días previos del período actual.
+    if (t === 'PERSONALIZADO' &&
+        (this.isPast(this.formPeriodo.fecha_inicio) || this.isPast(this.formPeriodo.fecha_fin))) {
+      return this.openError('Las fechas no pueden ser pasadas.');
+    }
+
+    // Orden siempre válido
+    if (this.parseISODateLocal(this.formPeriodo.fecha_fin) < this.parseISODateLocal(this.formPeriodo.fecha_inicio)) {
+      return this.openError('La fecha de fin no puede ser anterior a la de inicio.');
+    }
+
     const creando = !this.editPeriodoId;
     this.confirmTitle = creando ? 'Confirmar creación' : 'Confirmar actualización';
     this.confirmMessage = creando
@@ -385,6 +468,7 @@ export class EmpresaComponent implements OnInit {
       case 'periodo-delete': {
         const idp = payload?.id_periodo as number | undefined;
         if (!idp) return this.openError('No se encontró el identificador del período.');
+
         this.periodosService.delete(idp).subscribe({
           next: () => {
             this.periodos = this.periodos.filter(p => p.id_periodo !== idp);
@@ -397,11 +481,10 @@ export class EmpresaComponent implements OnInit {
     }
   }
 
-  // ====== COMÚN ======
+  // ===== Común =====
   onRowAction(evt: { action: string; row: UiEmpresa }) {
     if (evt.action === 'edit') return this.onEdit(evt.row);
     this.openError(`Acción no soportada: ${evt.action}`);
   }
-
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 }
