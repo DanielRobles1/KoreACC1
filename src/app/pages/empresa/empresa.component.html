@@ -8,7 +8,7 @@
   <div class="content">
     <div class="crud-wrapper">
 
-      <!-- CRUD Empresa -->
+      <!-- ===================== EMPRESA ===================== -->
       <app-crud-panel
         *ngIf="activeTabId === 'datos'"
         [title]="title"
@@ -30,11 +30,12 @@
         (action)="onRowAction($event)">
       </app-crud-panel>
 
-      <!-- CRUD Períodos -->
+      <!-- (El indicador de ejercicio seleccionado ya NO aparece en 'datos') -->
+
+      <!-- ===================== PERÍODOS ===================== -->
       <app-crud-panel
-        
         [title]="'Períodos Contables'"
-        
+
         [activeTabId]="activeTabId"
         (tabChange)="onTabChange($event)"
 
@@ -51,11 +52,69 @@
         (action)="onPeriodoAction($event)">
       </app-crud-panel>
 
+      <!-- Barra de generación y selección de ejercicio (SOLO en 'periodos') -->
+      <div *ngIf="activeTabId === 'periodos'"
+           style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin: 8px 0 16px;">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <strong>Generar períodos:</strong>
+          <select class="field-input" [(ngModel)]="genTipo" name="gen_tipo" style="min-width:140px;">
+            <option value="SEMANAL">SEMANAL</option>
+            <option value="MENSUAL">MENSUAL</option>
+            <option value="ANUAL">ANUAL</option>
+          </select>
+          <button
+            class="btn btn-primary"
+            type="button"
+            (click)="openGenerarPeriodos(genTipo)"
+            [disabled]="!canEdit || !ejercicioSeleccionado?.id_ejercicio || isGenerating"
+            title="Generar períodos para el ejercicio seleccionado">
+            {{ isGenerating ? 'Generando…' : 'Generar' }}
+          </button>
+        </div>
+
+        <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+          <span class="text-muted">Ejercicio:</span>
+          <span>
+            {{ ejercicioSeleccionado?.anio ?? '—' }}
+            <ng-container *ngIf="!ejercicioSeleccionado?.id_ejercicio">
+              <em style="color:#b00; margin-left:6px;">(selecciona uno)</em>
+            </ng-container>
+          </span>
+          <button
+            class="btn btn-link"
+            type="button"
+            (click)="onOpenEjercicioManager()"
+            title="Seleccionar/crear ejercicio">
+            Cambiar
+          </button>
+        </div>
+      </div>
+
+      <!-- ===================== EJERCICIOS ===================== -->
+      <app-crud-panel
+        [title]="'Ejercicios Contables'"
+
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+
+        [primaryActionLabel]="primaryActionLabel3"
+        (primaryAction)="onPrimaryEjercicio()"
+        [disablePrimary]="!canEdit"
+
+        [columns]="columns3"
+        [data]="ejercicios"
+        [actions]="actions3"
+        [showSearch]="false"
+        [hidePrimary]="false"
+
+        (action)="onEjercicioAction($event)">
+      </app-crud-panel>
+
     </div>
   </div>
 </div>
 
-<!-- MODAL: Empresa -->
+<!-- ===================== MODAL: EMPRESA ===================== -->
 <app-modal
   [open]="editOpen"
   [title]="modalTitle"
@@ -97,7 +156,7 @@
   </form>
 </app-modal>
 
-<!-- MODAL: Período -->
+<!-- ===================== MODAL: PERÍODO ===================== -->
 <app-modal
   [open]="modalPeriodoOpen"
   [title]="modalPeriodoTitle"
@@ -107,6 +166,42 @@
   (canceled)="cancelPeriodoModal()"
   (confirmed)="confirmPeriodoModal()">
   <form #periodoForm="ngForm" style="display: grid; gap: 10px;">
+
+    <!-- Crear automáticamente para todo el ejercicio (solo al crear) -->
+    <div *ngIf="!editPeriodoId"
+         style="padding:10px; border:1px solid #2c3e50; border-radius:8px; background:#1e2a35;">
+      <label class="field-label" style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" [(ngModel)]="autoCreate" name="autoCreate" />
+        Crear automáticamente para todo el ejercicio
+      </label>
+
+      <div *ngIf="autoCreate" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:8px;">
+        <div>
+          <label class="field-label required" style="display:block;">Tipo a generar</label>
+          <select class="field-input" [(ngModel)]="autoCreateTipo" name="autoCreateTipo" required style="min-width:160px;">
+            <option value="SEMANAL">SEMANAL</option>
+            <option value="MENSUAL">MENSUAL</option>
+            <option value="ANUAL">ANUAL</option>
+          </select>
+        </div>
+
+        <div style="margin-left:auto; font-size:12px; opacity:.9;">
+          <strong>Ejercicio seleccionado:</strong>
+          <span *ngIf="ejercicioSeleccionado?.id_ejercicio; else noEj">
+            {{ ejercicioSeleccionado?.anio }} ({{ ejercicioSeleccionado?.fecha_inicio }} → {{ ejercicioSeleccionado?.fecha_fin }})
+          </span>
+          <ng-template #noEj>
+            <em style="color:#e67e22;">(selecciona un ejercicio)</em>
+          </ng-template>
+        </div>
+
+        <div style="width:100%; font-size:12px; opacity:.8; margin-top:6px;">
+          Se crearán todos los períodos de ese tipo cubriendo el rango del ejercicio. Los campos de fecha abajo quedan deshabilitados.
+        </div>
+      </div>
+    </div>
+    <!-- /autoCreate -->
+
     <div>
       <label class="field-label required">Tipo de período</label>
       <select
@@ -114,7 +209,8 @@
         [(ngModel)]="formPeriodo.tipo_periodo"
         name="tipo_periodo"
         required
-        (ngModelChange)="onTipoPeriodoChange($event)">
+        (ngModelChange)="onTipoPeriodoChange($event)"
+        [disabled]="autoCreate">
         <option value="SEMANAL">SEMANAL</option>
         <option value="MENSUAL">MENSUAL</option>
         <option value="ANUAL">ANUAL</option>
@@ -133,7 +229,7 @@
           required
           [min]="minDate"
           (ngModelChange)="onFechaInicioChange($event)"
-          [readonly]="formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+          [readonly]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
       </div>
       <div>
         <label class="field-label required">Fecha fin</label>
@@ -145,21 +241,80 @@
           required
           [min]="minDate"
           (ngModelChange)="onFechaFinChange($event)"
-          [readonly]="formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+          [readonly]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
       </div>
     </div>
 
     <div>
       <label class="field-label">Estado</label>
-      <select class="field-input" [(ngModel)]="formPeriodo.esta_abierto" name="esta_abierto">
+      <select class="field-input" [(ngModel)]="formPeriodo.esta_abierto" name="esta_abierto" [disabled]="autoCreate">
         <option [ngValue]="true">Abierto</option>
         <option [ngValue]="false">Cerrado</option>
       </select>
+      <div *ngIf="autoCreate" style="font-size:12px; opacity:.8; margin-top:4px;">
+        En generación automática los períodos se crean abiertos por defecto.
+      </div>
     </div>
   </form>
 </app-modal>
 
-<!-- MODAL: Confirmación genérico -->
+<!-- ===================== MODAL: EJERCICIO ===================== -->
+<app-modal
+  [open]="modalEjercicioOpen"
+  [title]="modalEjercicioTitle"
+  [size]="'md'"
+  [showClose]="true"
+  (closed)="closeEjercicioModal()"
+  (canceled)="cancelEjercicioModal()"
+  (confirmed)="confirmEjercicioModal()">
+  <form #ejercicioForm="ngForm" style="display: grid; gap: 10px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label class="field-label required">Año</label>
+        <input
+          class="field-input"
+          type="number"
+          [(ngModel)]="formEjercicio.anio"
+          name="anio"
+          min="1900"
+          max="9999"
+          required />
+      </div>
+      <div>
+        <label class="field-label">Estado</label>
+        <select class="field-input" [(ngModel)]="formEjercicio.esta_abierto" name="esta_abierto">
+          <option [ngValue]="true">Abierto</option>
+          <option [ngValue]="false">Cerrado</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label class="field-label required">Fecha inicio</label>
+        <input
+          class="field-input"
+          type="date"
+          [(ngModel)]="formEjercicio.fecha_inicio"
+          name="fecha_inicio_ej"
+          required
+          [min]="minDate" />
+      </div>
+      <div>
+        <label class="field-label required">Fecha fin</label>
+        <input
+          class="field-input"
+          type="date"
+          [(ngModel)]="formEjercicio.fecha_fin"
+          name="fecha_fin_ej"
+          required
+          [min]="minDate" />
+      </div>
+    </div>
+  </form>
+</app-modal>
+
+<!-- ===================== MODAL: CONFIRMACIÓN ===================== -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -171,7 +326,7 @@
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- TOAST ÚNICO (servicio) -->
+<!-- ===================== TOAST ===================== -->
 <app-toast-message
   [open]="vm?.open ?? false"
   [title]="vm?.title ?? ''"
