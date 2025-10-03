@@ -27,9 +27,10 @@ export interface PeriodoQuery {
   hasta?: string; // 'YYYY-MM-DD'
 }
 
+export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
+
 @Injectable({ providedIn: 'root' })
 export class PeriodoContableService {
-  // ❌ Tenías un espacio inicial: ` http://...`
   private baseUrl = 'http://localhost:3000/api/v1/periodos';
 
   constructor(private http: HttpClient) {}
@@ -56,8 +57,12 @@ export class PeriodoContableService {
   }
 
   create(payload: PeriodoContableDto): Observable<PeriodoContableDto> {
-    // payload debe incluir id_ejercicio
     return this.http.post<PeriodoContableDto>(this.baseUrl, payload);
+  }
+
+  generate(id_ejercicio: number, frecuencia: FrecuenciaPeriodo): Observable<PeriodoContableDto[]> {
+    const url = `${this.baseUrl}/generar`;
+    return this.http.post<PeriodoContableDto[]>(url, { id_ejercicio, frecuencia });
   }
 
   update(id_periodo: number, payload: Partial<PeriodoContableDto>): Observable<PeriodoContableDto> {

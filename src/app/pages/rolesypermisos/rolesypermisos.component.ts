@@ -423,6 +423,7 @@ loadPermisosDisponibles() {
     'Pólizas':  ['poliza', 'póliza'],
     'Reportes': ['reporte', 'report'],
     'Roles':    ['rol'],
+    'Periodos': ['periodos', 'periodo', 'period'],
     'Empresa':  ['empresa', 'company']
   };
 
@@ -434,6 +435,7 @@ loadPermisosDisponibles() {
       'Reportes': [],
       'Roles':    [],
       'Empresa':  [],
+      'Periodos': [],
       'Otros':    [],   
     };
 

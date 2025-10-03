@@ -121,6 +121,33 @@ table {
     .dots { padding: 0 .25rem; color: var(--text-muted); }
 }
 
+/* crud-panel.component.scss */
+tr.is-selected {
+  background: #E6F4FF;          /* azul claro */
+  outline: 2px solid #1677FF;   /* borde */
+  outline-offset: -2px;
+}
+
+.sel-head { width: 44px; }
+.sel-cell { text-align: center; }
+
+.radio-box {
+  display: inline-flex; align-items: center; cursor: pointer;
+}
+.radio-box input { display: none; }
+
+/* “Recuadro” de selección */
+.fake-radio {
+  width: 18px; height: 18px;
+  border: 2px solid #1677FF; border-radius: 4px; /* cuadrado */
+  display: inline-block; position: relative;
+}
+.radio-box input:checked + .fake-radio::after {
+  content: ""; position: absolute; inset: 2px;
+  background: #1677FF; border-radius: 2px;
+}
+
+
 /* Responsive */
 @media (max-width: 640px) {
   .card__header { grid-template-columns: 1fr; }

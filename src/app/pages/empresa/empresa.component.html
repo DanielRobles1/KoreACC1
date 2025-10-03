@@ -31,6 +31,30 @@
       </app-crud-panel>
 
       <!-- (El indicador de ejercicio seleccionado ya NO aparece en 'datos') -->
+      <!-- ===================== EJERCICIOS ===================== -->
+      <app-crud-panel
+        [title]="'Ejercicios Contables'"
+
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+
+        [primaryActionLabel]="primaryActionLabel3"
+        (primaryAction)="onPrimaryEjercicio()"
+        [disablePrimary]="!canEdit"
+
+        [columns]="columns3"
+        [data]="ejercicios"
+        [actions]="actions3"
+        [showSearch]="false"
+        [hidePrimary]="false"
+
+        [selectionMode]="'single'"
+        [idKey]="'id_ejercicio'"
+        [selectedRowId]="ejercicioSeleccionado?.id_ejercicio ?? null"
+        (selection)="setEjercicioSeleccionado($event)"
+
+        (action)="onEjercicioAction($event)">
+      </app-crud-panel>
 
       <!-- ===================== PERÍODOS ===================== -->
       <app-crud-panel
@@ -89,26 +113,6 @@
           </button>
         </div>
       </div>
-
-      <!-- ===================== EJERCICIOS ===================== -->
-      <app-crud-panel
-        [title]="'Ejercicios Contables'"
-
-        [activeTabId]="activeTabId"
-        (tabChange)="onTabChange($event)"
-
-        [primaryActionLabel]="primaryActionLabel3"
-        (primaryAction)="onPrimaryEjercicio()"
-        [disablePrimary]="!canEdit"
-
-        [columns]="columns3"
-        [data]="ejercicios"
-        [actions]="actions3"
-        [showSearch]="false"
-        [hidePrimary]="false"
-
-        (action)="onEjercicioAction($event)">
-      </app-crud-panel>
 
     </div>
   </div>
@@ -169,10 +173,10 @@
 
     <!-- Crear automáticamente para todo el ejercicio (solo al crear) -->
     <div *ngIf="!editPeriodoId"
-         style="padding:10px; border:1px solid #2c3e50; border-radius:8px; background:#1e2a35;">
+         style="padding:10px; border:1px solid #2c3e50; border-radius:8px; background:#fdfdfd;">
       <label class="field-label" style="display:flex; align-items:center; gap:8px;">
         <input type="checkbox" [(ngModel)]="autoCreate" name="autoCreate" />
-        Crear automáticamente para todo el ejercicio
+        Generar automáticamente los periodos para todo el ejercicio
       </label>
 
       <div *ngIf="autoCreate" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:8px;">
@@ -180,6 +184,7 @@
           <label class="field-label required" style="display:block;">Tipo a generar</label>
           <select class="field-input" [(ngModel)]="autoCreateTipo" name="autoCreateTipo" required style="min-width:160px;">
             <option value="SEMANAL">SEMANAL</option>
+            <option value="QUINCENAL">QUINCENAL</option>
             <option value="MENSUAL">MENSUAL</option>
             <option value="ANUAL">ANUAL</option>
           </select>

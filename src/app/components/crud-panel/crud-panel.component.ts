@@ -31,9 +31,9 @@ export class CrudPanelComponent {
 
  // Emite la fila seleccionada cuando cambia el radio
   @Output() selection = new EventEmitter<any>();
-
-  // guarda el id de la fila seleccionada (por simplicidad usamos 'id')
-  selectedRowId: any = null;
+  @Input() selectionMode: 'none' | 'single' = 'none';    // opt-in
+@Input() idKey: string = 'id';                         // pk genérica
+@Input() selectedRowId: string | number | null = null;
 
   onRadioChange(row: any) {
     this.selectedRowId = row.id;
@@ -100,4 +100,10 @@ export class CrudPanelComponent {
     }
     return out;
   }
+
+  onRowClick(row: any) {
+  if (this.selectionMode !== 'single') return;
+  // si el host controla selectedRowId, solo emite; el host actualizará el input
+  this.selection.emit(row);
+}
 }

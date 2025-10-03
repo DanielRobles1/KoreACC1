@@ -50,7 +50,7 @@ export class EmpresaComponent implements OnInit {
     private auth: AuthService,
     public toast: ToastService,
     private ejerciciosService: EjercicioContableService
-  ) {}
+  ) { }
 
   // ===== Layout =====
   sidebarOpen = true;
@@ -58,7 +58,7 @@ export class EmpresaComponent implements OnInit {
   // ===== Tabs =====
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
-    { id: 'datos',    label: 'Empresa',   icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',  route: '/empresa' },
+    { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
     { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
@@ -100,10 +100,10 @@ export class EmpresaComponent implements OnInit {
   // ===== Períodos =====
   primaryActionLabel2 = 'Nuevo período';
   columns2: CrudColumn[] = [
-    { key: 'id_periodo',   header: '#', width: '72px' },
+    { key: 'id_periodo', header: '#', width: '72px' },
     { key: 'tipo_periodo', header: 'Tipo' },
     { key: 'fecha_inicio', header: 'Inicio' },
-    { key: 'fecha_fin',    header: 'Fin' },
+    { key: 'fecha_fin', header: 'Fin' },
     { key: 'esta_abierto', header: 'Abierto' },
   ];
   periodos: PeriodoContableDto[] = [];
@@ -131,18 +131,18 @@ export class EmpresaComponent implements OnInit {
   primaryActionLabel3 = 'Nuevo ejercicio';
   columns3: CrudColumn[] = [
     { key: 'id_ejercicio', header: '#', width: '72px' },
-    { key: 'anio',         header: 'Año' },
+    { key: 'anio', header: 'Año' },
     { key: 'fecha_inicio', header: 'Inicio' },
-    { key: 'fecha_fin',    header: 'Fin' },
+    { key: 'fecha_fin', header: 'Fin' },
     { key: 'esta_abierto', header: 'Abierto' },
   ];
   ejercicios: EjercicioContableDto[] = [];
   actions3: CrudAction[] = [
-    { id: 'edit',    label: 'Editar',   tooltip: 'Editar' },
-    { id: 'delete',  label: 'Eliminar', tooltip: 'Eliminar' },
-    { id: 'abrir',   label: 'Abrir',    tooltip: 'Marcar como abierto' },
-    { id: 'cerrar',  label: 'Cerrar',   tooltip: 'Marcar como cerrado' },
-    { id: 'select',  label: 'Seleccionar', tooltip: 'Seleccionar ejercicio actual' },
+    { id: 'edit', label: 'Editar', tooltip: 'Editar' },
+    { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
+    { id: 'abrir', label: 'Abrir', tooltip: 'Marcar como abierto' },
+    { id: 'cerrar', label: 'Cerrar', tooltip: 'Marcar como cerrado' },
+    { id: 'select', label: 'Seleccionar', tooltip: 'Seleccionar ejercicio actual' },
   ];
 
   // Modal ejercicio
@@ -177,10 +177,10 @@ export class EmpresaComponent implements OnInit {
   private isPast(dateStr: string): boolean { if (!dateStr) return false; const d = this.parseISODateLocal(dateStr); return d < this.todayLocal(); }
 
   private startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-  private endOfMonth(d: Date)   { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-  private startOfYear(d: Date)  { return new Date(d.getFullYear(), 0, 1); }
-  private endOfYear(d: Date)    { return new Date(d.getFullYear(), 12, 0); }
-  private addDays(d: Date, days: number)   { const r = new Date(d); r.setDate(r.getDate() + days); return r; }
+  private endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+  private startOfYear(d: Date) { return new Date(d.getFullYear(), 0, 1); }
+  private endOfYear(d: Date) { return new Date(d.getFullYear(), 12, 0); }
+  private addDays(d: Date, days: number) { const r = new Date(d); r.setDate(r.getDate() + days); return r; }
 
   private startOfWeek(d: Date) {
     const wd = d.getDay();                 // 0=Dom, 1=Lun,...6=Sáb
@@ -196,7 +196,7 @@ export class EmpresaComponent implements OnInit {
     switch (type) {
       case 'SEMANAL': return { start: this.startOfWeek(base), end: this.addDays(this.startOfWeek(base), 6) };
       case 'MENSUAL': return { start: this.startOfMonth(base), end: this.endOfMonth(base) };
-      case 'ANUAL':   return { start: this.startOfYear(base),  end: this.endOfYear(base)  };
+      case 'ANUAL': return { start: this.startOfYear(base), end: this.endOfYear(base) };
     }
     return null;
   }
@@ -206,30 +206,29 @@ export class EmpresaComponent implements OnInit {
     const range = this.computeCurrentPeriod(type, referenceDate ?? this.todayLocal());
     if (!range) return;
     this.formPeriodo.fecha_inicio = this.toISO(range.start);
-    this.formPeriodo.fecha_fin    = this.toISO(range.end);
+    this.formPeriodo.fecha_fin = this.toISO(range.end);
   }
 
   // ===== Ciclo de vida =====
   ngOnInit() {
     this.toast.state$.subscribe(s => this.vm = s);
-    this.canEdit   = this.auth.hasPermission('editar_empresa');
+    this.canEdit = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
 
     this.actions = [
-      ...(this.canEdit   ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []),
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Empresa' }] : []),
     ];
     this.actions2 = [
-      ...(this.canEdit   ? [{ id: 'edit',   tooltip: 'Editar Periodo' }] : []),
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []),
     ];
 
     this.actions3 = [
       ...(this.canEdit ? [
-        { id: 'edit',   tooltip: 'Editar Ejercicio' },
-        { id: 'abrir',  tooltip: 'Marcar como abierto' },
+        { id: 'edit', tooltip: 'Editar Ejercicio' },
+        { id: 'abrir', tooltip: 'Marcar como abierto' },
         { id: 'cerrar', tooltip: 'Marcar como cerrado' },
-        { id: 'select', tooltip: 'Seleccionar ejercicio actual' },
       ] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Ejercicio' }] : []),
     ];
@@ -269,7 +268,7 @@ export class EmpresaComponent implements OnInit {
   onPrimary() {
     if (!this.canEdit) return this.openError('No tienes permisos para editar la empresa');
     const empresa = this.rows[0];
-    if (!empresa)  return this.openError('No hay datos de empresa para editar');
+    if (!empresa) return this.openError('No hay datos de empresa para editar');
     this.formEmpresa = { ...empresa };
     this.editOpen = true;
   }
@@ -278,7 +277,7 @@ export class EmpresaComponent implements OnInit {
     this.formEmpresa = { ...row };
     this.editOpen = true;
   }
-  closeModal()  { this.editOpen = false; }
+  closeModal() { this.editOpen = false; }
   cancelModal() { this.editOpen = false; }
   confirmModal() {
     this.confirmTitle = 'Confirmar guardado';
@@ -293,12 +292,13 @@ export class EmpresaComponent implements OnInit {
     const e = this.rows[0];
     const id = (e?.id_empresa ?? e?.id) as number | undefined;
     return id ?? null;
-    }
+  }
 
   loadPeriodos() {
     const idEmp = this.empresaId();
     if (!idEmp) return;
-    this.periodosService.listByEmpresa(idEmp).subscribe({
+    const idEj = this.ejercicioSeleccionado?.id_ejercicio;
+    this.periodosService.listByEmpresa(idEmp, idEj).subscribe({
       next: (items) => this.periodos = items ?? [],
       error: (err) => this.openError('Error al cargar los períodos', err),
     });
@@ -406,7 +406,7 @@ export class EmpresaComponent implements OnInit {
   }
 
   // Cierre modal período
-  closePeriodoModal()  { this.modalPeriodoOpen = false; }
+  closePeriodoModal() { this.modalPeriodoOpen = false; }
   cancelPeriodoModal() { this.modalPeriodoOpen = false; }
 
   // Confirmación antes de guardar período
@@ -429,7 +429,7 @@ export class EmpresaComponent implements OnInit {
     const t = this.formPeriodo.tipo_periodo as PeriodoTipo;
 
     if (t === 'PERSONALIZADO' &&
-        (this.isPast(this.formPeriodo.fecha_inicio) || this.isPast(this.formPeriodo.fecha_fin))) {
+      (this.isPast(this.formPeriodo.fecha_inicio) || this.isPast(this.formPeriodo.fecha_fin))) {
       return this.openError('Las fechas no pueden ser pasadas.');
     }
 
@@ -577,7 +577,7 @@ export class EmpresaComponent implements OnInit {
   }
 
   // Cierre modal ejercicio
-  closeEjercicioModal()  { this.modalEjercicioOpen = false; }
+  closeEjercicioModal() { this.modalEjercicioOpen = false; }
   cancelEjercicioModal() { this.modalEjercicioOpen = false; }
 
   // ===== Confirmación genérica =====
@@ -753,7 +753,7 @@ export class EmpresaComponent implements OnInit {
 
   // ====== GENERACIÓN AUTOMÁTICA DE PERÍODOS ======
   genModalOpen = false;
-  genTipo: Exclude<PeriodoTipo,'PERSONALIZADO'> = 'MENSUAL';
+  genTipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL';
   genIncluirCerrados = false;
   isGenerating = false;
 
@@ -765,102 +765,43 @@ export class EmpresaComponent implements OnInit {
     }
     return ej;
   }
-
-  private clampRange(start: Date, end: Date, min: Date, max: Date) {
-    const s = start < min ? new Date(min) : new Date(start);
-    const e = end   > max ? new Date(max) : new Date(end);
-    return { start: s, end: e };
-  }
-
-  private nextMonth(d: Date)        { return new Date(d.getFullYear(), d.getMonth() + 1, 1); }
-  private monthStart(d: Date)       { return new Date(d.getFullYear(), d.getMonth(), 1); }
-  private monthEnd(d: Date)         { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-  private weekStartMon(d: Date)     { const wd = d.getDay(); const diff = (wd === 0 ? -6 : 1 - wd); const r = new Date(d); r.setDate(d.getDate() + diff); return new Date(r.getFullYear(), r.getMonth(), r.getDate()); }
-  private weekEndMonSun(s: Date)    { const r = new Date(s); r.setDate(s.getDate() + 6); return r; }
-
-  async generatePeriodsForSelectedExercise(tipo: Exclude<PeriodoTipo,'PERSONALIZADO'> = 'MENSUAL') {
+  async generatePeriodsForSelectedExercise(tipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL') {
     let ej: EjercicioContableDto;
     try {
       ej = this.ensureEjercicioSeleccionado();
-    } catch { return; }
-
-    const idEmp = this.empresaId();
-    if (!idEmp) { this.openError('No hay empresa seleccionada.'); return; }
-
-    const ejStart = this.parseISODateLocal(ej.fecha_inicio);
-    const ejEnd   = this.parseISODateLocal(ej.fecha_fin);
-
-    const ranges: Array<{inicio: string; fin: string}> = [];
-
-    if (tipo === 'ANUAL') {
-      const { start, end } = this.clampRange(ejStart, ejEnd, ejStart, ejEnd);
-      ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-    }
-
-    if (tipo === 'MENSUAL') {
-      let cursor = new Date(ejStart.getFullYear(), ejStart.getMonth(), 1);
-      while (cursor <= ejEnd) {
-        const mStart = this.monthStart(cursor);
-        const mEnd   = this.monthEnd(cursor);
-        const { start, end } = this.clampRange(mStart, mEnd, ejStart, ejEnd);
-        if (start <= end) ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-        cursor = this.nextMonth(cursor);
-      }
-    }
-
-    if (tipo === 'SEMANAL') {
-      let cursor = this.weekStartMon(ejStart);
-      while (cursor <= ejEnd) {
-        const wStart = this.weekStartMon(cursor);
-        const wEnd   = this.weekEndMonSun(wStart);
-        const { start, end } = this.clampRange(wStart, wEnd, ejStart, ejEnd);
-        if (start <= end) ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-        cursor = new Date(wStart);
-        cursor.setDate(wStart.getDate() + 7);
-      }
-    }
-
-    if (ranges.length === 0) {
-      this.openError('No se encontraron rangos para generar.');
+    } catch {
       return;
     }
 
-    const existentesKey = new Set(
-      (this.periodos ?? [])
-        .filter(p => (p as any).id_ejercicio === ej.id_ejercicio && p.tipo_periodo === tipo)
-        .map(p => `${p.tipo_periodo}|${p.fecha_inicio}|${p.fecha_fin}`)
-    );
-    const toCreate = ranges.filter(r => !existentesKey.has(`${tipo}|${r.inicio}|${r.fin}`));
-
-    if (toCreate.length === 0) {
-      this.openSuccess('No hay períodos nuevos por crear (ya existen).');
+    const idEmp = this.empresaId();
+    if (!idEmp) {
+      this.openError('No hay empresa seleccionada.');
       return;
     }
 
     this.isGenerating = true;
-    try {
-      for (const r of toCreate) {
-        const payload: PeriodoContableDto = {
-          id_empresa: idEmp,
-          id_ejercicio: ej.id_ejercicio!, // FK (asegúrate que exista en el DTO)
-          tipo_periodo: tipo,
-          fecha_inicio: r.inicio,
-          fecha_fin: r.fin,
-          esta_abierto: true,
-          periodo_daterange: undefined,
-        } as any;
-        await this.periodosService.create(payload).toPromise();
-      }
-      this.loadPeriodos();
-      this.openSuccess(`Períodos ${tipo.toLowerCase()} generados correctamente.`);
-    } catch (err) {
-      this.openError('No se pudieron generar todos los períodos.', err);
-    } finally {
-      this.isGenerating = false;
-    }
+    this.openSuccess(`Generando períodos ${tipo.toLowerCase()}...`);
+
+    this.periodosService.generate(ej.id_ejercicio!, tipo).subscribe({
+      next: (periodosGenerados) => {
+        this.loadPeriodos(); 
+        const n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
+        this.openSuccess(
+          n != null
+            ? `Períodos ${tipo.toLowerCase()} generados: ${n}.`
+            : `Períodos ${tipo.toLowerCase()} generados correctamente.`
+        );
+      },
+      error: (err) => {
+        this.openError('No se pudieron generar los períodos.', err);
+      },
+      complete: () => {
+        this.isGenerating = false;
+      },
+    });
   }
 
-  openGenerarPeriodos(tipo: Exclude<PeriodoTipo,'PERSONALIZADO'> = 'MENSUAL') {
+  openGenerarPeriodos(tipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL') {
     this.genTipo = tipo;
     this.generatePeriodsForSelectedExercise(tipo);
   }

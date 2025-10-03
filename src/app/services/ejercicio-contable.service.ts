@@ -35,10 +35,10 @@ export class EjercicioContableService {
   }
 
   abrir(id: number): Observable<EjercicioContableDto> {
-    return this.http.post<EjercicioContableDto>(`${this.baseUrl}/${id}/abrir`, {});
+    return this.http.patch<EjercicioContableDto>(`${this.baseUrl}/${id}/abrir`, {});
   }
 
   cerrar(id: number): Observable<EjercicioContableDto> {
-    return this.http.post<EjercicioContableDto>(`${this.baseUrl}/${id}/cerrar`, {});
+    return this.http.patch<EjercicioContableDto>(`${this.baseUrl}/${id}/cerrar`, {});
   }
 }
