@@ -2,11 +2,10 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 
-// Standalone deps UI
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-// Tus componentes standalone
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
 import { CrudPanelComponent } from '@app/components/crud-panel/crud-panel.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
@@ -23,7 +22,7 @@ interface Cuenta {
   deleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  // Campos de vista (derivados)
+  // Campos de vista 
   padreCodigo?: string | null;
   padreNombre?: string | null;
   icon?: string;
@@ -53,21 +52,20 @@ interface ToastVM {
   ],
 })
 export class CatalogoCuentasComponent implements OnInit, OnDestroy {
-  // ====== DI ======
+ 
   private http = inject(HttpClient);
   private subs: Subscription[] = [];
 
-  // ====== LAYOUT / TABS ======
+  
   sidebarOpen = true;
   title = 'Catálogo de Cuentas';
   tabs = [{ id: 'datos', label: 'Cuentas' }];
   activeTabId: 'datos' = 'datos';
 
-  // ====== PERMISOS / ACCIONES SUPERIORES ======
+  
   canEdit = true;
   primaryActionLabel = 'Nueva cuenta';
 
-  // ====== GRID ======
   columns: any[] = [
     { key: 'codigo', header: 'Código', width: '140' },
     { key: 'nombre', header: 'Nombre', width: '260' },
@@ -85,7 +83,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   rows: Cuenta[] = [];
   allCuentas: Cuenta[] = []; // para combos de padre
 
-  // ====== MODAL: CUENTA ======
+  
   editOpen = false;
   modalTitle = 'Nueva cuenta';
   modalSize: 'sm' | 'md' | 'lg' | 'xl' = 'md';
@@ -101,7 +99,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     parentId: null,
   };
 
-  // --- Estado de validación en vivo ---
+ 
   errors: { codigo?: string; nombre?: string } = {};
   touched: { codigo: boolean; nombre: boolean } = { codigo: false, nombre: false };
 
@@ -110,16 +108,16 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     return !!this.formCuenta.codigo?.trim() && !!this.formCuenta.nombre?.trim();
   }
 
-  // ====== MODAL: CONFIRMACIÓN ======
+ 
   confirmOpen = false;
   confirmTitle = 'Confirmación';
   confirmMessage = '';
   confirmPayload: { type: 'delete'; id: number } | null = null;
 
-  // ====== TOAST ======
+  
   vm: ToastVM = { open: false, title: '', message: '', type: 'info', autoCloseMs: 3500 };
 
-  // ====== LIFECYCLE ======
+  
   ngOnInit(): void {
     this.loadCuentas();
   }
@@ -128,7 +126,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
   }
 
-  // ====== DATA ======
+  
   loadCuentas(): void {
     const s = this.http.get<Cuenta[]>(API).subscribe({
       next: (data) => {
@@ -182,7 +180,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.subs.push(s);
   }
 
-  // ====== HANDLERS CRUD-PANEL ======
+  
   onPrimary(): void {
     // Nueva cuenta
     this.editId = null;
@@ -247,7 +245,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ====== VALIDACIÓN EN VIVO ======
+  
   private resetValidation(): void {
     this.errors = {};
     this.touched = { codigo: false, nombre: false };
@@ -269,7 +267,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Llamar desde (ngModelChange) en los inputs para validar en tiempo real */
+ 
   onFieldChange(field: 'codigo' | 'nombre', value: string): void {
     const v = (value ?? '').trimStart(); // evita espacios al inicio
     this.formCuenta[field] = v;
@@ -277,7 +275,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.validate(field);
   }
 
-  // ====== MODAL: CUENTA ======
+  
   closeModal(): void { this.editOpen = false; }
   cancelModal(): void { this.editOpen = false; }
 
@@ -306,7 +304,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     else this.updateCuenta(this.editId, payload);
   }
 
-  // ====== MODAL: CONFIRMACIÓN ======
+  
   closeConfirm(): void {
     this.confirmOpen = false;
     this.confirmPayload = null;
@@ -320,7 +318,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.closeConfirm();
   }
 
-  // ====== HELPERS UI ======
+ 
   getParentOptions(): Cuenta[] {
     const excludeId = this.editId;
     return this.allCuentas.filter(c => c.id !== excludeId);
@@ -335,7 +333,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   onSidebarToggle(open: boolean): void { this.sidebarOpen = open; }
   onTabChange(tabId: string): void { this.activeTabId = tabId as any; }
 
-  // ====== TOASTS & ERRORS ======
+  
   toastOk(msg: string): void {
     this.vm = { open: true, title: 'Éxito', message: msg, type: 'success', autoCloseMs: 2800 };
   }
@@ -358,7 +356,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
 // Search
 searchTerm = '';
 
-// 👉 lista filtrada (si el CrudPanel te manda el término)
 get filteredRows() {
   const term = this.searchTerm.trim().toLowerCase();
   if (!term) return this.rows;
@@ -377,7 +374,6 @@ onSearch(term: string) {
   this.searchTerm = term ?? '';
 }
 
-  // trackBy opcional para *ngFor de filas
   trackById(index: number, item: { id: number }): number {
     return item.id;
   }

@@ -5,11 +5,11 @@
     (openChange)="onSidebarToggle($event)">
   </app-sidebar>
 
-  <!-- ====== CONTENIDO ====== -->
+  
   <div class="content">
     <div class="crud-wrapper">
       
-      <!-- ===================== PANEL DE CATÁLOGO DE CUENTAS ===================== -->
+     
       <app-crud-panel
         [title]="title"
         [tabs]="tabs"
@@ -34,7 +34,7 @@
   </div>
 </div>
 
-<!-- ===================== MODAL: CUENTA ===================== -->
+
 <app-modal
   [open]="editOpen"
   [title]="modalTitle"
@@ -118,7 +118,7 @@
   </form>
 </app-modal>
 
-<!-- ===================== MODAL: CONFIRMACIÓN ===================== -->
+
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -130,7 +130,7 @@
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- ===================== TOAST ===================== -->
+
 <app-toast-message
   [open]="vm.open"
   [title]="vm.title"

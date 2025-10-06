@@ -20,10 +20,8 @@ exports.__esModule = true;
 exports.CatalogoCuentasComponent = void 0;
 var core_1 = require("@angular/core");
 var http_1 = require("@angular/common/http");
-// Standalone deps UI
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
-// Tus componentes standalone
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
 var crud_panel_component_1 = require("@app/components/crud-panel/crud-panel.component");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
@@ -31,18 +29,14 @@ var toast_message_component_component_1 = require("@app/components/modal/toast-m
 var API = 'http://localhost:3000/api/v1/cuentas';
 var CatalogoCuentasComponent = /** @class */ (function () {
     function CatalogoCuentasComponent() {
-        // ====== DI ======
         this.http = core_1.inject(http_1.HttpClient);
         this.subs = [];
-        // ====== LAYOUT / TABS ======
         this.sidebarOpen = true;
         this.title = 'Catálogo de Cuentas';
         this.tabs = [{ id: 'datos', label: 'Cuentas' }];
         this.activeTabId = 'datos';
-        // ====== PERMISOS / ACCIONES SUPERIORES ======
         this.canEdit = true;
         this.primaryActionLabel = 'Nueva cuenta';
-        // ====== GRID ======
         this.columns = [
             { key: 'codigo', header: 'Código', width: '140' },
             { key: 'nombre', header: 'Nombre', width: '260' },
@@ -57,7 +51,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         ];
         this.rows = [];
         this.allCuentas = []; // para combos de padre
-        // ====== MODAL: CUENTA ======
         this.editOpen = false;
         this.modalTitle = 'Nueva cuenta';
         this.modalSize = 'md';
@@ -70,15 +63,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             ctaMayor: false,
             parentId: null
         };
-        // --- Estado de validación en vivo ---
         this.errors = {};
         this.touched = { codigo: false, nombre: false };
-        // ====== MODAL: CONFIRMACIÓN ======
         this.confirmOpen = false;
         this.confirmTitle = 'Confirmación';
         this.confirmMessage = '';
         this.confirmPayload = null;
-        // ====== TOAST ======
         this.vm = { open: false, title: '', message: '', type: 'info', autoCloseMs: 3500 };
         // Search
         this.searchTerm = '';
@@ -92,14 +82,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    // ====== LIFECYCLE ======
     CatalogoCuentasComponent.prototype.ngOnInit = function () {
         this.loadCuentas();
     };
     CatalogoCuentasComponent.prototype.ngOnDestroy = function () {
         this.subs.forEach(function (s) { return s.unsubscribe(); });
     };
-    // ====== DATA ======
     CatalogoCuentasComponent.prototype.loadCuentas = function () {
         var _this = this;
         var s = this.http.get(API).subscribe({
@@ -152,7 +140,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         });
         this.subs.push(s);
     };
-    // ====== HANDLERS CRUD-PANEL ======
     CatalogoCuentasComponent.prototype.onPrimary = function () {
         // Nueva cuenta
         this.editId = null;
@@ -215,7 +202,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             return;
         }
     };
-    // ====== VALIDACIÓN EN VIVO ======
     CatalogoCuentasComponent.prototype.resetValidation = function () {
         this.errors = {};
         this.touched = { codigo: false, nombre: false };
@@ -239,14 +225,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             check(field);
         }
     };
-    /** Llamar desde (ngModelChange) en los inputs para validar en tiempo real */
     CatalogoCuentasComponent.prototype.onFieldChange = function (field, value) {
         var v = (value !== null && value !== void 0 ? value : '').trimStart(); // evita espacios al inicio
         this.formCuenta[field] = v;
         this.touched[field] = true;
         this.validate(field);
     };
-    // ====== MODAL: CUENTA ======
     CatalogoCuentasComponent.prototype.closeModal = function () { this.editOpen = false; };
     CatalogoCuentasComponent.prototype.cancelModal = function () { this.editOpen = false; };
     CatalogoCuentasComponent.prototype.confirmModal = function () {
@@ -272,7 +256,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         else
             this.updateCuenta(this.editId, payload);
     };
-    // ====== MODAL: CONFIRMACIÓN ======
     CatalogoCuentasComponent.prototype.closeConfirm = function () {
         this.confirmOpen = false;
         this.confirmPayload = null;
@@ -286,7 +269,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         }
         this.closeConfirm();
     };
-    // ====== HELPERS UI ======
     CatalogoCuentasComponent.prototype.getParentOptions = function () {
         var excludeId = this.editId;
         return this.allCuentas.filter(function (c) { return c.id !== excludeId; });
@@ -299,7 +281,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
     };
     CatalogoCuentasComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
     CatalogoCuentasComponent.prototype.onTabChange = function (tabId) { this.activeTabId = tabId; };
-    // ====== TOASTS & ERRORS ======
     CatalogoCuentasComponent.prototype.toastOk = function (msg) {
         this.vm = { open: true, title: 'Éxito', message: msg, type: 'success', autoCloseMs: 2800 };
     };
@@ -322,7 +303,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         this.toastError(fallbackMsg, err);
     };
     Object.defineProperty(CatalogoCuentasComponent.prototype, "filteredRows", {
-        // 👉 lista filtrada (si el CrudPanel te manda el término)
         get: function () {
             var term = this.searchTerm.trim().toLowerCase();
             if (!term)
@@ -344,7 +324,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
     CatalogoCuentasComponent.prototype.onSearch = function (term) {
         this.searchTerm = term !== null && term !== void 0 ? term : '';
     };
-    // trackBy opcional para *ngFor de filas
     CatalogoCuentasComponent.prototype.trackById = function (index, item) {
         return item.id;
     };

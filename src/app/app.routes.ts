@@ -13,6 +13,7 @@ import { RoleGuard } from './guards/role.guard';
 import { PermissionGuard } from './guards/permission.guard';
 import { EmpresaComponent } from './pages/empresa/empresa.component';
 import { ImpuestosComponent } from './pages/impuestos/impuestos.component';
+import { CatalogCentrosComponent } from './pages/catalog-centros/catalog-centros.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -58,11 +59,11 @@ export const routes: Routes = [
      canActivate: [AuthGuard, PermissionGuard],
      data: { perms: ['consultar_empresa']}
   },
- // {
- //   path: 'centros-costo',
-  //  component: CatalogCentrosComponent,
-  //  canActivate: [AuthGuard, PermissionGuard],
-   // data: {perms: ['consultar_empresa']}
- // },
+  {
+   path: 'centros-costo',
+    component: CatalogCentrosComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {perms: ['consultar_empresa']}
+ },
   { path: '**', redirectTo: 'login' }
 ];

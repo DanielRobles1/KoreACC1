@@ -12,6 +12,7 @@ var auth_guard_1 = require("./guards/auth.guard");
 var permission_guard_1 = require("./guards/permission.guard");
 var empresa_component_1 = require("./pages/empresa/empresa.component");
 var impuestos_component_1 = require("./pages/impuestos/impuestos.component");
+var catalog_centros_component_1 = require("./pages/catalog-centros/catalog-centros.component");
 exports.routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: login_component_1.LoginComponent },
@@ -55,11 +56,11 @@ exports.routes = [
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
         data: { perms: ['consultar_empresa'] }
     },
-    // {
-    //   path: 'centros-costo',
-    //  component: CatalogCentrosComponent,
-    //  canActivate: [AuthGuard, PermissionGuard],
-    // data: {perms: ['consultar_empresa']}
-    // },
+    {
+        path: 'centros-costo',
+        component: catalog_centros_component_1.CatalogCentrosComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
     { path: '**', redirectTo: 'login' }
 ];

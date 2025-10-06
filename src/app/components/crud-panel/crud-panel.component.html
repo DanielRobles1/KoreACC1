@@ -80,20 +80,20 @@
                       [title]="a.tooltip || a.label || a.id"
                       (click)="onActionClick(a.id, row); $event.stopPropagation()">
 
-                <!-- ✏️ Editar -->
+                <!-- Editar -->
                 <svg *ngIf="a.id === 'edit'"
                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 20h9"></path>
                   <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                 </svg>
 
-                <!-- ➕ Crear hijo (alias: child | create) -->
+                
                 <svg *ngIf="a.id === 'child' || a.id === 'create'"
                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
 
-                <!-- 🗑️ Eliminar (alias: del | delete) -->
+                <!-- Eliminar (alias: del | delete) -->
                 <svg *ngIf="a.id === 'del' || a.id === 'delete'"
                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
