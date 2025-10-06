@@ -1,0 +1,142 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <!-- ====== CONTENIDO ====== -->
+  <div class="content">
+    <div class="crud-wrapper">
+      
+      <!-- ===================== PANEL DE CATÁLOGO DE CUENTAS ===================== -->
+      <app-crud-panel
+        [title]="title"
+        [tabs]="tabs"
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+        [primaryActionLabel]="primaryActionLabel"
+        (primaryAction)="onPrimary()"
+        [disablePrimary]="!canEdit"
+        [data]="filteredRows"
+
+        [columns]="columns"
+        [data]="rows"              
+        [actions]="actions"
+        [showSearch]="true"        
+        [hidePrimary]="false"
+        (search)="onSearch($event)"
+
+        (edit)="onEdit($event)"
+        (action)="onRowAction($event)">
+      </app-crud-panel>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: CUENTA ===================== -->
+<app-modal
+  [open]="editOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  [showClose]="showClose"
+  (closed)="closeModal()"
+  (canceled)="cancelModal()"
+  (confirmed)="confirmModal()">
+
+  <form #cuentaForm="ngForm" style="display: grid; gap: 10px;">
+    <!-- Código -->
+    <div>
+      <label class="field-label required">Código</label>
+      <input
+        class="field-input"
+        type="text"
+        name="codigo"
+        [(ngModel)]="formCuenta.codigo"
+        (ngModelChange)="onFieldChange('codigo', $event)"
+        required
+        maxlength="20"
+        placeholder="Ej. 1000 o 1001-01" />
+      <!-- Error debajo del campo -->
+      <small
+        *ngIf="touched.codigo && errors.codigo"
+        style="color:rgb(247, 39, 39); display:block; margin-top:4px; font-weight:bold;">
+        {{ errors.codigo }}
+      </small>
+    </div>
+
+    <!-- Nombre -->
+    <div>
+      <label class="field-label required">Nombre de cuenta</label>
+      <input
+        class="field-input"
+        type="text"
+        name="nombre"
+        [(ngModel)]="formCuenta.nombre"
+        (ngModelChange)="onFieldChange('nombre', $event)"
+        required
+        maxlength="100"
+        placeholder="Ej. Caja general, Banco BBVA, Ventas" />
+      <!-- Error debajo del campo -->
+      <small
+        *ngIf="touched.nombre && errors.nombre"
+        style="color:rgb(247, 58, 58); display:block; margin-top:4px; font-weight:bold;">
+        {{ errors.nombre }}
+      </small>
+    </div>
+
+    <!-- Toggle cuenta mayor -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label class="field-label" style="margin: 0;">Cuenta mayor</label>
+      <input
+        type="checkbox"
+        name="ctaMayor"
+        [(ngModel)]="formCuenta.ctaMayor" />
+      <span style="font-size: 12px; opacity: 0.8;">
+        (si se marca, puede tener subcuentas)
+      </span>
+    </div>
+
+    <!-- Cuenta padre (solo si no es mayor) -->
+    <div *ngIf="!formCuenta.ctaMayor">
+      <label class="field-label">Cuenta padre</label>
+      <select
+        class="field-input"
+        name="parentId"
+        [(ngModel)]="formCuenta.parentId">
+        <option [ngValue]="null">— Sin padre —</option>
+        <option *ngFor="let c of getParentOptions()" [ngValue]="c.id">
+          {{ c.codigo }} - {{ c.nombre }}
+        </option>
+      </select>
+
+      <div *ngIf="parentPreselectedId" style="font-size: 12px; opacity: 0.8; margin-top:4px;">
+        Se creará como subcuenta de
+        <strong>{{ getCodigoPadre(parentPreselectedId) }}</strong>
+      </div>
+    </div>
+  </form>
+</app-modal>
+
+<!-- ===================== MODAL: CONFIRMACIÓN ===================== -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  [size]="'sm'"
+  [showClose]="true"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0">{{ confirmMessage }}</p>
+</app-modal>
+
+<!-- ===================== TOAST ===================== -->
+<app-toast-message
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
+  position="top-right"
+  [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+  (closed)="vm.open = false">
+</app-toast-message>

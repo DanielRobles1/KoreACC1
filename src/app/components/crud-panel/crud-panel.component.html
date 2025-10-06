@@ -30,18 +30,17 @@
         </nav>
       </div>
 
-     <button 
-  *ngIf="!hidePrimary"
-  class="primary" 
-  type="button" 
-  (click)="onPrimary()">
-  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <line x1="12" y1="5" x2="12" y2="19"></line>
-    <line x1="5" y1="12" x2="19" y2="12"></line>
-  </svg>
-  {{ primaryActionLabel }}
-</button>
-
+      <button
+        *ngIf="!hidePrimary"
+        class="primary"
+        type="button"
+        (click)="onPrimary()">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        {{ primaryActionLabel }}
+      </button>
     </header>
 
     <div class="table-wrapper">
@@ -53,78 +52,98 @@
             <th *ngIf="actions?.length">Acciones</th>
           </tr>
         </thead>
+
         <tbody>
-    <tr *ngFor="let row of data; trackBy: trackByIndex"
-        [class.is-selected]="selectedRowId != null && row[idKey] === selectedRowId"
-        (click)="onRowClick(row)">
+          <tr *ngFor="let row of data; trackBy: trackByIndex"
+              [class.is-selected]="selectedRowId != null && row[idKey] === selectedRowId"
+              (click)="onRowClick(row)">
 
-      <!-- Columna de selección -->
-      <td *ngIf="selectionMode==='single'" class="sel-cell" (click)="$event.stopPropagation()">
-        <label class="radio-box" title="Seleccionar">
-          <input type="radio"
-                 name="crudRowSelect"
-                 [checked]="row[idKey]===selectedRowId"
-                 (change)="onRadioChange(row)">
-          <span class="fake-radio"></span>
-        </label>
-      </td>
+            <!-- Columna de selección -->
+            <td *ngIf="selectionMode==='single'" class="sel-cell" (click)="$event.stopPropagation()">
+              <label class="radio-box" title="Seleccionar">
+                <input type="radio"
+                       name="crudRowSelect"
+                       [checked]="row[idKey]===selectedRowId"
+                       (change)="onRadioChange(row)">
+                <span class="fake-radio"></span>
+              </label>
+            </td>
 
-      <!-- Celdas de datos -->
-      <td *ngFor="let col of columns">{{ row[col.key] }}</td>
+            <!-- Celdas de datos -->
+            <td *ngFor="let col of columns">{{ row[col.key] }}</td>
 
-      <!-- Acciones -->
-      <td class="actions" *ngIf="actions?.length">
-        <button class="icon"
-                *ngFor="let a of actions"
-                type="button"
-                [title]="a.tooltip || a.label || a.id"
-                (click)="onActionClick(a.id, row)">
-          <!-- (tus SVGs existentes) -->
-          <svg *ngIf="a.id === 'edit'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 20h9"></path>
-            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-          </svg>
+            <!-- Acciones -->
+            <td class="actions" *ngIf="actions?.length">
+              <button class="icon"
+                      *ngFor="let a of actions"
+                      type="button"
+                      [title]="a.tooltip || a.label || a.id"
+                      (click)="onActionClick(a.id, row); $event.stopPropagation()">
 
-          <!-- Eliminar -->
-          <svg *ngIf="a.id === 'delete'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
-            <path d="M10 11v6"></path><path d="M14 11v6"></path>
-            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
-          </svg>
+                <!-- ✏️ Editar -->
+                <svg *ngIf="a.id === 'edit'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
 
-          <!-- Permisos -->
-                <svg *ngIf="a.id === 'permissions'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <!-- ➕ Crear hijo (alias: child | create) -->
+                <svg *ngIf="a.id === 'child' || a.id === 'create'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+
+                <!-- 🗑️ Eliminar (alias: del | delete) -->
+                <svg *ngIf="a.id === 'del' || a.id === 'delete'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                  <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                </svg>
+
+                <!-- 🔐 Permisos (si lo usas en otros módulos) -->
+                <svg *ngIf="a.id === 'permissions'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                   <path d="M7 11V7a5 5 0 0110 0v4"></path>
                 </svg>
 
-          <!-- 🔓 Abrir (unlock) -->
-          <svg *ngIf="a.id === 'abrir'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 019.9 0"></path>
-          </svg>
+                <!-- 🔓 Abrir -->
+                <svg *ngIf="a.id === 'abrir'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 019.9 0"></path>
+                </svg>
 
-          <!-- 🔒 Cerrar (lock) -->
-          <svg *ngIf="a.id === 'cerrar'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0110 0v4"></path>
-          </svg>
+                <!-- 🔒 Cerrar -->
+                <svg *ngIf="a.id === 'cerrar'"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                </svg>
 
-          <!-- Otros (texto) -->
-          <span *ngIf="a.id !== 'edit' && a.id !== 'delete' && a.id !== 'permissions' && a.id !== 'abrir' && a.id !== 'cerrar'">
-            {{ a.label || a.id }}
-          </span>
-        </button>
-      </td>
-    </tr>
+                <!-- Fallback: texto si no hay ícono mapeado -->
+                <span *ngIf="
+                  a.id !== 'edit' &&
+                  a.id !== 'del' && a.id !== 'delete' &&
+                  a.id !== 'child' && a.id !== 'create' &&
+                  a.id !== 'permissions' &&
+                  a.id !== 'abrir' && a.id !== 'cerrar'">
+                  {{ a.label || a.id }}
+                </span>
+              </button>
+            </td>
+          </tr>
 
-    <tr *ngIf="!data || data.length === 0">
-      <td class="empty" [attr.colspan]="columns.length + (actions?.length ? 1 : 0) + (selectionMode==='single' ? 1 : 0)">
-        Sin registros
-      </td>
-    </tr>
-  </tbody>
+          <tr *ngIf="!data || data.length === 0">
+            <td class="empty"
+                [attr.colspan]="columns.length + (actions?.length ? 1 : 0) + (selectionMode==='single' ? 1 : 0)">
+              Sin registros
+            </td>
+          </tr>
+        </tbody>
       </table>
     </div>
   </section>

@@ -43,7 +43,7 @@ export const routes: Routes = [
     path: 'empresa',
     component: EmpresaComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: { perms: ['consultar_empresa']}
+    data: { perms: ['consultar_empresa','editar_empresa','crear_empresa','eliminar_empresa'] }
   },
   {
     path: 'impuestos',
@@ -51,6 +51,18 @@ export const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: { perms: ['consultar_empresa']}
   },
-
+ {
+    path: 'catalogos/cuentas',
+    loadComponent: () =>
+      import('./pages/catalogocuentas/catalogocuentas.component').then(m => m.CatalogoCuentasComponent),
+     canActivate: [AuthGuard, PermissionGuard],
+     data: { perms: ['consultar_empresa']}
+  },
+ // {
+ //   path: 'centros-costo',
+  //  component: CatalogCentrosComponent,
+  //  canActivate: [AuthGuard, PermissionGuard],
+   // data: {perms: ['consultar_empresa']}
+ // },
   { path: '**', redirectTo: 'login' }
 ];
