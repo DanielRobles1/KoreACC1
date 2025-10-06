@@ -13,7 +13,6 @@ var http_1 = require("@angular/common/http");
 var PeriodoContableService = /** @class */ (function () {
     function PeriodoContableService(http) {
         this.http = http;
-        // ❌ Tenías un espacio inicial: ` http://...`
         this.baseUrl = 'http://localhost:3000/api/v1/periodos';
     }
     PeriodoContableService.prototype.list = function (query) {
@@ -38,8 +37,11 @@ var PeriodoContableService = /** @class */ (function () {
         return this.http.get(this.baseUrl + "/" + id_periodo);
     };
     PeriodoContableService.prototype.create = function (payload) {
-        // payload debe incluir id_ejercicio
         return this.http.post(this.baseUrl, payload);
+    };
+    PeriodoContableService.prototype.generate = function (id_ejercicio, frecuencia) {
+        var url = this.baseUrl + "/generar";
+        return this.http.post(url, { id_ejercicio: id_ejercicio, frecuencia: frecuencia });
     };
     PeriodoContableService.prototype.update = function (id_periodo, payload) {
         return this.http.put(this.baseUrl + "/" + id_periodo, payload);

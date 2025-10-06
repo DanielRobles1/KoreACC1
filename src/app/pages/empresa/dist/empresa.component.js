@@ -243,7 +243,6 @@ var EmpresaComponent = /** @class */ (function () {
             { id: 'edit', tooltip: 'Editar Ejercicio' },
             { id: 'abrir', tooltip: 'Marcar como abierto' },
             { id: 'cerrar', tooltip: 'Marcar como cerrado' },
-            { id: 'select', tooltip: 'Seleccionar ejercicio actual' },
         ] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Ejercicio' }] : []));
         this.minDate = this.toISO(this.todayLocal());
         this.loadDataEmpresa();
@@ -310,10 +309,12 @@ var EmpresaComponent = /** @class */ (function () {
     };
     EmpresaComponent.prototype.loadPeriodos = function () {
         var _this = this;
+        var _a;
         var idEmp = this.empresaId();
         if (!idEmp)
             return;
-        this.periodosService.listByEmpresa(idEmp).subscribe({
+        var idEj = (_a = this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio;
+        this.periodosService.listByEmpresa(idEmp, idEj).subscribe({
             next: function (items) { return _this.periodos = items !== null && items !== void 0 ? items : []; },
             error: function (err) { return _this.openError('Error al cargar los períodos', err); }
         });
@@ -765,115 +766,41 @@ var EmpresaComponent = /** @class */ (function () {
         }
         return ej;
     };
-    EmpresaComponent.prototype.clampRange = function (start, end, min, max) {
-        var s = start < min ? new Date(min) : new Date(start);
-        var e = end > max ? new Date(max) : new Date(end);
-        return { start: s, end: e };
-    };
-    EmpresaComponent.prototype.nextMonth = function (d) { return new Date(d.getFullYear(), d.getMonth() + 1, 1); };
-    EmpresaComponent.prototype.monthStart = function (d) { return new Date(d.getFullYear(), d.getMonth(), 1); };
-    EmpresaComponent.prototype.monthEnd = function (d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); };
-    EmpresaComponent.prototype.weekStartMon = function (d) { var wd = d.getDay(); var diff = (wd === 0 ? -6 : 1 - wd); var r = new Date(d); r.setDate(d.getDate() + diff); return new Date(r.getFullYear(), r.getMonth(), r.getDate()); };
-    EmpresaComponent.prototype.weekEndMonSun = function (s) { var r = new Date(s); r.setDate(s.getDate() + 6); return r; };
     EmpresaComponent.prototype.generatePeriodsForSelectedExercise = function (tipo) {
-        var _a;
         if (tipo === void 0) { tipo = 'MENSUAL'; }
         return __awaiter(this, void 0, void 0, function () {
-            var ej, idEmp, ejStart, ejEnd, ranges, _b, start, end, cursor, mStart, mEnd, _c, start, end, cursor, wStart, wEnd, _d, start, end, existentesKey, toCreate, _i, toCreate_1, r, payload, err_1;
-            return __generator(this, function (_e) {
-                switch (_e.label) {
-                    case 0:
-                        try {
-                            ej = this.ensureEjercicioSeleccionado();
-                        }
-                        catch (_f) {
-                            return [2 /*return*/];
-                        }
-                        idEmp = this.empresaId();
-                        if (!idEmp) {
-                            this.openError('No hay empresa seleccionada.');
-                            return [2 /*return*/];
-                        }
-                        ejStart = this.parseISODateLocal(ej.fecha_inicio);
-                        ejEnd = this.parseISODateLocal(ej.fecha_fin);
-                        ranges = [];
-                        if (tipo === 'ANUAL') {
-                            _b = this.clampRange(ejStart, ejEnd, ejStart, ejEnd), start = _b.start, end = _b.end;
-                            ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-                        }
-                        if (tipo === 'MENSUAL') {
-                            cursor = new Date(ejStart.getFullYear(), ejStart.getMonth(), 1);
-                            while (cursor <= ejEnd) {
-                                mStart = this.monthStart(cursor);
-                                mEnd = this.monthEnd(cursor);
-                                _c = this.clampRange(mStart, mEnd, ejStart, ejEnd), start = _c.start, end = _c.end;
-                                if (start <= end)
-                                    ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-                                cursor = this.nextMonth(cursor);
-                            }
-                        }
-                        if (tipo === 'SEMANAL') {
-                            cursor = this.weekStartMon(ejStart);
-                            while (cursor <= ejEnd) {
-                                wStart = this.weekStartMon(cursor);
-                                wEnd = this.weekEndMonSun(wStart);
-                                _d = this.clampRange(wStart, wEnd, ejStart, ejEnd), start = _d.start, end = _d.end;
-                                if (start <= end)
-                                    ranges.push({ inicio: this.toISO(start), fin: this.toISO(end) });
-                                cursor = new Date(wStart);
-                                cursor.setDate(wStart.getDate() + 7);
-                            }
-                        }
-                        if (ranges.length === 0) {
-                            this.openError('No se encontraron rangos para generar.');
-                            return [2 /*return*/];
-                        }
-                        existentesKey = new Set(((_a = this.periodos) !== null && _a !== void 0 ? _a : [])
-                            .filter(function (p) { return p.id_ejercicio === ej.id_ejercicio && p.tipo_periodo === tipo; })
-                            .map(function (p) { return p.tipo_periodo + "|" + p.fecha_inicio + "|" + p.fecha_fin; }));
-                        toCreate = ranges.filter(function (r) { return !existentesKey.has(tipo + "|" + r.inicio + "|" + r.fin); });
-                        if (toCreate.length === 0) {
-                            this.openSuccess('No hay períodos nuevos por crear (ya existen).');
-                            return [2 /*return*/];
-                        }
-                        this.isGenerating = true;
-                        _e.label = 1;
-                    case 1:
-                        _e.trys.push([1, 6, 7, 8]);
-                        _i = 0, toCreate_1 = toCreate;
-                        _e.label = 2;
-                    case 2:
-                        if (!(_i < toCreate_1.length)) return [3 /*break*/, 5];
-                        r = toCreate_1[_i];
-                        payload = {
-                            id_empresa: idEmp,
-                            id_ejercicio: ej.id_ejercicio,
-                            tipo_periodo: tipo,
-                            fecha_inicio: r.inicio,
-                            fecha_fin: r.fin,
-                            esta_abierto: true,
-                            periodo_daterange: undefined
-                        };
-                        return [4 /*yield*/, this.periodosService.create(payload).toPromise()];
-                    case 3:
-                        _e.sent();
-                        _e.label = 4;
-                    case 4:
-                        _i++;
-                        return [3 /*break*/, 2];
-                    case 5:
-                        this.loadPeriodos();
-                        this.openSuccess("Per\u00EDodos " + tipo.toLowerCase() + " generados correctamente.");
-                        return [3 /*break*/, 8];
-                    case 6:
-                        err_1 = _e.sent();
-                        this.openError('No se pudieron generar todos los períodos.', err_1);
-                        return [3 /*break*/, 8];
-                    case 7:
-                        this.isGenerating = false;
-                        return [7 /*endfinally*/];
-                    case 8: return [2 /*return*/];
+            var ej, idEmp;
+            var _this = this;
+            return __generator(this, function (_a) {
+                try {
+                    ej = this.ensureEjercicioSeleccionado();
                 }
+                catch (_b) {
+                    return [2 /*return*/];
+                }
+                idEmp = this.empresaId();
+                if (!idEmp) {
+                    this.openError('No hay empresa seleccionada.');
+                    return [2 /*return*/];
+                }
+                this.isGenerating = true;
+                this.openSuccess("Generando per\u00EDodos " + tipo.toLowerCase() + "...");
+                this.periodosService.generate(ej.id_ejercicio, tipo).subscribe({
+                    next: function (periodosGenerados) {
+                        _this.loadPeriodos();
+                        var n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
+                        _this.openSuccess(n != null
+                            ? "Per\u00EDodos " + tipo.toLowerCase() + " generados: " + n + "."
+                            : "Per\u00EDodos " + tipo.toLowerCase() + " generados correctamente.");
+                    },
+                    error: function (err) {
+                        _this.openError('No se pudieron generar los períodos.', err);
+                    },
+                    complete: function () {
+                        _this.isGenerating = false;
+                    }
+                });
+                return [2 /*return*/];
             });
         });
     };

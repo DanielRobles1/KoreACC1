@@ -31,7 +31,7 @@ export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
 
 @Injectable({ providedIn: 'root' })
 export class PeriodoContableService {
-  private baseUrl = 'http://localhost:3000/api/v1/periodos';
+  private baseUrl ='http://localhost:3000/api/v1/periodos';
 
   constructor(private http: HttpClient) {}
 
