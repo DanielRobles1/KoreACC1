@@ -1,0 +1,110 @@
+/* usuarios.component.scss (o global) */
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr; /* la 1a col toma el ancho del sidebar */
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* sidebar ocupa el 100% en alto y su ancho lo manda la var */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;          /* importante para que no “asome” contenido */
+}
+
+/* cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+/* content debe permitir encogerse correctamente */
+.content {
+  min-width: 0;              /* evita overflow horizontal de grids */
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Móvil: el sidebar se vuelve overlay deslizante */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr; /* sólo una columna */
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0; /* top:0; right:auto; bottom:0; left:0 */
+    height: 100vh;
+    width: 280px;      /* ancho fijo en móvil */
+    transform: translateX(0);
+    transition: transform .3s ease;
+    z-index: 50;
+  }
+  .layout.is-collapsed .sidebar {
+    transform: translateX(-100%);
+  }
+}
+
+/* ====== Grid base ya existente (layout/sidebar/content) permanece igual ====== */
+:host {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+}
+
+/* layout/sidebar/content: ya los tienes */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.field { display: block; }
+.col-span-2 { grid-column: span 2; }
+
+.field-label {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: .2px;
+  color: #0b1020;
+  margin-bottom: 8px;
+}
+.field-label.required::after {
+  content: '*';
+  margin-left: 2px;
+  font-weight: 700;
+  color: #0b1020;
+}
+
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D9DEE7;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+  background: #fff;
+}
+.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+
+.hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+.switch-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-note { font-size: 12px; opacity: .85; color: #0b1020; }
+
+@media (max-width: 720px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .col-span-2, .switch-line { grid-column: auto; }
+}

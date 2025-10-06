@@ -423,7 +423,9 @@ loadPermisosDisponibles() {
     'Pólizas':  ['poliza', 'póliza'],
     'Reportes': ['reporte', 'report'],
     'Roles':    ['rol'],
-    'Periodos': ['periodos', 'periodo', 'period'],
+    'Impuestos': ['impuestos', 'impuesto', 'Impuestos'],
+    'Cat. Contable': ['cat_Contable', 'Cuentas', 'Contable', 'cuentas', 'contable'],
+    'Cat. Centros': ['cat_Centros', 'Centros', 'centros'],
     'Empresa':  ['empresa', 'company']
   };
 
@@ -435,7 +437,9 @@ loadPermisosDisponibles() {
       'Reportes': [],
       'Roles':    [],
       'Empresa':  [],
-      'Periodos': [],
+      'Impuestos': [],
+      'Cat. Contable': [],
+      'Cat. Centros': [],
       'Otros':    [],   
     };
 

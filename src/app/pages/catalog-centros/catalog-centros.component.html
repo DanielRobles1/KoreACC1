@@ -1,1 +1,156 @@
-<p>catalog-centros works!</p>
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <div class="content">
+    <app-crud-panel
+      [title]="title"
+      [tabs]="tabs"
+      [activeTabId]="activeTabId"
+      (tabChange)="onTabChange($event)"
+
+      [primaryActionLabel]="primaryActionLabel"
+      (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"
+
+      [columns]="columns"
+      [data]="filteredRows"
+      [actions]="actions"
+
+      (edit)="onEdit($event)"
+      (action)="onRowAction($event)"
+      (search)="onSearch($event)">
+    </app-crud-panel>
+  </div>
+</div>
+
+<!-- MODAL: Crear/editar centro -->
+<app-modal
+  [open]="modalOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  [showClose]="true"
+  (closed)="closeModal()"
+  (canceled)="cancelModal()"
+  (confirmed)="confirmCentroModal()">
+
+  <form #centroForm="ngForm" class="form-grid" novalidate>
+    <div class="field">
+      <label class="field-label required">ID del centro</label>
+      <input
+        class="field-input"
+        type="number"
+        name="id_centro"
+        [(ngModel)]="formCentro.id_centro"
+        required
+        maxlength="20" />
+    </div>
+
+    <div class="field">
+      <label class="field-label required">Nombre del centro</label>
+      <input
+        class="field-input"
+        type="text"
+        name="nombre_centro"
+        [(ngModel)]="formCentro.nombre_centro"
+        required
+        maxlength="150" />
+    </div>
+
+    <div class="field">
+      <label class="field-label required">Serie de venta</label>
+      <input
+        class="field-input"
+        type="text"             
+        name="serie_venta"
+        [(ngModel)]="formCentro.serie_venta"
+        required
+        maxlength="50" />
+    </div>
+
+    <div class="field">
+      <label class="field-label required">Región</label>
+      <input
+        class="field-input"
+        type="text"
+        name="region"
+        [(ngModel)]="formCentro.region"
+        required
+        maxlength="80" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Código Postal</label>
+      <input
+        class="field-input"
+        type="text"
+        name="cp"
+        [(ngModel)]="formCentro.cp"
+        maxlength="5"
+        pattern="^\d{5}$" />
+      <div class="hint">Formato esperado: 5 dígitos.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Calle</label>
+      <input class="field-input" type="text" name="calle" [(ngModel)]="formCentro.calle" maxlength="120" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Número exterior</label>
+      <input class="field-input" type="text" name="num_ext" [(ngModel)]="formCentro.num_ext" maxlength="20" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Número interior</label>
+      <input class="field-input" type="text" name="num_int" [(ngModel)]="formCentro.num_int" maxlength="20" />
+    </div>
+
+    <div class="field">
+      <label class="field-label">Teléfono</label>
+      <input class="field-input" type="text" name="telefono" [(ngModel)]="formCentro.telefono" maxlength="20" />
+    </div>
+
+    <div class="field col-span-2">
+      <label class="field-label">Correo de contacto</label>
+      <input class="field-input" type="email" name="correo" [(ngModel)]="formCentro.correo" maxlength="120" />
+    </div>
+
+    <div class="field switch-line col-span-2">
+      <label class="field-label">Estatus</label>
+      <label class="switch">
+        <input type="checkbox" name="activo" [(ngModel)]="formCentro.activo" />
+        <span>Activo</span>
+      </label>
+    </div>
+
+    <div class="form-note col-span-2">
+      Los campos marcados con <b>*</b> son obligatorios.
+    </div>
+  </form>
+</app-modal>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()"
+>
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>
+
+<app-toast-message
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
+  position="top-right"
+  [autoCloseMs]="vm.autoCloseMs"
+  (closed)="toast.close()"
+/>
