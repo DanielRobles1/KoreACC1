@@ -46,6 +46,7 @@
         name="id_centro"
         [(ngModel)]="formCentro.id_centro"
         required
+        placeholder="Código del centro"
         maxlength="20" />
     </div>
 
@@ -57,6 +58,7 @@
         name="nombre_centro"
         [(ngModel)]="formCentro.nombre_centro"
         required
+        placeholder="Nombre"
         maxlength="150" />
     </div>
 
@@ -68,6 +70,7 @@
         name="serie_venta"
         [(ngModel)]="formCentro.serie_venta"
         required
+        placeholder="Ej. A0"
         maxlength="50" />
     </div>
 
@@ -79,6 +82,7 @@
         name="region"
         [(ngModel)]="formCentro.region"
         required
+        placeholder="Ej. Valles centrales"
         maxlength="80" />
     </div>
 
@@ -90,33 +94,34 @@
         name="cp"
         [(ngModel)]="formCentro.cp"
         maxlength="5"
+        placeholder="C. P. XXXXX"
         pattern="^\d{5}$" />
       <div class="hint">Formato esperado: 5 dígitos.</div>
     </div>
 
     <div class="field">
       <label class="field-label">Calle</label>
-      <input class="field-input" type="text" name="calle" [(ngModel)]="formCentro.calle" maxlength="120" />
+      <input class="field-input" type="text" name="calle" [(ngModel)]="formCentro.calle" maxlength="120" placeholder="Calle" />
     </div>
 
     <div class="field">
       <label class="field-label">Número exterior</label>
-      <input class="field-input" type="text" name="num_ext" [(ngModel)]="formCentro.num_ext" maxlength="20" />
+      <input class="field-input" type="text" name="num_ext" [(ngModel)]="formCentro.num_ext" maxlength="20" placeholder="Número exterior" />
     </div>
 
     <div class="field">
       <label class="field-label">Número interior</label>
-      <input class="field-input" type="text" name="num_int" [(ngModel)]="formCentro.num_int" maxlength="20" />
+      <input class="field-input" type="text" name="num_int" [(ngModel)]="formCentro.num_int" maxlength="20" placeholder="Número interior"/>
     </div>
 
     <div class="field">
       <label class="field-label">Teléfono</label>
-      <input class="field-input" type="text" name="telefono" [(ngModel)]="formCentro.telefono" maxlength="20" />
+      <input class="field-input" type="text" name="telefono" [(ngModel)]="formCentro.telefono" maxlength="20" placeholder="951-XXX-XX-XX"/>
     </div>
 
     <div class="field col-span-2">
       <label class="field-label">Correo de contacto</label>
-      <input class="field-input" type="email" name="correo" [(ngModel)]="formCentro.correo" maxlength="120" />
+      <input class="field-input" type="email" name="correo" [(ngModel)]="formCentro.correo" maxlength="120" placeholder="ejemplo@gmail.com"/>
     </div>
 
     <div class="field switch-line col-span-2">

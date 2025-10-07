@@ -94,8 +94,8 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
   // CRUD CONFIG
   title = 'Centros de costo';
   tabs: CrudTab[] = [
-    { id: 'Catalogo contable', label: 'Catalogo contable', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
-    { id: 'Centros de costo', label: 'Centros de costo', icon: 'assets/svgs/poliza.svg', iconAlt: 'centros-costo', route: '/centros-costo' },
+    { id: 'Cuentas', label: 'Cuentas', icon: 'assets/svgs/catalog-cuentas.svg', iconAlt: 'Cuentas', route: '/catalogos/cuentas' },
+    { id: 'Centros de costo', label: 'Centros de costo', icon: 'assets/svgs/catalogue-catalog.svg', iconAlt: 'centros-costo', route: '/centros-costo' },
   ];
   activeTabId = 'Centros de costo';
   primaryActionLabel = 'Nuevo centro';
