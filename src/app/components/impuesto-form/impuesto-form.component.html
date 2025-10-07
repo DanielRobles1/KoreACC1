@@ -56,10 +56,34 @@
       <small class="err" *ngIf="f.vigencia_inicio.touched && f.vigencia_inicio.invalid">Campo requerido</small>
     </label>
 
-    <label>
+    <!-- Cuenta relacionada -->
+    <label class="cuenta-relacionada">
       <span>Cuenta relacionada*</span>
-      <input type="text" placeholder="Cuenta contable" formControlName="cuenta_relacionada" />
-      <small class="err" *ngIf="f.cuenta_relacionada.touched && f.cuenta_relacionada.invalid">Campo requerido</small>
+
+      <!-- Buscador (filtra por código o nombre) -->
+      <input
+        type="text"
+        placeholder="Buscar por código o nombre…"
+        [value]="cuentaSearch"
+        (input)="onCuentaSearch($any($event.target).value)"
+        autocomplete="off"
+      />
+
+
+      <!-- Select de cuentas (scrollable) -->
+      <select formControlName="cuenta_relacionada" size="8">
+        <option [ngValue]="null">— Sin cuenta asociada —</option>
+        <option *ngFor="let c of cuentasFiltradas$ | async" [ngValue]="c.codigo">
+          [{{ c.codigo }}] {{ c.nombre }}
+        </option>
+      </select>
+
+      <small class="hint" *ngIf="(cuentasFiltradasCount$ | async) === 0">
+        Sin resultados para “{{ cuentaSearch }}”.
+      </small>
+      <small class="err" *ngIf="f.cuenta_relacionada.touched && f.cuenta_relacionada.invalid">
+        Campo requerido
+      </small>
     </label>
   </div>
 </form>
