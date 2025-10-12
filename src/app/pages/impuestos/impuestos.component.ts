@@ -12,11 +12,18 @@ import { ToastService, ToastState } from '@app/services/toast-service.service';
 @Component({
   selector: 'app-impuestos',
   standalone: true,
-  imports: [SidebarComponent, CrudPanelComponent, ModalComponent, ToastMessageComponent, ImpuestoFormComponent],
+  imports: [
+    SidebarComponent,
+    CrudPanelComponent,
+    ModalComponent,
+    ToastMessageComponent,
+    ImpuestoFormComponent
+  ],
   templateUrl: './impuestos.component.html',
   styleUrls: ['./impuestos.component.scss']
 })
 export class ImpuestosComponent {
+  idEmpresa: number = 1;
   constructor(
     private impuestoService: ImpuestoServiceTsService,
     private router: Router,
@@ -24,10 +31,10 @@ export class ImpuestosComponent {
     public toast: ToastService
   ) {}
 
-  // ==== TOAST VM (servicio centralizado) ====
+ 
   vm!: ToastState;
 
-  // ==== MODAL PRINCIPAL ====
+  
   modalOpen = false;
   modalTitle = 'Crear nuevo impuesto';
   modalSize: 'sm' | 'md' | 'lg' = 'md';
@@ -36,7 +43,7 @@ export class ImpuestosComponent {
   closeModal() { this.modalOpen = false; }
   cancelModal() { this.modalOpen = false; }
 
-  // ==== CONFIRMACIÓN ====
+  
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
@@ -44,19 +51,18 @@ export class ImpuestosComponent {
   private pendingAction: 'save' | 'delete' = 'save';
   private pendingImpuesto: Impuestos | null = null;
 
-  // ==== PERMISOS ====
+  // PERMISOS 
   canCreate = false;
   canEdit = false;
   canDelete = false;
 
-  // ==== CRUD CONFIG ====
+  // CRUD PANEL
   title = 'Impuestos';
   tabs: CrudTab[] = [
-    { id: 'empresa',   label: 'Empresa',   icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa',   route: '/empresa' },
-    { id: 'impuestos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Impuestos', route: '/impuestos' },
+    { id: 'empresa', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
+    { id: 'impuestos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Impuestos', route: '/impuestos' }
   ];
   activeTabId = 'impuestos';
-
   primaryActionLabel = 'Nuevo impuesto';
 
   columns: CrudColumn[] = [
@@ -68,17 +74,17 @@ export class ImpuestosComponent {
     { key: 'aplica_en', header: 'Aplica en' },
     { key: 'es_estandar', header: 'Estándar', width: '10%' },
     { key: 'vigencia_inicio', header: 'Vigencia inicio', width: '15%' },
-    { key: 'cuenta_relacionada', header: 'Cuenta relacionada' },
+    { key: 'id_cuenta', header: 'Cuenta relacionada' } // ✅ clave corregida
   ];
 
   rows: Impuestos[] = [];
 
   actions: CrudAction[] = [
-    { id: 'edit',   label: 'Editar',   tooltip: 'Editar impuesto' },
-    { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar impuesto' },
+    { id: 'edit', label: 'Editar', tooltip: 'Editar impuesto' },
+    { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar impuesto' }
   ];
 
-  // ==== BÚSQUEDA ====
+  // BÚSQUEDA 
   private norm = (v: unknown) =>
     (v ?? '')
       .toString()
@@ -99,8 +105,8 @@ export class ImpuestosComponent {
       const tipo = this.norm(r.tipo);
       const modo = this.norm(r.modo);
       const aplica = this.norm(r.aplica_en);
-      const tasa = this.norm(r.tasa);
-      const cuenta = this.norm(r.cuenta_relacionada);
+      const tasa = this.norm(String(r.tasa));
+      const cuenta = this.norm(String(r.id_cuenta ?? ''));
 
       return (
         nombre.includes(term) ||
@@ -121,14 +127,12 @@ export class ImpuestosComponent {
     this.toast.state$.subscribe(s => (this.vm = s));
     this.cargaImpuestos();
 
-    // Mantener permisos de impuestos
     this.canCreate = this.auth.hasPermission('crear_empresa');
     this.canEdit   = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
 
-    // Ajustar acciones según permisos (con label + tooltip)
     this.actions = [
-      ...(this.canEdit   ? [{ id: 'edit',   label: 'Editar',   tooltip: 'Editar impuesto' }] : []),
+      ...(this.canEdit   ? [{ id: 'edit', label: 'Editar', tooltip: 'Editar impuesto' }] : []),
       ...(this.canDelete ? [{ id: 'delete', label: 'Eliminar', tooltip: 'Eliminar impuesto' }] : []),
     ];
   }
@@ -136,7 +140,18 @@ export class ImpuestosComponent {
   cargaImpuestos() {
     this.impuestoService.getImpuestos().subscribe({
       next: (data) => {
-        this.rows = data;
+        this.rows = (data ?? []).map((d: any) => ({
+          id_impuesto: d.id_impuesto,
+          id_empresa: d.id_empresa ?? this.idEmpresa,
+          nombre: d.nombre,
+          tipo: d.tipo,
+          modo: d.modo,
+          tasa: d.tasa,
+          aplica_en: d.aplica_en,
+          es_estandar: d.es_estandar,
+          vigencia_inicio: d.vigencia_inicio,
+          id_cuenta: d.id_cuenta ?? d.cuenta_relacionada ?? null // ✅ asegura campo presente
+        }));
       },
       error: (err) => {
         this.toast.error(this.extractErrorMessage(err) ?? 'No se pudieron cargar los impuestos.', 'Error', 0);
@@ -144,7 +159,7 @@ export class ImpuestosComponent {
     });
   }
 
-  // ==== PRIMARIA (Crear) ====
+  
   onPrimary() {
     if (!this.canCreate) {
       this.toast.warning('No tienes permisos para crear impuestos.', 'Acción no permitida');
@@ -155,7 +170,7 @@ export class ImpuestosComponent {
     this.modalOpen = true;
   }
 
-  // ==== ACCIONES POR FILA ====
+  //  ACCIONES 
   onRowAction(evt: { action: string; row: Impuestos }) {
     if (evt.action === 'edit') {
       if (!this.canEdit) {
@@ -181,7 +196,7 @@ export class ImpuestosComponent {
     }
   }
 
-  // ==== UPSERT ====
+ 
   upsertImpuesto(impuesto: Impuestos) {
     this.pendingAction = 'save';
     this.pendingImpuesto = impuesto;
@@ -195,7 +210,7 @@ export class ImpuestosComponent {
     this.confirmOpen = true;
   }
 
-  // ==== CONFIRM MODAL ====
+  
   closeConfirm() { this.confirmOpen = false; }
   cancelConfirm() { this.confirmOpen = false; }
 
@@ -244,7 +259,7 @@ export class ImpuestosComponent {
     }
   }
 
-  // ==== NAV TABS / SIDEBAR ====
+  // ==== NAV TABS ====
   onTabChange(tabId: string) {
     this.activeTabId = tabId;
     const selected = this.tabs.find(t => t.id === tabId);
@@ -254,7 +269,7 @@ export class ImpuestosComponent {
   sidebarOpen = true;
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 
-  // ==== UTIL ====
+  
   private extractErrorMessage(err: any): string | null {
     return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
   }

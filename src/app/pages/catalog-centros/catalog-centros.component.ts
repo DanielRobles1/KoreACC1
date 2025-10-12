@@ -10,7 +10,10 @@ import { CentrosCostosService } from '@app/services/centros-costos.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
-
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 type UiCentro = {
   id_centro?: number;
   serie_venta: string;
@@ -352,4 +355,66 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
   private extractErrorMessage(err: any): string | null {
     return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
   }
+  // === EXPORTAR A EXCEL ===
+exportToExcel() {
+  if (!this.rows || this.rows.length === 0) {
+    this.toast.warning('No hay datos para exportar.', 'Atención');
+    return;
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(this.rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Centros de Costo');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+  saveAs(blob, 'centros_de_costo.xlsx');
+  this.toast.success('Archivo Excel exportado correctamente.');
+}
+
+// === IMPORTAR EXCEL ===
+onImportExcel(event: any) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e: any) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const importedData = XLSX.utils.sheet_to_json(worksheet);
+
+    this.rows = importedData as UiCentro[];
+    this.toast.success('Archivo Excel importado correctamente.');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// === EXPORTAR PDF ===
+exportToPDF() {
+  if (!this.rows || this.rows.length === 0) {
+    this.toast.warning('No hay datos para exportar.', 'Atención');
+    return;
+  }
+
+  const doc = new jsPDF('l', 'pt', 'a4');
+  doc.setFontSize(16);
+  doc.text('Centros de Costo', 40, 40);
+
+  const columns = this.columns.map(c => c.header);
+  const data = this.rows.map(row => this.columns.map(c => (row as any)[c.key]));
+
+  autoTable(doc, {
+    head: [columns],
+    body: data,
+    startY: 60,
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [0, 102, 204] },
+  });
+
+  doc.save('centros_de_costo.pdf');
+  this.toast.success('PDF exportado correctamente.');
+}
 }

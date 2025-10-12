@@ -5,11 +5,21 @@
     (openChange)="onSidebarToggle($event)">
   </app-sidebar>
 
-  
   <div class="content">
     <div class="crud-wrapper">
       
-     
+      <!-- 🔽 Barra de botones de exportación/importación -->
+      <div class="export-bar">
+        <button class="btn-excel" (click)="exportToExcel()">Exportar Excel</button>
+        <button class="btn-pdf" (click)="exportToPDF()"> Exportar PDF</button>
+
+        <label class="btn-import">
+          Importar Excel
+          <input type="file" accept=".xlsx, .xls" (change)="importFromExcel($event)" hidden />
+        </label>
+      </div>
+      <!-- 🔼 Fin de barra -->
+
       <app-crud-panel
         [title]="title"
         [tabs]="tabs"
@@ -35,6 +45,7 @@
 </div>
 
 
+<!-- 🧩 Modal de edición -->
 <app-modal
   [open]="editOpen"
   [title]="modalTitle"
@@ -57,9 +68,7 @@
         required
         maxlength="20"
         placeholder="Ej. 1000 o 1001-01" />
-      <!-- Error debajo del campo -->
-      <small
-        *ngIf="touched.codigo && errors.codigo"
+      <small *ngIf="touched.codigo && errors.codigo"
         style="color:rgb(247, 39, 39); display:block; margin-top:4px; font-weight:bold;">
         {{ errors.codigo }}
       </small>
@@ -77,9 +86,7 @@
         required
         maxlength="100"
         placeholder="Ej. Caja general, Banco BBVA, Ventas" />
-      <!-- Error debajo del campo -->
-      <small
-        *ngIf="touched.nombre && errors.nombre"
+      <small *ngIf="touched.nombre && errors.nombre"
         style="color:rgb(247, 58, 58); display:block; margin-top:4px; font-weight:bold;">
         {{ errors.nombre }}
       </small>
@@ -88,22 +95,16 @@
     <!-- Toggle cuenta mayor -->
     <div style="display: flex; align-items: center; gap: 8px;">
       <label class="field-label" style="margin: 0;">Cuenta mayor</label>
-      <input
-        type="checkbox"
-        name="ctaMayor"
-        [(ngModel)]="formCuenta.ctaMayor" />
+      <input type="checkbox" name="ctaMayor" [(ngModel)]="formCuenta.ctaMayor" />
       <span style="font-size: 12px; opacity: 0.8;">
         (si se marca, puede tener subcuentas)
       </span>
     </div>
 
-    <!-- Cuenta padre (solo si no es mayor) -->
+    <!-- Cuenta padre -->
     <div *ngIf="!formCuenta.ctaMayor">
       <label class="field-label">Cuenta padre</label>
-      <select
-        class="field-input"
-        name="parentId"
-        [(ngModel)]="formCuenta.parentId">
+      <select class="field-input" name="parentId" [(ngModel)]="formCuenta.parentId">
         <option [ngValue]="null">— Sin padre —</option>
         <option *ngFor="let c of getParentOptions()" [ngValue]="c.id">
           {{ c.codigo }} - {{ c.nombre }}
@@ -118,7 +119,7 @@
   </form>
 </app-modal>
 
-
+<!-- 🧩 Modal de confirmación -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -130,7 +131,7 @@
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-
+<!-- 🧩 Toast -->
 <app-toast-message
   [open]="vm.open"
   [title]="vm.title"

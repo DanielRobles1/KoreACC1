@@ -1,6 +1,10 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Subscription } from 'rxjs';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 import { CommonModule } from '@angular/common';
@@ -370,6 +374,105 @@ get filteredRows() {
     return nombre.includes(term) || codigo.includes(term) || hitPadre;
   });
 }
+// ================== EXPORTAR A EXCEL ==================
+exportToExcel(): void {
+  const exportData = this.filteredRows.map(r => ({
+    Código: r.codigo,
+    Nombre: r.nombre,
+    '¿Mayor?': r.ctaMayor ? 'Sí' : 'No',
+    'Padre (Código)': r.padreCodigo ?? '',
+    'Padre (Nombre)': r.padreNombre ?? '',
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Cuentas');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+  saveAs(blob, `catalogo_cuentas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  this.toastOk('Catálogo exportado a Excel');
+}
+
+// ================== EXPORTAR A PDF ==================
+exportToPDF(): void {
+  const doc = new jsPDF();
+  doc.text('Catálogo de Cuentas', 14, 15);
+
+  const tableData = this.filteredRows.map(r => [
+    r.codigo,
+    r.nombre,
+    r.ctaMayor ? 'Sí' : 'No',
+    r.padreCodigo ?? '',
+    r.padreNombre ?? '',
+  ]);
+
+  autoTable(doc, {
+    head: [['Código', 'Nombre', '¿Mayor?', 'Padre (Código)', 'Padre (Nombre)']],
+    body: tableData,
+    startY: 20,
+  });
+
+  doc.save(`catalogo_cuentas_${new Date().toISOString().split('T')[0]}.pdf`);
+  this.toastOk('Catálogo exportado a PDF');
+}
+
+// ================== IMPORTAR DESDE EXCEL ==================
+importFromExcel(event: any): void {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e: any) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rowsExcel: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+    const normalize = (str: string | undefined | null) => (str ?? '').toString().trim();
+
+    // Paso 1: crear un Map de código -> parentCodigo
+    const cuentasPendientes = rowsExcel.map(r => ({
+      codigo: normalize(r['Código']),
+      nombre: r['Nombre'],
+      ctaMayor: r['¿Mayor?'] === 'Sí',
+      parentCodigo: normalize(r['Código Padre']) || null
+    }));
+
+    // Paso 2: crear primero los padres
+    const codigoToId = new Map<string, number>();
+
+    for (const c of cuentasPendientes) {
+      // Determinar parentId según código
+      let parentId: number | null = null;
+      if (c.parentCodigo) parentId = codigoToId.get(c.parentCodigo) ?? null;
+
+      // Crear cuenta en backend
+      const created = await new Promise<Cuenta>((resolve, reject) => {
+        const s = this.http.post<Cuenta>(API, {
+          codigo: c.codigo,
+          nombre: c.nombre,
+          ctaMayor: c.ctaMayor,
+          parentId: parentId
+        }).subscribe({
+          next: res => resolve(res),
+          error: err => reject(err)
+        });
+        this.subs.push(s);
+      });
+
+      codigoToId.set(c.codigo, created.id);
+    }
+
+    // Paso 3: recargar tabla para reflejar jerarquía
+    this.loadCuentas();
+    this.toastOk('Importación completada y jerarquía asociada.');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+
 onSearch(term: string) {
   this.searchTerm = term ?? '';
 }

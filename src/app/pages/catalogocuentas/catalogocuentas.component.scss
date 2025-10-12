@@ -121,3 +121,49 @@
 }
 .action-link:hover { text-decoration: underline; opacity: 1; }
 .icon-16 { width: 16px; height: 16px; stroke: currentColor; }
+.export-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  button, label {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn-excel {
+    background-color: #1f883d;
+    color: white;
+  }
+
+  .btn-excel:hover {
+    background-color: #166c2e;
+  }
+
+  .btn-pdf {
+    background-color: #c62828;
+    color: white;
+  }
+
+  .btn-pdf:hover {
+    background-color: #a11f1f;
+  }
+
+  .btn-import {
+    background-color: #2b6cb0;
+    color: white;
+    cursor: pointer;
+    input {
+      display: none;
+    }
+  }
+
+  .btn-import:hover {
+    background-color: #1e4e7a;
+  }
+}

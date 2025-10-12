@@ -86,16 +86,16 @@ var EmpresaComponent = /** @class */ (function () {
         this.auth = auth;
         this.toast = toast;
         this.ejerciciosService = ejerciciosService;
-        // ===== Layout =====
+        // }Layout
         this.sidebarOpen = true;
-        // ===== Tabs =====
+        // tablas
         this.title = 'Configuración de la Empresa';
         this.tabs = [
             { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
         ];
         this.activeTabId = 'datos';
-        // ===== Empresa =====
+        // Empresa
         this.primaryActionLabel = 'Editar datos';
         this.columns = [
             { key: 'id', header: '#', width: '64px' },
@@ -122,7 +122,7 @@ var EmpresaComponent = /** @class */ (function () {
             telefono: '',
             correo_contacto: ''
         };
-        // ===== Períodos =====
+        // PERIODOS 
         this.primaryActionLabel2 = 'Nuevo período';
         this.columns2 = [
             { key: 'id_periodo', header: '#', width: '72px' },
@@ -146,10 +146,9 @@ var EmpresaComponent = /** @class */ (function () {
             esta_abierto: true
         };
         this.editPeriodoId = null;
-        // === NUEVO: controles de creación automática dentro del modal de período
+        // controles de creación automática dentro del modal de período
         this.autoCreate = false;
         this.autoCreateTipo = 'MENSUAL';
-        // === EJERCICIOS ===
         this.primaryActionLabel3 = 'Nuevo ejercicio';
         this.columns3 = [
             { key: 'id_ejercicio', header: '#', width: '72px' },
@@ -178,21 +177,21 @@ var EmpresaComponent = /** @class */ (function () {
         this.editEjercicioId = null;
         // Selección actual para periodos
         this.ejercicioSeleccionado = null;
-        // Modal confirm genérico
+        // Modal confirm
         this.confirmOpen = false;
         this.confirmTitle = 'Confirmar acción';
         this.confirmMessage = '';
         this.confirmKind = null;
         this.confirmPayload = null;
-        // ===== Fechas =====
+        // PARA FECHAS
         this.minDate = '';
-        // ====== GENERACIÓN AUTOMÁTICA DE PERÍODOS ======
+        // GENERACIÓN AUTOMÁTICA DE PERÍODOS 
         this.genModalOpen = false;
         this.genTipo = 'MENSUAL';
         this.genIncluirCerrados = false;
         this.isGenerating = false;
     }
-    // ===== Utils de fechas =====
+    // FECHAS 
     EmpresaComponent.prototype.pad = function (n) { return n < 10 ? "0" + n : "" + n; };
     EmpresaComponent.prototype.toISO = function (d) { return d.getFullYear() + "-" + this.pad(d.getMonth() + 1) + "-" + this.pad(d.getDate()); };
     EmpresaComponent.prototype.todayLocal = function () { var now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); };
@@ -205,7 +204,7 @@ var EmpresaComponent = /** @class */ (function () {
     EmpresaComponent.prototype.endOfYear = function (d) { return new Date(d.getFullYear(), 12, 0); };
     EmpresaComponent.prototype.addDays = function (d, days) { var r = new Date(d); r.setDate(r.getDate() + days); return r; };
     EmpresaComponent.prototype.startOfWeek = function (d) {
-        var wd = d.getDay(); // 0=Dom, 1=Lun,...6=Sáb
+        var wd = d.getDay(); // 0=Dom, 1=Lun,----6=Sáb
         var diff = (wd === 0 ? -6 : 1 - wd); // llevar a lunes
         var res = new Date(d);
         res.setDate(d.getDate() + diff);
@@ -231,7 +230,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.formPeriodo.fecha_inicio = this.toISO(range.start);
         this.formPeriodo.fecha_fin = this.toISO(range.end);
     };
-    // ===== Ciclo de vida =====
+    // CICLO DE VIDA
     EmpresaComponent.prototype.ngOnInit = function () {
         var _this = this;
         this.toast.state$.subscribe(function (s) { return _this.vm = s; });
@@ -300,7 +299,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmPayload = null;
         this.confirmOpen = true;
     };
-    // ===== Períodos =====
+    // PERI
     EmpresaComponent.prototype.empresaId = function () {
         var _a;
         var e = this.rows[0];
@@ -452,7 +451,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmPayload = null;
         this.confirmOpen = true;
     };
-    // ======== EJERCICIOS: lógica ========
+    // EJERCICIOS: lógica de almacenamiento local de selección
     EmpresaComponent.prototype.storageKey = function () {
         var idEmp = this.empresaId();
         return idEmp ? "ejercicio_seleccionado:" + idEmp : null;
@@ -584,7 +583,6 @@ var EmpresaComponent = /** @class */ (function () {
     // Cierre modal ejercicio
     EmpresaComponent.prototype.closeEjercicioModal = function () { this.modalEjercicioOpen = false; };
     EmpresaComponent.prototype.cancelEjercicioModal = function () { this.modalEjercicioOpen = false; };
-    // ===== Confirmación genérica =====
     EmpresaComponent.prototype.closeConfirm = function () { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; };
     EmpresaComponent.prototype.cancelConfirm = function () { this.closeConfirm(); };
     EmpresaComponent.prototype.confirmProceed = function () {
@@ -620,7 +618,6 @@ var EmpresaComponent = /** @class */ (function () {
                 }
                 var payloadPeriodo = {
                     id_empresa: idEmp,
-                    // Asegúrate de tener id_ejercicio?: number en tu DTO
                     id_ejercicio: ejSel.id_ejercicio,
                     tipo_periodo: this.formPeriodo.tipo_periodo,
                     fecha_inicio: this.formPeriodo.fecha_inicio,
@@ -660,7 +657,6 @@ var EmpresaComponent = /** @class */ (function () {
                 });
                 break;
             }
-            // === EJERCICIOS ===
             case 'ejercicio-save': {
                 var idEmp = this.empresaId();
                 if (!idEmp)
@@ -747,14 +743,13 @@ var EmpresaComponent = /** @class */ (function () {
             }
         }
     };
-    // ===== Común =====
     EmpresaComponent.prototype.onRowAction = function (evt) {
         if (evt.action === 'edit')
             return this.onEdit(evt.row);
         this.openError("Acci\u00F3n no soportada: " + evt.action);
     };
     EmpresaComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
-    // Abrir gestor de ejercicios desde UI
+    // Abrir gestor de ejercicios
     EmpresaComponent.prototype.onOpenEjercicioManager = function () {
         this.onPrimaryEjercicio();
     };

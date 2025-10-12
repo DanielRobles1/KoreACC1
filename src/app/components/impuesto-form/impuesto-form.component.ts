@@ -3,8 +3,7 @@ import { FormBuilder, FormControl, FormGroup, Validators, ReactiveFormsModule } 
 import { CommonModule } from '@angular/common';
 import { BehaviorSubject, combineLatest, map, debounceTime, startWith, shareReplay } from 'rxjs';
 import { ImpuestoServiceTsService } from '@app/services/impuesto.service.ts.service';
-import { CuentasService } from '@app/services/cuentas.service'; // <-- tu service
-// ^ ajusta la ruta si es diferente
+import { CuentasService } from '@app/services/cuentas.service';
 
 const APLICA_EN_OPTS = ['VENTA', 'COMPRA', 'AMBOS'] as const;
 const MODO_OPTS = ['TASA', 'CUOTA', 'EXENTO'] as const;
@@ -18,7 +17,7 @@ type ImpuestoForm = {
   aplica_en: FormControl<string>;
   es_estandar: FormControl<boolean>;
   vigencia_inicio: FormControl<string>;
-  cuenta_relacionada: FormControl<string | null>; // <-- ahora numérico (id)
+  id_cuenta: FormControl<number | null>; // ✅ campo corregido
 };
 
 export interface Impuestos {
@@ -31,10 +30,9 @@ export interface Impuestos {
   aplica_en: string;
   es_estandar: boolean;
   vigencia_inicio: string;
-  cuenta_relacionada: string | null; // <-- id de cuenta (o null)
+  id_cuenta: number | null; // ✅ nombre consistente con backend
 }
 
-// Mismo interface de tu service
 interface Cuenta {
   id: number;
   codigo: string;
@@ -75,20 +73,21 @@ export class ImpuestoFormComponent implements OnInit {
 
   cuentasFiltradas$ = combineLatest([
     this.cuentas$,
-    this.cuentaSearch$.pipe(debounceTime(200), startWith(''))
+    this.cuentaSearch$.pipe(debounceTime(200), startWith('')),
   ]).pipe(
     map(([cuentas, term]) => {
       const q = (term || '').trim().toLowerCase();
       if (!q) return cuentas;
-      return cuentas.filter(c =>
-        (c.codigo?.toLowerCase().includes(q)) ||
-        (c.nombre?.toLowerCase().includes(q))
+      return cuentas.filter(
+        (c) =>
+          c.codigo?.toLowerCase().includes(q) ||
+          c.nombre?.toLowerCase().includes(q)
       );
     }),
     shareReplay(1)
   );
 
-  cuentasFiltradasCount$ = this.cuentasFiltradas$.pipe(map(list => list.length));
+  cuentasFiltradasCount$ = this.cuentasFiltradas$.pipe(map((list) => list.length));
 
   constructor(
     private fb: FormBuilder,
@@ -96,19 +95,28 @@ export class ImpuestoFormComponent implements OnInit {
     private cuentasSrv: CuentasService
   ) {
     this.form = this.fb.nonNullable.group<ImpuestoForm>({
-      nombre: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3)]),
-      tipo: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(3)]),
+      nombre: this.fb.nonNullable.control('', [
+        Validators.required,
+        Validators.minLength(3),
+      ]),
+      tipo: this.fb.nonNullable.control('', [
+        Validators.required,
+        Validators.minLength(3),
+      ]),
       modo: this.fb.nonNullable.control('', [Validators.required]),
-      tasa: this.fb.nonNullable.control(0, [Validators.required, Validators.min(0), Validators.max(100)]),
+      tasa: this.fb.nonNullable.control(0, [
+        Validators.required,
+        Validators.min(0),
+        Validators.max(100),
+      ]),
       aplica_en: this.fb.nonNullable.control('', [Validators.required]),
       es_estandar: this.fb.nonNullable.control(false),
       vigencia_inicio: this.fb.nonNullable.control('', [Validators.required]),
-      cuenta_relacionada: this.fb.control<string | null>(null),
+      id_cuenta: this.fb.control<number | null>(null), // ✅ corregido
     });
   }
 
-  ngOnInit(): void {
-  }
+  ngOnInit(): void {}
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['value'] && this.value) {
@@ -120,7 +128,7 @@ export class ImpuestoFormComponent implements OnInit {
         aplica_en: this.value.aplica_en ?? '',
         es_estandar: this.value.es_estandar ?? false,
         vigencia_inicio: this.value.vigencia_inicio ?? '',
-        cuenta_relacionada: this.value.cuenta_relacionada ?? null,
+        id_cuenta: this.value.id_cuenta ?? null, // ✅ corregido
       });
     } else {
       this.form.reset();
@@ -143,7 +151,6 @@ export class ImpuestoFormComponent implements OnInit {
     }
 
     this.isSubmitting = true;
-
     const raw = this.form.getRawValue();
 
     const payload: Impuestos = {
@@ -156,7 +163,7 @@ export class ImpuestoFormComponent implements OnInit {
       aplica_en: (raw.aplica_en ?? '').trim().toUpperCase(),
       es_estandar: !!raw.es_estandar,
       vigencia_inicio: (raw.vigencia_inicio ?? '').trim(),
-      cuenta_relacionada: raw.cuenta_relacionada ?? null,
+      id_cuenta: raw.id_cuenta ? Number(raw.id_cuenta) : null, // ✅ consistente
     };
 
     if (Number.isNaN(payload.tasa)) {
@@ -169,5 +176,7 @@ export class ImpuestoFormComponent implements OnInit {
     this.isSubmitting = false;
   }
 
-  onCancel() { this.canceled.emit(); }
+  onCancel() {
+    this.canceled.emit();
+  }
 }

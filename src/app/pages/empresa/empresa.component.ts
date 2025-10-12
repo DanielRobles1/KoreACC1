@@ -12,7 +12,7 @@ import { EmpresaServiceTsService } from '@app/services/empresa.service.ts.servic
 import { AuthService } from '@app/services/auth.service';
 import { PeriodoContableService, PeriodoContableDto, PeriodoTipo } from '@app/services/periodo-contable.service';
 
-// === EJERCICIOS ===
+
 import { EjercicioContableService, EjercicioContableDto } from '@app/services/ejercicio-contable.service';
 
 type UiEmpresa = {
@@ -29,7 +29,7 @@ type ConfirmKind =
   | 'empresa-save'
   | 'periodo-save'
   | 'periodo-delete'
-  // === EJERCICIOS ===
+  
   | 'ejercicio-save'
   | 'ejercicio-delete'
   | 'ejercicio-abrir'
@@ -52,10 +52,10 @@ export class EmpresaComponent implements OnInit {
     private ejerciciosService: EjercicioContableService
   ) { }
 
-  // ===== Layout =====
+  // }Layout
   sidebarOpen = true;
 
-  // ===== Tabs =====
+  // tablas
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
     { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
@@ -63,7 +63,7 @@ export class EmpresaComponent implements OnInit {
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 
-  // ===== Empresa =====
+  // Empresa
   primaryActionLabel = 'Editar datos';
   columns: CrudColumn[] = [
     { key: 'id', header: '#', width: '64px' },
@@ -97,7 +97,7 @@ export class EmpresaComponent implements OnInit {
     correo_contacto: '',
   };
 
-  // ===== Períodos =====
+  // PERIODOS 
   primaryActionLabel2 = 'Nuevo período';
   columns2: CrudColumn[] = [
     { key: 'id_periodo', header: '#', width: '72px' },
@@ -123,11 +123,11 @@ export class EmpresaComponent implements OnInit {
   };
   editPeriodoId: number | null = null;
 
-  // === NUEVO: controles de creación automática dentro del modal de período
+  // controles de creación automática dentro del modal de período
   autoCreate = false;
   autoCreateTipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL';
 
-  // === EJERCICIOS ===
+  
   primaryActionLabel3 = 'Nuevo ejercicio';
   columns3: CrudColumn[] = [
     { key: 'id_ejercicio', header: '#', width: '72px' },
@@ -159,17 +159,17 @@ export class EmpresaComponent implements OnInit {
   // Selección actual para periodos
   ejercicioSeleccionado: EjercicioContableDto | null = null;
 
-  // Modal confirm genérico
+  // Modal confirm
   confirmOpen = false;
   confirmTitle = 'Confirmar acción';
   confirmMessage = '';
   private confirmKind: ConfirmKind = null;
   private confirmPayload: any = null;
 
-  // ===== Fechas =====
+  // PARA FECHAS
   minDate: string = '';
 
-  // ===== Utils de fechas =====
+  // FECHAS 
   private pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
   private toISO(d: Date) { return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`; }
   private todayLocal(): Date { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
@@ -183,7 +183,7 @@ export class EmpresaComponent implements OnInit {
   private addDays(d: Date, days: number) { const r = new Date(d); r.setDate(r.getDate() + days); return r; }
 
   private startOfWeek(d: Date) {
-    const wd = d.getDay();                 // 0=Dom, 1=Lun,...6=Sáb
+    const wd = d.getDay();                 // 0=Dom, 1=Lun,----6=Sáb
     const diff = (wd === 0 ? -6 : 1 - wd); // llevar a lunes
     const res = new Date(d);
     res.setDate(d.getDate() + diff);
@@ -209,7 +209,7 @@ export class EmpresaComponent implements OnInit {
     this.formPeriodo.fecha_fin = this.toISO(range.end);
   }
 
-  // ===== Ciclo de vida =====
+  // CICLO DE VIDA
   ngOnInit() {
     this.toast.state$.subscribe(s => this.vm = s);
     this.canEdit = this.auth.hasPermission('editar_empresa');
@@ -287,7 +287,7 @@ export class EmpresaComponent implements OnInit {
     this.confirmOpen = true;
   }
 
-  // ===== Períodos =====
+  // PERI
   private empresaId(): number | null {
     const e = this.rows[0];
     const id = (e?.id_empresa ?? e?.id) as number | undefined;
@@ -447,7 +447,7 @@ export class EmpresaComponent implements OnInit {
     this.confirmOpen = true;
   }
 
-  // ======== EJERCICIOS: lógica ========
+  // EJERCICIOS: lógica de almacenamiento local de selección
   private storageKey(): string | null {
     const idEmp = this.empresaId();
     return idEmp ? `ejercicio_seleccionado:${idEmp}` : null;
@@ -580,7 +580,7 @@ export class EmpresaComponent implements OnInit {
   closeEjercicioModal() { this.modalEjercicioOpen = false; }
   cancelEjercicioModal() { this.modalEjercicioOpen = false; }
 
-  // ===== Confirmación genérica =====
+  
   closeConfirm() { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; }
   cancelConfirm() { this.closeConfirm(); }
 
@@ -616,7 +616,7 @@ export class EmpresaComponent implements OnInit {
 
         const payloadPeriodo: PeriodoContableDto = {
           id_empresa: idEmp,
-          // Asegúrate de tener id_ejercicio?: number en tu DTO
+          
           id_ejercicio: ejSel.id_ejercicio!,
           tipo_periodo: this.formPeriodo.tipo_periodo as PeriodoTipo,
           fecha_inicio: this.formPeriodo.fecha_inicio!,
@@ -658,7 +658,7 @@ export class EmpresaComponent implements OnInit {
         break;
       }
 
-      // === EJERCICIOS ===
+      
       case 'ejercicio-save': {
         const idEmp = this.empresaId();
         if (!idEmp) return this.openError('No hay empresa seleccionada.');
@@ -739,19 +739,19 @@ export class EmpresaComponent implements OnInit {
     }
   }
 
-  // ===== Común =====
+  
   onRowAction(evt: { action: string; row: UiEmpresa }) {
     if (evt.action === 'edit') return this.onEdit(evt.row);
     this.openError(`Acción no soportada: ${evt.action}`);
   }
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 
-  // Abrir gestor de ejercicios desde UI
+  // Abrir gestor de ejercicios
   onOpenEjercicioManager() {
     this.onPrimaryEjercicio();
   }
 
-  // ====== GENERACIÓN AUTOMÁTICA DE PERÍODOS ======
+  // GENERACIÓN AUTOMÁTICA DE PERÍODOS 
   genModalOpen = false;
   genTipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL';
   genIncluirCerrados = false;

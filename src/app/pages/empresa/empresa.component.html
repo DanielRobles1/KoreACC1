@@ -8,14 +8,14 @@
   <div class="content">
     <div class="crud-wrapper">
 
-      <!-- ===================== EMPRESA ===================== -->
+      <!-- Empresa apartaso -->
       <app-crud-panel
         *ngIf="activeTabId === 'datos'"
         [title]="title"
         [tabs]="tabs"
         [activeTabId]="activeTabId"
         (tabChange)="onTabChange($event)"
-
+        
         [primaryActionLabel]="primaryActionLabel"
         (primaryAction)="onPrimary()"
         [disablePrimary]="!canEdit"
@@ -30,8 +30,8 @@
         (action)="onRowAction($event)">
       </app-crud-panel>
 
-      <!-- (El indicador de ejercicio seleccionado ya NO aparece en 'datos') -->
-      <!-- ===================== EJERCICIOS ===================== -->
+      
+      <!-- Ejercicios contables  -->
       <app-crud-panel
         [title]="'Ejercicios Contables'"
 
@@ -56,7 +56,7 @@
         (action)="onEjercicioAction($event)">
       </app-crud-panel>
 
-      <!-- ===================== PERÍODOS ===================== -->
+      <!-- Periodos contables -->
       <app-crud-panel
         [title]="'Períodos Contables'"
 
@@ -118,7 +118,7 @@
   </div>
 </div>
 
-<!-- ===================== MODAL: EMPRESA ===================== -->
+<!-- modañ para la empresa-->
 <app-modal
   [open]="editOpen"
   [title]="modalTitle"
@@ -160,7 +160,7 @@
   </form>
 </app-modal>
 
-<!-- ===================== MODAL: PERÍODO ===================== -->
+<!-- modal para periodo-->
 <app-modal
   [open]="modalPeriodoOpen"
   [title]="modalPeriodoTitle"
@@ -171,7 +171,7 @@
   (confirmed)="confirmPeriodoModal()">
   <form #periodoForm="ngForm" style="display: grid; gap: 10px;">
 
-    <!-- Crear automáticamente para todo el ejercicio (solo al crear) -->
+    <!-- Crear automáticamente para todo el ejercicio  -->
     <div *ngIf="!editPeriodoId"
          style="padding:10px; border:1px solid #2c3e50; border-radius:8px; background:#fdfdfd;">
       <label class="field-label" style="display:flex; align-items:center; gap:8px;">
@@ -263,7 +263,7 @@
   </form>
 </app-modal>
 
-<!-- ===================== MODAL: EJERCICIO ===================== -->
+<!-- modal ejercicio -->
 <app-modal
   [open]="modalEjercicioOpen"
   [title]="modalEjercicioTitle"
@@ -319,7 +319,7 @@
   </form>
 </app-modal>
 
-<!-- ===================== MODAL: CONFIRMACIÓN ===================== -->
+<!--  MODAL: CONFIRMACIÓN -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -331,7 +331,7 @@
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
 
-<!-- ===================== TOAST ===================== -->
+
 <app-toast-message
   [open]="vm?.open ?? false"
   [title]="vm?.title ?? ''"
