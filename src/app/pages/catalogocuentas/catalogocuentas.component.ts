@@ -108,7 +108,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   touched: { codigo: boolean; nombre: boolean } = { codigo: false, nombre: false };
 
   get canSave(): boolean {
-    // sin errores y con contenido válido
+  
     return !!this.formCuenta.codigo?.trim() && !!this.formCuenta.nombre?.trim();
   }
 
@@ -417,7 +417,7 @@ exportToPDF(): void {
   this.toastOk('Catálogo exportado a PDF');
 }
 
-// ================== IMPORTAR DESDE EXCEL ==================
+// IMPORTAR DESDE EXCEL
 importFromExcel(event: any): void {
   const file = event.target.files[0];
   if (!file) return;
@@ -440,7 +440,7 @@ importFromExcel(event: any): void {
       parentCodigo: normalize(r['Código Padre']) || null
     }));
 
-    // Paso 2: crear primero los padres
+    // Paso 2: crear primero los padres: OJO CREO QUE NO LO HACE
     const codigoToId = new Map<string, number>();
 
     for (const c of cuentasPendientes) {
