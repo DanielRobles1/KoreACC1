@@ -38,4 +38,8 @@ export class CentrosCostosService {
   deleteCentro(id: number | string): Observable<void> {
     return this.http.delete<void>(`${this.apiURL}/${id}`);
   }
+  bulkCreateCentros(data: UiCentro[]): Observable<any> {
+    return this.http.post<any>(`${this.apiURL}/bulk`, data);
+  }
+
 }

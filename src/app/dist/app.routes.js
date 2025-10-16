@@ -13,6 +13,8 @@ var permission_guard_1 = require("./guards/permission.guard");
 var empresa_component_1 = require("./pages/empresa/empresa.component");
 var impuestos_component_1 = require("./pages/impuestos/impuestos.component");
 var catalog_centros_component_1 = require("./pages/catalog-centros/catalog-centros.component");
+var polizas_component_1 = require("./pages/polizas/polizas.component");
+var poliza_home_component_1 = require("./pages/poliza-home/poliza-home.component");
 exports.routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: login_component_1.LoginComponent },
@@ -59,6 +61,18 @@ exports.routes = [
     {
         path: 'centros-costo',
         component: catalog_centros_component_1.CatalogCentrosComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
+    {
+        path: 'polizas',
+        component: polizas_component_1.PolizasComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
+    {
+        path: 'poliza-home',
+        component: poliza_home_component_1.PolizaHomeComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
         data: { perms: ['consultar_empresa'] }
     },

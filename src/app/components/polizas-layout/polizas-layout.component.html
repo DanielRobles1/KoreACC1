@@ -1,0 +1,27 @@
+<!-- app-polizas-layout.component.html -->
+<div class="layout" [class.is-closed]="!open">
+  <aside class="sidebar-area">
+    <app-sidebar [open]="open" (openChange)="onToggle($event)"></app-sidebar>
+  </aside>
+
+  <div class="main">
+    <div class="page-bg"></div>
+
+    <!-- Toolbar superior (título + acciones) -->
+    <header class="page-toolbar">
+      <h1 class="page-title">
+        <ng-content select="[page-title]"></ng-content>
+      </h1>
+      <div class="page-actions">
+        <ng-content select="[page-actions]"></ng-content>
+      </div>
+    </header>
+
+    <!-- Área scrolleable con card blanca -->
+    <section class="page-container">
+      <div class="page-card">
+        <ng-content></ng-content>
+      </div>
+    </section>
+  </div>
+</div>

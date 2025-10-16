@@ -60,6 +60,7 @@ var XLSX = require("xlsx");
 var file_saver_1 = require("file-saver");
 var jspdf_1 = require("jspdf");
 var jspdf_autotable_1 = require("jspdf-autotable");
+var rxjs_1 = require("rxjs");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
@@ -116,7 +117,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
     Object.defineProperty(CatalogoCuentasComponent.prototype, "canSave", {
         get: function () {
             var _a, _b;
-            // sin errores y con contenido válido
             return !!((_a = this.formCuenta.codigo) === null || _a === void 0 ? void 0 : _a.trim()) && !!((_b = this.formCuenta.nombre) === null || _b === void 0 ? void 0 : _b.trim());
         },
         enumerable: false,
@@ -403,7 +403,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         doc.save("catalogo_cuentas_" + new Date().toISOString().split('T')[0] + ".pdf");
         this.toastOk('Catálogo exportado a PDF');
     };
-    // ================== IMPORTAR DESDE EXCEL ==================
     CatalogoCuentasComponent.prototype.importFromExcel = function (event) {
         var _this = this;
         var file = event.target.files[0];
@@ -411,11 +410,9 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             return;
         var reader = new FileReader();
         reader.onload = function (e) { return __awaiter(_this, void 0, void 0, function () {
-            var data, workbook, sheetName, worksheet, rowsExcel, normalize, cuentasPendientes, codigoToId, _loop_1, _i, cuentasPendientes_1, c;
-            var _this = this;
-            var _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var data, workbook, sheetName, worksheet, rowsExcel, normalize, cuentas, codigoToId, _i, _a, c, created, _b, _c, c, parentId, created, err_1;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
                     case 0:
                         data = new Uint8Array(e.target.result);
                         workbook = XLSX.read(data, { type: 'array' });
@@ -423,57 +420,66 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                         worksheet = workbook.Sheets[sheetName];
                         rowsExcel = XLSX.utils.sheet_to_json(worksheet);
                         normalize = function (str) { return (str !== null && str !== void 0 ? str : '').toString().trim(); };
-                        cuentasPendientes = rowsExcel.map(function (r) { return ({
+                        cuentas = rowsExcel.map(function (r) { return ({
                             codigo: normalize(r['Código']),
-                            nombre: r['Nombre'],
-                            ctaMayor: r['¿Mayor?'] === 'Sí',
+                            nombre: normalize(r['Nombre']),
+                            ctaMayor: normalize(r['¿Mayor?']) === 'Sí',
                             parentCodigo: normalize(r['Código Padre']) || null
                         }); });
                         codigoToId = new Map();
-                        _loop_1 = function (c) {
-                            var parentId, created;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        parentId = null;
-                                        if (c.parentCodigo)
-                                            parentId = (_a = codigoToId.get(c.parentCodigo)) !== null && _a !== void 0 ? _a : null;
-                                        return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                                var s = _this.http.post(API, {
-                                                    codigo: c.codigo,
-                                                    nombre: c.nombre,
-                                                    ctaMayor: c.ctaMayor,
-                                                    parentId: parentId
-                                                }).subscribe({
-                                                    next: function (res) { return resolve(res); },
-                                                    error: function (err) { return reject(err); }
-                                                });
-                                                _this.subs.push(s);
-                                            })];
-                                    case 1:
-                                        created = _a.sent();
-                                        codigoToId.set(c.codigo, created.id);
-                                        return [2 /*return*/];
-                                }
-                            });
-                        };
-                        _i = 0, cuentasPendientes_1 = cuentasPendientes;
-                        _b.label = 1;
+                        _d.label = 1;
                     case 1:
-                        if (!(_i < cuentasPendientes_1.length)) return [3 /*break*/, 4];
-                        c = cuentasPendientes_1[_i];
-                        return [5 /*yield**/, _loop_1(c)];
+                        _d.trys.push([1, 10, , 11]);
+                        _i = 0, _a = cuentas.filter(function (x) { return !x.parentCodigo; });
+                        _d.label = 2;
                     case 2:
-                        _b.sent();
-                        _b.label = 3;
+                        if (!(_i < _a.length)) return [3 /*break*/, 5];
+                        c = _a[_i];
+                        return [4 /*yield*/, rxjs_1.firstValueFrom(this.http.post('http://localhost:3000/api/v1/cuentas', c))];
                     case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
+                        created = _d.sent();
+                        if (created === null || created === void 0 ? void 0 : created.id) {
+                            codigoToId.set(c.codigo, created.id);
+                        }
+                        else {
+                            console.warn('⚠️ No se devolvió ID para:', c);
+                        }
+                        _d.label = 4;
                     case 4:
-                        // Paso 3: recargar tabla para reflejar jerarquía
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 5:
+                        _b = 0, _c = cuentas.filter(function (x) { return x.parentCodigo; });
+                        _d.label = 6;
+                    case 6:
+                        if (!(_b < _c.length)) return [3 /*break*/, 9];
+                        c = _c[_b];
+                        parentId = codigoToId.get(c.parentCodigo);
+                        if (!parentId) {
+                            console.warn("\u26A0\uFE0F Padre no encontrado para " + c.codigo + " (" + c.parentCodigo + ")");
+                            return [3 /*break*/, 8];
+                        }
+                        return [4 /*yield*/, rxjs_1.firstValueFrom(this.http.post('http://localhost:3000/api/v1/cuentas', __assign(__assign({}, c), { parentId: parentId })))];
+                    case 7:
+                        created = _d.sent();
+                        if (created === null || created === void 0 ? void 0 : created.id) {
+                            codigoToId.set(c.codigo, created.id);
+                        }
+                        _d.label = 8;
+                    case 8:
+                        _b++;
+                        return [3 /*break*/, 6];
+                    case 9:
+                        // === 3️⃣ Refrescar la tabla ===
                         this.loadCuentas();
-                        this.toastOk('Importación completada y jerarquía asociada.');
-                        return [2 /*return*/];
+                        this.toastOk('Importación completada y jerarquía asociada correctamente.');
+                        return [3 /*break*/, 11];
+                    case 10:
+                        err_1 = _d.sent();
+                        console.error('❌ Error en importación:', err_1);
+                        this.toastError('No se pudo completar la importación', err_1);
+                        return [3 /*break*/, 11];
+                    case 11: return [2 /*return*/];
                 }
             });
         }); };

@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
+import { firstValueFrom } from 'rxjs';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -417,7 +417,8 @@ exportToPDF(): void {
   this.toastOk('Catálogo exportado a PDF');
 }
 
-// IMPORTAR DESDE EXCEL
+
+
 importFromExcel(event: any): void {
   const file = event.target.files[0];
   if (!file) return;
@@ -430,47 +431,65 @@ importFromExcel(event: any): void {
     const worksheet = workbook.Sheets[sheetName];
     const rowsExcel: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-    const normalize = (str: string | undefined | null) => (str ?? '').toString().trim();
+    const normalize = (str: any) => (str ?? '').toString().trim();
 
-    // Paso 1: crear un Map de código -> parentCodigo
-    const cuentasPendientes = rowsExcel.map(r => ({
+    // Convertir todas las filas en objetos tipo Cuenta
+    const cuentas = rowsExcel.map(r => ({
       codigo: normalize(r['Código']),
-      nombre: r['Nombre'],
-      ctaMayor: r['¿Mayor?'] === 'Sí',
+      nombre: normalize(r['Nombre']),
+      ctaMayor: normalize(r['¿Mayor?']) === 'Sí',
       parentCodigo: normalize(r['Código Padre']) || null
     }));
 
-    // Paso 2: crear primero los padres: OJO CREO QUE NO LO HACE
     const codigoToId = new Map<string, number>();
 
-    for (const c of cuentasPendientes) {
-      // Determinar parentId según código
-      let parentId: number | null = null;
-      if (c.parentCodigo) parentId = codigoToId.get(c.parentCodigo) ?? null;
+    try {
+      // Crear todas las cuentas padre 
+      for (const c of cuentas.filter(x => !x.parentCodigo)) {
+        const created: any = await firstValueFrom(
+          this.http.post('http://localhost:3000/api/v1/cuentas', c)
+        );
 
-      // Crear cuenta en backend
-      const created = await new Promise<Cuenta>((resolve, reject) => {
-        const s = this.http.post<Cuenta>(API, {
-          codigo: c.codigo,
-          nombre: c.nombre,
-          ctaMayor: c.ctaMayor,
-          parentId: parentId
-        }).subscribe({
-          next: res => resolve(res),
-          error: err => reject(err)
-        });
-        this.subs.push(s);
-      });
+        if (created?.id) {
+          codigoToId.set(c.codigo, created.id);
+        } else {
+          console.warn('⚠️ No se devolvió ID para:', c);
+        }
+      }
 
-      codigoToId.set(c.codigo, created.id);
+      //  Crear cuentas hijas (ya existen los padres) 
+      for (const c of cuentas.filter(x => x.parentCodigo)) {
+        const parentId = codigoToId.get(c.parentCodigo);
+
+        if (!parentId) {
+          console.warn(`⚠️ Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
+          continue;
+        }
+
+        const created: any = await firstValueFrom(
+          this.http.post('http://localhost:3000/api/v1/cuentas', {
+            ...c,
+            parentId,
+          })
+        );
+
+        if (created?.id) {
+          codigoToId.set(c.codigo, created.id);
+        }
+      }
+
+      //  Refrescar la tabla
+      this.loadCuentas();
+      this.toastOk('Importación completada y jerarquía asociada correctamente.');
+    } catch (err) {
+      console.error('❌ Error en importación:', err);
+      this.toastError('No se pudo completar la importación', err);
     }
-
-    // Paso 3: recargar tabla para reflejar jerarquía
-    this.loadCuentas();
-    this.toastOk('Importación completada y jerarquía asociada.');
   };
+
   reader.readAsArrayBuffer(file);
 }
+
 
 
 onSearch(term: string) {

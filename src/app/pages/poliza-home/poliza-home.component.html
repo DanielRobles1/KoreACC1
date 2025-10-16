@@ -1,0 +1,116 @@
+<app-polizas-layout
+  [open]="sidebarOpen"
+  (openChange)="onSidebarToggle($event)">
+
+  <span page-title>Pólizas</span>
+
+  <div page-actions class="toolbar-filters">
+   
+    <input
+      #xmlInput
+      type="file"
+      accept=".xml,text/xml,application/xml"
+      hidden
+      (change)="onXmlPicked($event)" />
+
+    <!-- Nueva póliza -->
+    
+
+    <span *ngIf="selectedXmlName" style="margin-left:.5rem; color:#e9eef5;">
+      {{ selectedXmlName }}
+    </span>
+    <span *ngIf="uploadXmlError" style="margin-left:.5rem; color:#ffb4b4;">
+      {{ uploadXmlError }}
+    </span>
+  </div>
+
+  <!-- Contenido -->
+  <div class="polizas-container">
+    <h2>Pólizas registradas</h2>
+    <button
+  type="button"
+  class="pill-btn"
+  routerLink="/polizas"
+>
+  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+  Nueva póliza
+</button>
+
+
+    <!-- Buscador -->
+    <input
+      type="search"
+      [(ngModel)]="q"
+      (ngModelChange)="onBuscarChange($event)"
+      placeholder="Buscar pólizas por folio, concepto, UUID, cliente…"
+      style="min-width:280px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgba(255,255,255,.25); background:transparent; color:#e9eef5; outline:none; margin-bottom: .75rem;" />
+
+    <table class="tabla-polizas">
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Concepto</th>
+          <th>Centro</th>
+          <th>Tipo</th>
+          <th>Periodo</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let p of (polizasFiltradas ?? []); trackBy: trackByFolio">
+          <td>{{ p.folio }}</td>
+          <td>{{ p.concepto }}</td>
+          <td>{{ nombreCentro(p.id_centro) }}</td>
+          <td>{{ nombreTipo(p.id_tipopoliza) }}</td>
+          <td>{{ nombrePeriodo(p.id_periodo) }}</td>
+          <td><span [class]="estadoClass(p)">{{ getEstado(p) }}</span></td>
+          <td>
+            <!-- Editar (lápiz) -->
+            <button
+              class="icon-btn"
+              (click)="editarPoliza(p)"
+              title="Editar"
+              aria-label="Editar póliza">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   width="20" height="20">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+              </svg>
+            </button>
+
+            <!-- Eliminar (tu bote de basura) -->
+            <button
+              class="icon-btn danger"
+              (click)="eliminarPoliza(p.id_poliza)"
+              title="Eliminar"
+              aria-label="Eliminar póliza">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   width="20" height="20">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+              </svg>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</app-polizas-layout>
+<app-toast-message
+  [open]="toast.open"
+  [title]="toast.title"
+  [message]="toast.message"
+  [type]="toast.type"
+  [position]="toast.position"
+  [autoCloseMs]="toast.autoCloseMs"
+  [showClose]="toast.showClose"
+  (closed)="onToastClosed()">
+</app-toast-message>

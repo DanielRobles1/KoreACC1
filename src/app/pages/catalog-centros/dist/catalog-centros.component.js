@@ -346,7 +346,6 @@ var CatalogCentrosComponent = /** @class */ (function () {
         file_saver_1.saveAs(blob, 'centros_de_costo.xlsx');
         this.toast.success('Archivo Excel exportado correctamente.');
     };
-    // === IMPORTAR EXCEL ===
     CatalogCentrosComponent.prototype.onImportExcel = function (event) {
         var _this = this;
         var file = event.target.files[0];
@@ -359,8 +358,32 @@ var CatalogCentrosComponent = /** @class */ (function () {
             var sheetName = workbook.SheetNames[0];
             var worksheet = workbook.Sheets[sheetName];
             var importedData = XLSX.utils.sheet_to_json(worksheet);
-            _this.rows = importedData;
-            _this.toast.success('Archivo Excel importado correctamente.');
+            if (!importedData.length) {
+                _this.toast.warning('El archivo no contiene datos válidos.');
+                return;
+            }
+            var processed = 0;
+            var total = importedData.length;
+            importedData.forEach(function (centro, index) {
+                // retraso entre peticiones para no saturar el servidor
+                setTimeout(function () {
+                    _this.centroService.createCentro(centro).subscribe({
+                        next: function () {
+                            processed++;
+                            console.log("Centro " + processed + "/" + total + " guardado:", centro.nombre_centro);
+                            // Cuando se hayan guardado todos, refrescamos la tabla
+                            if (processed === total) {
+                                _this.toast.success("Se importaron " + total + " centros correctamente.");
+                                _this.loadCentros(); //  Recarga los datos en pantalla
+                            }
+                        },
+                        error: function (err) {
+                            console.error("\u274C Error al guardar centro \"" + centro.nombre_centro + "\":", err);
+                            _this.toast.error("Error al guardar el centro \"" + centro.nombre_centro + "\"");
+                        }
+                    });
+                }, index * 200); // 200 ms entre peticiones
+            });
         };
         reader.readAsArrayBuffer(file);
     };

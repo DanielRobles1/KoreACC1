@@ -25,6 +25,9 @@ var CentrosCostosService = /** @class */ (function () {
     CentrosCostosService.prototype.deleteCentro = function (id) {
         return this.http["delete"](this.apiURL + "/" + id);
     };
+    CentrosCostosService.prototype.bulkCreateCentros = function (data) {
+        return this.http.post(this.apiURL + "/bulk", data);
+    };
     CentrosCostosService = __decorate([
         core_1.Injectable({
             providedIn: 'root'

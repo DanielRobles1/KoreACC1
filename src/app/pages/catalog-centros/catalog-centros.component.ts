@@ -372,7 +372,6 @@ exportToExcel() {
   this.toast.success('Archivo Excel exportado correctamente.');
 }
 
-// === IMPORTAR EXCEL ===
 onImportExcel(event: any) {
   const file = event.target.files[0];
   if (!file) return;
@@ -383,13 +382,43 @@ onImportExcel(event: any) {
     const workbook = XLSX.read(data, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const importedData = XLSX.utils.sheet_to_json(worksheet);
+    const importedData = XLSX.utils.sheet_to_json(worksheet) as UiCentro[];
 
-    this.rows = importedData as UiCentro[];
-    this.toast.success('Archivo Excel importado correctamente.');
+    if (!importedData.length) {
+      this.toast.warning('El archivo no contiene datos válidos.');
+      return;
+    }
+
+    let processed = 0;
+    const total = importedData.length;
+
+    importedData.forEach((centro, index) => {
+      // retraso entre peticiones para no saturar el servidor
+      setTimeout(() => {
+        this.centroService.createCentro(centro).subscribe({
+          next: () => {
+            processed++;
+            console.log(`Centro ${processed}/${total} guardado:`, centro.nombre_centro);
+
+            // Cuando se hayan guardado todos, refrescamos la tabla
+            if (processed === total) {
+              this.toast.success(`Se importaron ${total} centros correctamente.`);
+              this.loadCentros(); //  Recarga los datos en pantalla
+            }
+          },
+          error: (err) => {
+            console.error(`❌ Error al guardar centro "${centro.nombre_centro}":`, err);
+            this.toast.error(`Error al guardar el centro "${centro.nombre_centro}"`);
+          }
+        });
+      }, index * 200); // 200 ms entre peticiones
+    });
   };
+
   reader.readAsArrayBuffer(file);
 }
+
+
 
 // === EXPORTAR PDF ===
 exportToPDF() {

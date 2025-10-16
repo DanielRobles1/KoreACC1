@@ -34,15 +34,17 @@
 
     <!-- Menú -->
     <ul class="space-y-2">
-      <li>
-        <button type="button"
-                class="btn"
-                [class.btn--active]="active==='polizas'"
-                (click)="setActive('polizas')">
-          <img src="assets/svgs/poliza.svg" alt="Pólizas" class="icon">
-          <span class="ml-2">Pólizas</span>
-        </button>
-      </li>
+     <li>
+  <button type="button"
+          class="btn"
+          [routerLink]="['/poliza-home']"
+          routerLinkActive="btn--active"
+          [routerLinkActiveOptions]="{ exact: true }">
+    <img src="assets/svgs/poliza.svg" alt="Pólizas" class="icon">
+    <span class="ml-2">Pólizas</span>
+  </button>
+</li>
+
 
       <li>
         <button type="button"
