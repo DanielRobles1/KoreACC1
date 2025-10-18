@@ -1,0 +1,330 @@
+<app-polizas-layout [open]="sidebarOpen" (openChange)="onSidebarToggle($event)">
+  <!-- Título fuera (page-title) ya no: lo metemos al contenedor -->
+
+  <div class="polizas-container" *ngIf="!loading; else loadingTpl">
+    <!-- Header interno del contenedor -->
+    <div class="poliza-header">
+      <div class="title-wrap">
+        <h3 class="poliza-title">Editar póliza</h3>
+        <div class="meta-grid">
+          <span
+            *ngIf="poliza?.estado"
+            class="meta-chip"
+            [class.ok]="canGuardarEstilo() === 'ok'"
+            [class.warn]="canGuardarEstilo() === 'warn'"
+            [class.bad]="canGuardarEstilo() === 'bad'"
+          >
+            {{ poliza.estado }}
+          </span>
+          <span *ngIf="poliza?.fecha_creacion" class="meta-chip muted">
+            Creada: {{ poliza.fecha_creacion }}
+          </span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn ghost sm"
+          (click)="cargarPoliza(id_poliza)"
+        >
+          ↻ Recargar
+        </button>
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="updating || !puedeActualizar()"
+          (click)="actualizarPoliza()"
+        >
+          {{ updating ? "Actualizando…" : "💾 Actualizar póliza" }}
+        </button>
+      </div>
+    </div>
+
+    <form class="form-poliza">
+      <div class="form-grid compact">
+        <label>
+          Folio:
+          <input class="field" [(ngModel)]="poliza.folio" name="folio" />
+        </label>
+
+        <label>
+          Concepto:
+          <input class="field" [(ngModel)]="poliza.concepto" name="concepto" />
+        </label>
+
+        <label>
+          Tipo póliza:
+          <select class="field select" [(ngModel)]="poliza.id_tipopoliza" name="id_tipopoliza">
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let t of tiposPoliza" [ngValue]="t.id_tipopoliza">{{ t.nombre }}</option>
+          </select>
+        </label>
+
+        <label>
+          Periodo:
+          <select class="field select" [(ngModel)]="poliza.id_periodo" name="id_periodo">
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
+          </select>
+        </label>
+
+        <label>
+          Centro:
+          <select class="field select" [(ngModel)]="poliza.id_centro" name="id_centro">
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="movs-header">
+        <h4 class="section-title">Movimientos</h4>
+
+        <button type="button" class="btn pill" (click)="agregarMovimiento()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="18"
+            height="18"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="icon"
+          >
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar movimiento
+        </button>
+      </div>
+
+      <div class="tabla-wrapper">
+        <table class="tabla-movimientos">
+          <thead>
+            <tr>
+              <th>ID Cuenta</th>
+              <th>Ref. Serie Venta</th>
+              <th>Operación</th>
+              <th>Monto</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th>Centro Costo</th>
+              <th class="actions-cell"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mov of poliza.movimientos ?? []; let i = index">
+              <td class="cuenta-cell">
+                <div class="combo" (focusout)="closeCuenta(i)">
+                  <input
+                    class="cell-input"
+                    type="text"
+                    [(ngModel)]="mov._cuentaQuery"
+                    [ngModelOptions]="{ standalone: true }"
+                    name="cuentaQuery{{ i }}"
+                    placeholder="Buscar cuenta (código/nombre)"
+                    autocomplete="off"
+                    (focus)="openCuenta(i)"
+                    (input)="onCuentaQueryChange(i)"
+                  />
+
+                  <!-- Lista desplegable -->
+                  <div
+                    class="combo-list"
+                    *ngIf="cuentaOpenIndex === i && cuentasFiltradas[i]?.length"
+                  >
+                    <button
+                      type="button"
+                      class="combo-item"
+                      *ngFor="let c of cuentasFiltradas[i]"
+                      (click)="selectCuenta(i, c)"
+                    >
+                      <span class="code">{{ c.codigo }}</span>
+                      <span class="name">{{ c.nombre }}</span>
+                    </button>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <input
+                  class="cell-input"
+                  [(ngModel)]="mov.ref_serie_venta"
+                  name="ref_serie_venta{{ i }}"
+                />
+              </td>
+              <td>
+                <select
+                  class="cell-input select"
+                  [(ngModel)]="mov.operacion"
+                  name="operacion{{ i }}"
+                >
+                  <option [ngValue]="'0'">Cargo</option>
+                  <option [ngValue]="'1'">Abono</option>
+                </select>
+              </td>
+              <td>
+                <input
+                  class="cell-input"
+                  type="number"
+                  [(ngModel)]="mov.monto"
+                  name="monto{{ i }}"
+                />
+              </td>
+              <td>
+                <input
+                  class="cell-input"
+                  [(ngModel)]="mov.cliente"
+                  name="cliente{{ i }}"
+                />
+              </td>
+              <td>
+                <input
+                  class="cell-input cell-date"
+                  type="date"
+                  [(ngModel)]="mov.fecha"
+                  name="fecha{{ i }}"
+                />
+              </td>
+              <td>
+                <input
+                  class="cell-input"
+                  type="number"
+                  [(ngModel)]="mov.cc"
+                  name="cc{{ i }}"
+                />
+              </td>
+              <td class="actions-cell">
+      <button
+        type="button"
+        class="icon-btn danger"
+        [disabled]="deletingIndexSet.has(i)"
+        (click)="openConfirm(i)"
+        title="Eliminar movimiento"
+        aria-label="Eliminar movimiento">
+        <!-- Ícono basura -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </button>
+    </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="resume-cards">
+        <div class="resume-card">
+          <div class="label">Total cargos</div>
+          <div class="value">{{ getTotal("0") | number : "1.2-2" }}</div>
+        </div>
+        <div class="resume-card">
+          <div class="label">Total abonos</div>
+          <div class="value">{{ getTotal("1") | number : "1.2-2" }}</div>
+        </div>
+        <div
+          class="resume-card diff"
+          [class.ok]="canGuardarEstilo() === 'ok'"
+          [class.warn]="canGuardarEstilo() === 'warn'"
+          [class.bad]="canGuardarEstilo() === 'bad'"
+        >
+          <div class="label">Diferencia</div>
+          <div class="value">{{ getDiferencia() | number : '1.2-2' }}</div>
+
+          <!-- Chip de estado -->
+          <div
+            class="status-chip"
+            [class.ok]="canGuardarEstilo() === 'ok'"
+            [class.warn]="canGuardarEstilo() === 'warn'"
+            [class.bad]="canGuardarEstilo() === 'bad'"
+            aria-live="polite"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path
+                *ngIf="canGuardarEstilo() === 'ok'"
+                d="M20 6L9 17l-5-5"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              ></path>
+              <path
+                *ngIf="canGuardarEstilo() === 'warn'"
+                d="M12 9v4m0 4h.01M10.29 3.86l-7.5 12.99A1 1 0 0 0 3.62 19h16.76a1 1 0 0 0 .83-1.5L13.71 3.86a1 1 0 0 0-1.72 0z"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              ></path>
+              <path
+                *ngIf="canGuardarEstilo() === 'bad'"
+                d="M18 6L6 18M6 6l12 12"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              ></path>
+            </svg>
+            <span>
+              {{
+                canGuardarEstilo() === 'ok'
+                  ? 'Póliza cuadrada'
+                  : canGuardarEstilo() === 'warn'
+                  ? 'Sin movimientos'
+                  : 'No cuadra'
+              }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn ghost sm"
+          (click)="cargarPoliza(id_poliza)"
+        >
+          ↻ Recargar
+        </button>
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="updating || !puedeActualizar()"
+          (click)="actualizarPoliza()"
+        >
+          {{ updating ? "Actualizando…" : "💾 Actualizar póliza" }}
+        </button>
+        <span class="hint" *ngIf="!puedeActualizar()"
+          >Completa encabezado y corrige diferencias para habilitar el
+          guardado.</span
+        >
+      </div>
+    </form>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="polizas-container">
+      <p>Cargando póliza…</p>
+      <p class="hint error" *ngIf="errorMsg">{{ errorMsg }}</p>
+    </div>
+  </ng-template>
+</app-polizas-layout>
+
+<!-- Toast -->
+<app-toast-message
+  [open]="toast.open"
+  [title]="toast.title"
+  [message]="toast.message"
+  [type]="toast.type"
+  [position]="toast.position"
+  [autoCloseMs]="toast.autoCloseMs"
+  [showClose]="toast.showClose"
+  (closed)="onToastClosed()"
+>
+</app-toast-message>
+
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()"
+>
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>

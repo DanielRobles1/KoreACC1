@@ -16,6 +16,7 @@ import { ImpuestosComponent } from './pages/impuestos/impuestos.component';
 import { CatalogCentrosComponent } from './pages/catalog-centros/catalog-centros.component';
 import { PolizasComponent } from './pages/polizas/polizas.component';
 import { PolizaHomeComponent } from './pages/poliza-home/poliza-home.component';
+import { PolizaEditarComponent } from './pages/poliza-editar/poliza-editar.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -73,6 +74,10 @@ export const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
  },
+{
+  path: 'polizas/editar/:id',
+  component: PolizaEditarComponent
+},
 {
    path: 'poliza-home',
     component: PolizaHomeComponent,

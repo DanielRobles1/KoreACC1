@@ -264,10 +264,15 @@ export class PolizaHomeComponent {
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
   editarPoliza(p: PolizaRow) {
-    this.router.navigate(['/polizas', 'editar', String(p.folio)], {
-      state: { poliza: JSON.parse(JSON.stringify(p)) }
-    });
+    const id = (p as any)?.id_poliza ?? (p as any)?.id; // fallback por si tu back lo nombra 'id'
+    if (!id) {
+      // Si quieres, muestra un toast/alert aquí porque sin ID no podemos ir a la pantalla de edición
+      console.warn('No se encontró id_poliza en la fila seleccionada');
+      return;
+    }
+    this.router.navigate(['/polizas', 'editar', String(id)]);
   }
+
 
   eliminarPoliza(id_poliza?: number): void {
     if (id_poliza == null) {

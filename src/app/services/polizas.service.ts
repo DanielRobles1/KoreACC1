@@ -74,6 +74,31 @@ export class PolizasService {
     return this.http.post<any>(`${this.api}/poliza`, body);
   }
 
+  /** GET /api/v1/poliza/:id/movimientos */
+  getPolizaConMovimientos(id: number): Observable<any> {
+    return this.http.get<any>(`${this.api}/poliza/${id}/movimientos`);
+  }
+
+  /** PUT /api/v1/poliza/:id */
+  updatePoliza(id: number, body: any): Observable<any> {
+    return this.http.put<any>(`${this.api}/poliza/${id}`, body);
+  }
+
+  /** POST /api/v1/movimiento-poliza */
+  createMovPoliza(body: any): Observable<any> {
+    return this.http.post<any>(`${this.api}/movimiento-poliza`, body);
+  }
+
+  /** PUT /api/v1/movimiento-poliza/:id */
+  updateMovPoliza(id: number, body: any): Observable<any> {
+    return this.http.put<any>(`${this.api}/movimiento-poliza/${id}`, body);
+  }
+
+  /** DELETE /api/v1/movimiento-poliza/:id */
+  deleteMovPoliza(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.api}/movimiento-poliza/${id}`);
+  }
+
   /** DELETE /api/v1/poliza/:ID */
  deletePoliza(id: number): Observable<any> {
   return this.http.delete<any>(`${this.api}/poliza/${id}`);
