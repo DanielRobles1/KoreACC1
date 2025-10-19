@@ -8,10 +8,10 @@ export type PeriodoTipo = 'SEMANAL' | 'MENSUAL' | 'ANUAL' | 'PERSONALIZADO';
 export interface PeriodoContableDto {
   id_periodo?: number;
   id_empresa: number;
-  id_ejercicio: number;            // ⬅️ NECESARIO para la FK
+  id_ejercicio: number;    
   tipo_periodo: PeriodoTipo;
-  fecha_inicio: string;            // YYYY-MM-DD
-  fecha_fin: string;               // YYYY-MM-DD
+  fecha_inicio: string; 
+  fecha_fin: string;      
   periodo_daterange?: any;
   esta_abierto?: boolean;
   created_at?: string;
@@ -23,8 +23,8 @@ export interface PeriodoQuery {
   id_ejercicio?: number;           // ⬅️ Permite filtrar por ejercicio
   tipo_periodo?: PeriodoTipo;
   esta_abierto?: boolean;
-  desde?: string; // 'YYYY-MM-DD'
-  hasta?: string; // 'YYYY-MM-DD'
+  desde?: string; 
+  hasta?: string; 
 }
 
 export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
@@ -69,11 +69,14 @@ export class PeriodoContableService {
     return this.http.put<PeriodoContableDto>(`${this.baseUrl}/${id_periodo}`, payload);
   }
 
-  delete(id_periodo: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id_periodo}`);
+  cerrar(id_periodo: number): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(`${this.baseUrl}/${id_periodo}`, {});
   }
 
-  // Si tu backend acepta PATCH para cambiar solo 'esta_abierto'
+  delete(id_periodo: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/destroy/${id_periodo}`);
+  }
+
   setAbierto(id_periodo: number, esta_abierto: boolean): Observable<PeriodoContableDto> {
     return this.http.patch<PeriodoContableDto>(`${this.baseUrl}/${id_periodo}`, { esta_abierto });
   }

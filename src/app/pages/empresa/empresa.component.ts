@@ -29,7 +29,7 @@ type ConfirmKind =
   | 'empresa-save'
   | 'periodo-save'
   | 'periodo-delete'
-  
+  | 'periodo-cerrar'
   | 'ejercicio-save'
   | 'ejercicio-delete'
   | 'ejercicio-abrir'
@@ -110,6 +110,7 @@ export class EmpresaComponent implements OnInit {
   actions2: CrudAction[] = [
     { id: 'edit', label: 'Editar', tooltip: 'Editar' },
     { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
+    { id: 'cerrar', label: 'Cerrar', tooltip: 'Cerrar' },
   ];
 
   // Modal período
@@ -221,6 +222,7 @@ export class EmpresaComponent implements OnInit {
     ];
     this.actions2 = [
       ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []),
+      ...(this.canEdit ? [{ id: 'cerrar', tooltip: 'Cerrar Periodo' }] : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []),
     ];
 
@@ -399,6 +401,16 @@ export class EmpresaComponent implements OnInit {
         this.confirmPayload = { id_periodo: evt.row.id_periodo };
         this.confirmOpen = true;
         break;
+
+      case 'cerrar': {
+      const row = evt.row;
+      this.confirmTitle = 'Cerrar período';
+      this.confirmMessage = `¿Seguro que deseas cerrar el período ${row?.fecha_inicio} → ${row?.fecha_fin}?`;
+      this.confirmKind = 'periodo-cerrar';
+      this.confirmPayload = { id_periodo: row.id_periodo };
+      this.confirmOpen = true;
+      break;
+      }
 
       default:
         this.openError(`Acción no soportada: ${evt.action}`);
@@ -645,9 +657,27 @@ export class EmpresaComponent implements OnInit {
         break;
       }
 
+      case 'periodo-cerrar': {
+        const idp = payload?.id_periodo as number | undefined;
+        if (!idp) return this.openError('No se encontró el identificador del período.');
+
+        this.periodosService.cerrar(idp).subscribe({
+          next: (res) => {
+            // Actualiza el registro localmente a cerrado
+            this.periodos = this.periodos.map(p =>
+              p.id_periodo === idp ? { ...p, esta_abierto: false } : p
+            );
+            this.openSuccess(res?.message || 'Período cerrado correctamente.');
+          },
+          error: (err) => this.openError('No se pudo cerrar el período', err),
+        });
+        break;
+      }
+
       case 'periodo-delete': {
         const idp = payload?.id_periodo as number | undefined;
         if (!idp) return this.openError('No se encontró el identificador del período.');
+
         this.periodosService.delete(idp).subscribe({
           next: () => {
             this.periodos = this.periodos.filter(p => p.id_periodo !== idp);
