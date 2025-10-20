@@ -103,7 +103,13 @@ export class PolizasService {
  deletePoliza(id: number): Observable<any> {
   return this.http.delete<any>(`${this.api}/poliza/${id}`);
 }
+getCuentas() {
+    return this.http.get<any>(`${this.api}/cuentas`);
+  }
 
+  //  Cargar centros de costo
+  getCentrosCosto() {
+return this.http.get<any>(`${this.api}/centros`);  }
 
   // CFDI 
   /** POST /api/v1/cfdi/import (subir XML) */
@@ -141,7 +147,7 @@ export class PolizasService {
   }
   // en polizas.service.ts 
 getMe() {
-  return this.http.get<any>('/api/me'); // devuelve { id_usuario, nombre, email, ... }
+  return this.http.get<any>('/api/me'); 
 }
 
 }

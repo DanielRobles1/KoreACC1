@@ -44,9 +44,36 @@ var PolizasService = /** @class */ (function () {
     PolizasService.prototype.createPoliza = function (body) {
         return this.http.post(this.api + "/poliza", body);
     };
+    /** GET /api/v1/poliza/:id/movimientos */
+    PolizasService.prototype.getPolizaConMovimientos = function (id) {
+        return this.http.get(this.api + "/poliza/" + id + "/movimientos");
+    };
+    /** PUT /api/v1/poliza/:id */
+    PolizasService.prototype.updatePoliza = function (id, body) {
+        return this.http.put(this.api + "/poliza/" + id, body);
+    };
+    /** POST /api/v1/movimiento-poliza */
+    PolizasService.prototype.createMovPoliza = function (body) {
+        return this.http.post(this.api + "/movimiento-poliza", body);
+    };
+    /** PUT /api/v1/movimiento-poliza/:id */
+    PolizasService.prototype.updateMovPoliza = function (id, body) {
+        return this.http.put(this.api + "/movimiento-poliza/" + id, body);
+    };
+    /** DELETE /api/v1/movimiento-poliza/:id */
+    PolizasService.prototype.deleteMovPoliza = function (id) {
+        return this.http["delete"](this.api + "/movimiento-poliza/" + id);
+    };
     /** DELETE /api/v1/poliza/:ID */
     PolizasService.prototype.deletePoliza = function (id) {
         return this.http["delete"](this.api + "/poliza/" + id);
+    };
+    PolizasService.prototype.getCuentas = function () {
+        return this.http.get(this.api + "/cuentas");
+    };
+    //  Cargar centros de costo
+    PolizasService.prototype.getCentrosCosto = function () {
+        return this.http.get(this.api + "/centros");
     };
     // CFDI 
     /** POST /api/v1/cfdi/import (subir XML) */
@@ -83,7 +110,7 @@ var PolizasService = /** @class */ (function () {
     };
     // en polizas.service.ts 
     PolizasService.prototype.getMe = function () {
-        return this.http.get('/api/me'); // devuelve { id_usuario, nombre, email, ... }
+        return this.http.get('/api/me');
     };
     PolizasService = __decorate([
         core_1.Injectable({ providedIn: 'root' })
