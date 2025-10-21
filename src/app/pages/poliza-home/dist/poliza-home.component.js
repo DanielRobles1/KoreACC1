@@ -21,12 +21,13 @@ var router_1 = require("@angular/router");
 var polizas_layout_component_1 = require("@app/components/polizas-layout/polizas-layout.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
 var PolizaHomeComponent = /** @class */ (function () {
-    function PolizaHomeComponent(router, api) {
+    function PolizaHomeComponent(location, router, api) {
         var _this = this;
+        this.location = location;
         this.router = router;
         this.api = api;
         this.sidebarOpen = true;
-        //  Listado 
+        //  Listado
         this.polizas = [];
         this.polizasFiltradas = []; // se muestra en la tabla
         this.tiposPoliza = [];
@@ -35,14 +36,15 @@ var PolizaHomeComponent = /** @class */ (function () {
         this.mapTipos = new Map();
         this.mapPeriodos = new Map();
         this.mapCentros = new Map();
-        //  Buscador 
+        this.cuentasMap = new Map();
+        //  Buscador
         this.q = '';
         this.nuevaPoliza = { movimientos: [] };
         this.uploadingXml = false;
         this.selectedXmlName = '';
         this.uploadXmlError = '';
         this.cfdiOptions = [];
-        //  TOAST (estado
+        //  TOAST (estado)
         this.toast = {
             open: false,
             title: '',
@@ -52,8 +54,11 @@ var PolizaHomeComponent = /** @class */ (function () {
             autoCloseMs: 3500,
             showClose: true
         };
-        this.toNumOrNull = function (v) { return (v === '' || v == null || isNaN(Number(v)) ? null : Number(v)); };
-        this.toStrOrNull = function (v) { return (v == null ? null : String(v).trim() || null); };
+        this.loadingId = null; // para deshabilitar botones por fila
+        // “Ver más”
+        this.expandedId = null; // cuál fila está expandida
+        this.movsLoadingId = null; // para mostrar "Cargando…"
+        this.movsLoaded = {}; // cache por id
         this.onToastClosed = function () { _this.toast.open = false; };
         this.nombreCentro = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapCentros.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
         this.nombreTipo = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapTipos.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
@@ -61,11 +66,16 @@ var PolizaHomeComponent = /** @class */ (function () {
         //  Acciones 
         this.trackByFolio = function (_, p) { var _a, _b; return (_b = (_a = p === null || p === void 0 ? void 0 : p.id_poliza) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.folio) !== null && _b !== void 0 ? _b : _; };
     }
+    PolizaHomeComponent.prototype.volver = function () {
+        this.location.back();
+    };
     PolizaHomeComponent.prototype.ngOnInit = function () {
         this.cargarCatalogos();
         this.cargarPolizas();
         this.cargarCfdiRecientes();
+        this.cargarCuentas(); // importante para mostrar código/nombre de cuenta
     };
+    // ========= Utils =========
     PolizaHomeComponent.prototype.normalizeList = function (res) {
         var _a, _b, _c, _d;
         return Array.isArray(res) ? res : ((_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : []);
@@ -93,6 +103,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             this.toast.position = opts.position;
         this.toast.open = true;
     };
+    //  Catálogos 
     PolizaHomeComponent.prototype.cargarCatalogos = function () {
         var _this = this;
         // Tipos
@@ -116,7 +127,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
             }
         });
-        // Periodos -> "YYYY-MM-DD — YYYY-MM-DD"
+        // Periodos
         this.api.getPeriodos().subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
@@ -138,7 +149,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
             }
         });
-        // Centros -> "SERIE — Nombre"
+        // Centros
         this.api.getCentros().subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
@@ -162,19 +173,88 @@ var PolizaHomeComponent = /** @class */ (function () {
             }
         });
     };
+    //  Cuentas ( CODIGO — Nombre) 
+    PolizaHomeComponent.prototype.cargarCuentas = function () {
+        var _this = this;
+        this.api.getCuentas().subscribe({
+            next: function (r) {
+                var _a, _b, _c, _d, _e, _f, _g;
+                var arr = _this.normalizeList(r);
+                _this.cuentasMap.clear();
+                for (var _i = 0, arr_1 = arr; _i < arr_1.length; _i++) {
+                    var c = arr_1[_i];
+                    var id = Number((_b = (_a = c.id_cuenta) !== null && _a !== void 0 ? _a : c.id) !== null && _b !== void 0 ? _b : c.ID);
+                    var codigo = String((_e = (_d = (_c = c.codigo) !== null && _c !== void 0 ? _c : c.clave) !== null && _d !== void 0 ? _d : c.code) !== null && _e !== void 0 ? _e : '').trim();
+                    var nombre = String((_g = (_f = c.nombre) !== null && _f !== void 0 ? _f : c.descripcion) !== null && _g !== void 0 ? _g : '').trim();
+                    if (!Number.isNaN(id))
+                        _this.cuentasMap.set(id, { codigo: codigo, nombre: nombre });
+                }
+            },
+            error: function (e) { return console.error('Cuentas:', e); }
+        });
+    };
+    PolizaHomeComponent.prototype.cuentaEtiqueta = function (id, m) {
+        var _a, _b, _c, _d, _e, _f, _g, _h;
+        if (id == null) {
+            var cod_1 = (_b = (_a = m === null || m === void 0 ? void 0 : m.cuenta_codigo) !== null && _a !== void 0 ? _a : m === null || m === void 0 ? void 0 : m.codigo) !== null && _b !== void 0 ? _b : '';
+            var nom_1 = (_d = (_c = m === null || m === void 0 ? void 0 : m.cuenta_nombre) !== null && _c !== void 0 ? _c : m === null || m === void 0 ? void 0 : m.nombre) !== null && _d !== void 0 ? _d : '';
+            return (cod_1 || nom_1) ? "" + cod_1 + (cod_1 && nom_1 ? ' — ' : '') + nom_1 : '—';
+        }
+        var info = this.cuentasMap.get(Number(id));
+        if (info && (info.codigo || info.nombre)) {
+            return "" + info.codigo + (info.codigo && info.nombre ? ' — ' : '') + info.nombre;
+        }
+        var cod = (_f = (_e = m === null || m === void 0 ? void 0 : m.cuenta_codigo) !== null && _e !== void 0 ? _e : m === null || m === void 0 ? void 0 : m.codigo) !== null && _f !== void 0 ? _f : '';
+        var nom = (_h = (_g = m === null || m === void 0 ? void 0 : m.cuenta_nombre) !== null && _g !== void 0 ? _g : m === null || m === void 0 ? void 0 : m.nombre) !== null && _h !== void 0 ? _h : '';
+        if (cod || nom)
+            return "" + cod + (cod && nom ? ' — ' : '') + nom;
+        return String(id);
+    };
+    //  ver mas(movimientos) 
+    PolizaHomeComponent.prototype.getIdPoliza = function (p) {
+        var _a, _b, _c;
+        var id = (_b = (_a = p) === null || _a === void 0 ? void 0 : _a.id_poliza) !== null && _b !== void 0 ? _b : (_c = p) === null || _c === void 0 ? void 0 : _c.id;
+        return (id == null ? null : Number(id));
+    };
+    PolizaHomeComponent.prototype.toggleVerMas = function (p) {
+        var _this = this;
+        var id = this.getIdPoliza(p);
+        if (!id)
+            return;
+        if (this.expandedId === id) { // colapsa si ya está abierto
+            this.expandedId = null;
+            return;
+        }
+        this.expandedId = id;
+        if (this.movsLoaded[id])
+            return; // ya cargados
+        this.movsLoadingId = id;
+        this.api.getPolizaConMovimientos(id).subscribe({
+            next: function (res) {
+                var _a;
+                p.movimientos = (_a = res === null || res === void 0 ? void 0 : res.movimientos) !== null && _a !== void 0 ? _a : [];
+                _this.movsLoaded[id] = true;
+            },
+            error: function (err) {
+                console.error('getPolizaConMovimientos:', err);
+                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
+            },
+            complete: function () { return (_this.movsLoadingId = null); }
+        });
+    };
     //  Listado 
     PolizaHomeComponent.prototype.cargarPolizas = function () {
         var _this = this;
         this.api.getPolizas({
             id_tipopoliza: this.filtroTipo,
-            id_periodo: this.filtroPeriodo
+            id_periodo: this.filtroPeriodo,
+            includeMovimientos: true
         }).subscribe({
             next: function (r) {
                 var _a, _b;
                 var list = (_a = _this.normalizeList(r)) !== null && _a !== void 0 ? _a : ((_b = r === null || r === void 0 ? void 0 : r.polizas) !== null && _b !== void 0 ? _b : []);
                 _this.polizas = Array.isArray(list) ? list : [];
-                _this.aplicarFiltroLocal(); // filtra con this.q
-                // Mensaje informativo si no hay resultados
+                _this.aplicarFiltroLocal();
                 if (_this.polizas.length === 0) {
                     _this.showToast({ type: 'info', message: 'No se encontraron pólizas para los filtros/búsqueda actuales.' });
                 }
@@ -185,7 +265,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             }
         });
     };
-    //  Buscador 
+    // Buscador
     PolizaHomeComponent.prototype.onBuscarChange = function (_) {
         var _this = this;
         if (this.buscarTimer)
@@ -223,7 +303,6 @@ var PolizaHomeComponent = /** @class */ (function () {
                 movMatch);
         });
     };
-    //  Estado 
     PolizaHomeComponent.prototype.getEstado = function (p) {
         var _a, _b, _c, _d;
         var raw = ((_d = (_c = (_b = (_a = p.estado) !== null && _a !== void 0 ? _a : p.estatus) !== null && _b !== void 0 ? _b : p.status) !== null && _c !== void 0 ? _c : p.state) !== null && _d !== void 0 ? _d : '').toString().trim();
@@ -254,9 +333,13 @@ var PolizaHomeComponent = /** @class */ (function () {
     };
     PolizaHomeComponent.prototype.onSidebarToggle = function (v) { this.sidebarOpen = v; };
     PolizaHomeComponent.prototype.editarPoliza = function (p) {
-        this.router.navigate(['/polizas', 'editar', String(p.folio)], {
-            state: { poliza: JSON.parse(JSON.stringify(p)) }
-        });
+        var _a, _b, _c;
+        var id = (_b = (_a = p) === null || _a === void 0 ? void 0 : _a.id_poliza) !== null && _b !== void 0 ? _b : (_c = p) === null || _c === void 0 ? void 0 : _c.id;
+        if (!id) {
+            console.warn('No se encontró id_poliza en la fila seleccionada');
+            return;
+        }
+        this.router.navigate(['/polizas', 'editar', String(id)]);
     };
     PolizaHomeComponent.prototype.eliminarPoliza = function (id_poliza) {
         var _this = this;
@@ -282,7 +365,49 @@ var PolizaHomeComponent = /** @class */ (function () {
     PolizaHomeComponent.prototype.irANueva = function () {
         this.router.navigate(['/polizas', 'nueva']);
     };
-    //  XML 
+    //  Cambio de estado 
+    PolizaHomeComponent.prototype.isAllowedEstado = function (e) {
+        return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
+    };
+    PolizaHomeComponent.prototype.canMarcarRevisada = function (p) {
+        var e = (this.getEstado(p) || '').toLowerCase();
+        return !e.includes('cance') && !e.includes('cerr') && !e.includes('contab');
+    };
+    PolizaHomeComponent.prototype.canMarcarContabilizada = function (p) {
+        var e = (this.getEstado(p) || '').toLowerCase();
+        return e.includes('revis') || e.includes('cuadra');
+    };
+    PolizaHomeComponent.prototype.cambiarEstadoPoliza = function (p, nuevo) {
+        var _this = this;
+        if (!this.isAllowedEstado(nuevo)) {
+            this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Contabilizada.' });
+            return;
+        }
+        var id = this.getIdPoliza(p);
+        if (!id) {
+            this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede cambiar el estado: falta id_poliza.' });
+            return;
+        }
+        this.loadingId = id;
+        this.api.changeEstadoPoliza(id, nuevo).subscribe({
+            next: function (res) {
+                var _a;
+                p.estado = (_a = res === null || res === void 0 ? void 0 : res.estado) !== null && _a !== void 0 ? _a : nuevo;
+                _this.showToast({
+                    type: 'success',
+                    title: 'Estado actualizado',
+                    message: "La p\u00F3liza " + id + " ahora est\u00E1: " + p.estado + "."
+                });
+            },
+            error: function (err) {
+                var _a;
+                console.error('changeEstadoPoliza:', err);
+                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo cambiar el estado.';
+                _this.showToast({ type: 'error', title: 'Error', message: msg });
+            },
+            complete: function () { return (_this.loadingId = null); }
+        });
+    };
     PolizaHomeComponent.prototype.triggerXmlPicker = function (input) {
         this.uploadXmlError = '';
         input.value = '';
@@ -339,7 +464,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             complete: function () { return (_this.uploadingXml = false); }
         });
     };
-    //  CFDI recientes (GET /cfdi) 
+    //  CFDI recientes 
     PolizaHomeComponent.prototype.cargarCfdiRecientes = function () {
         var _this = this;
         var svc = this.api;
@@ -377,7 +502,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 router_1.RouterModule,
                 polizas_layout_component_1.PolizasLayoutComponent,
                 common_1.CurrencyPipe,
-                toast_message_component_component_1.ToastMessageComponent
+                toast_message_component_component_1.ToastMessageComponent,
             ],
             templateUrl: './poliza-home.component.html',
             styleUrls: ['./poliza-home.component.scss']

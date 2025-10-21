@@ -13,6 +13,8 @@ export interface Movimiento {
   cc?: number | null;
   uuid?: null | string;
     id_poliza?: number;   
+        includeMovimientos?: boolean;
+
 }
 
 export interface Poliza {
@@ -66,6 +68,7 @@ export class PolizasService {
     if (params?.id_tipopoliza != null) p = p.set('id_tipopoliza', String(params.id_tipopoliza));
     if (params?.id_periodo    != null) p = p.set('id_periodo',    String(params.id_periodo));
     if (params?.id_centro     != null) p = p.set('id_centro',     String(params.id_centro));
+   
     return this.http.get<any>(`${this.api}/poliza`, { params: p });
   }
 
@@ -148,6 +151,10 @@ return this.http.get<any>(`${this.api}/centros`);  }
   // en polizas.service.ts 
 getMe() {
   return this.http.get<any>('/api/me'); 
+}
+// polizas.service.ts
+changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Revisada' | 'Contabilizada') {
+  return this.http.patch<any>(`${this.api}/poliza/${id_poliza}`, { estado });
 }
 
 }

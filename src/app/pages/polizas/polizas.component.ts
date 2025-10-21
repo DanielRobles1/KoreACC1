@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
-
+import { Location } from '@angular/common';
+import { Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 type CfdiOption = {
   uuid: string;
   folio?: string | null;
@@ -30,7 +32,7 @@ type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 @Component({
   selector: 'app-polizas',
   standalone: true,
-  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent],
+  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent,RouterModule],
   templateUrl: './polizas.component.html',
   styleUrls: ['./polizas.component.scss']
 })
@@ -41,7 +43,10 @@ export class PolizasComponent implements OnInit {
   currentUser: UsuarioLigero | null = null;
   centrosCosto: CentroCostoItem[] = [];
   private centrosCostoMap = new Map<number, CentroCostoItem>();
-
+  location: any;
+  router: any;
+volver() {
+this.router.navigate(['/poliza-home']);}
   // Listado
   polizas: Poliza[] = [];
 cuentasQuery = '';
@@ -105,7 +110,6 @@ cuentasQuery = '';
   }
   onToastClosed = () => { this.toast.open = false; };
 
-  // ========= Utils =========
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
   }
@@ -219,9 +223,8 @@ onCuentaSeleccionada(index: number) {
 onCuentaSeleccionadaGlobal(): void {
   this.cuentasQuery = ''; // limpia el buscador global
 }
-// Devuelve las cuentas filtradas globalmente  (si hace falta) la actualmente seleccionada en esa fila
 getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
-  const base = this.getCuentasFiltradasGlobal(); // tu filtro global actual
+  const base = this.getCuentasFiltradasGlobal(); 
 
   if (!selectedId) return base;
 
@@ -287,14 +290,13 @@ getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
     });
   }
 
-  // centros de costo (para tabla Movimientos) mostrando la serie_venta en la etiqueta
 private getCentros(): void {
   const svc: any = this.api as any;
   const fn =
     svc.getCentrosCosto   || svc.listCentrosCosto ||
     svc.getCentroCostos   || svc.listCentroCostos ||
     svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
-    svc.getCentros; // fallback por si tu service usa otro nombre
+    svc.getCentros; 
 
   if (typeof fn !== 'function') {
     console.warn('No existe método de API para Centros de Costo; usando vacío.');

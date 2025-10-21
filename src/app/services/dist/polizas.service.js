@@ -112,6 +112,10 @@ var PolizasService = /** @class */ (function () {
     PolizasService.prototype.getMe = function () {
         return this.http.get('/api/me');
     };
+    // polizas.service.ts
+    PolizasService.prototype.changeEstadoPoliza = function (id_poliza, estado) {
+        return this.http.patch(this.api + "/poliza/" + id_poliza, { estado: estado });
+    };
     PolizasService = __decorate([
         core_1.Injectable({ providedIn: 'root' })
     ], PolizasService);

@@ -185,7 +185,6 @@
   gap: .2rem;
   font-size: .85rem;
 }
-
 .poliza-header {
   display: flex;
   align-items: flex-start;
@@ -295,6 +294,86 @@
   border-radius: .5rem;
   background: var(--card);
 }
+.tabla-movimientos .cell-cuenta {
+  display: flex;
+  flex-direction: row;       /* los pone en la misma línea */
+  align-items: center;       /* alinea verticalmente */
+  gap: 8px;                  /* espacio entre select e input */
+  white-space: nowrap;       /* evita que se bajen de línea */
+}
+
+.tabla-movimientos .cell-cuenta select.cell-input {
+  flex: 0 0 50%;             /* el select ocupa 50% del ancho */
+  min-width: 160px;
+}
+
+.tabla-movimientos .cell-cuenta input.cell-input {
+  flex: 1 1 50%;             /* el buscador ocupa el resto */
+  min-width: 160px;
+}
+
+.tabla-movimientos .cell-cuenta .hint {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+.movs-toolbar {
+  margin: 8px 0 22px;
+}
+.movs-toolbar .hint {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+.totales-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) 1fr;
+  gap: 24px;
+  align-items: end;
+  margin: 20px 0 8px;
+
+  .tot-card {
+    .tot-label {
+      font-weight: 800;
+      letter-spacing: .02em;
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #111;
+      margin-bottom: 6px;
+    }
+    .tot-value {
+      font-weight: 800;
+      font-size: 20px;
+      color: #111;
+    }
+  }
+
+  .pill-status {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid #111;
+    padding: 8px 14px;
+    border-radius: 9999px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    &.ok {
+      border-color: #111;
+      color: #111;
+    }
+    &.bad {
+      border-color: #b45309; /* ámbar/advertencia */
+      color: #b45309;
+    }
+
+    .icon { font-size: 14px; line-height: 1; }
+    .text { font-size: 14px; }
+  }
+}
+
+/* Opcional: que no se pegue a la tabla */
+.tabla-wrapper + .totales-panel { margin-top: 16px; }
 
 .tabla-movimientos {
   width: 100%;
@@ -306,7 +385,8 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #f1f5f9;
+  background: #113960;
+  color: #fff;
   border-bottom: 1px solid var(--line);
   font-weight: 700;
   box-shadow: 0 1px 0 var(--line);
@@ -497,3 +577,47 @@ h3, h4 { margin: .5rem 0 .75rem; color: var(--text); }
   background: #fff;
 }
 .icon-btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+
+.movs-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start; /* opcional: evita que se separen tanto */
+  gap: 690px;
+  margin-bottom: 12px;
+
+  .stacked {
+    flex: 0 0 240px; /* 🔹 ancho fijo del buscador (ajusta a gusto: 200–280px) */
+  }
+
+  .field {
+    width: 100%;
+  }
+
+  .btn.pill {
+    white-space: nowrap;
+    padding: 8px 16px;
+    font-weight: 600;
+  }
+
+  .icon {
+    margin-right: 6px;
+  }
+}
+
+:host ::ng-deep .pill-status.ok {
+  color: #16a34a; /* Verde */
+}
+
+:host ::ng-deep .pill-status.bad {
+  color: #dc2626; /* Rojo */
+}
+
+.pill-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+

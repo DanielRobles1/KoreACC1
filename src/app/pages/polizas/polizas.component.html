@@ -1,11 +1,26 @@
 <app-polizas-layout
   [open]="sidebarOpen"
   (openChange)="onSidebarToggle($event)">
+<a [routerLink]="['/poliza-home']" style="text-decoration:none;">
+  <button
+    type="button"
+    style="background:none; border:none; cursor:pointer; padding:0;">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      width="24"
+      height="24">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </button>
+</a>
+
 
   <!-- Título en la barra superior -->
   <span page-title>Pólizas</span>
 
-  <!-- Filtros + botones en la barra superior -->
   <div page-actions class="toolbar-filters">
     <!-- Botón Cargar XML -->
     <button
@@ -40,7 +55,6 @@
     </span>
   </div>
 
-  <!-- CONTENIDO dentro de la card -->
   <div class="polizas-container">
     <hr />
     <h3>Nueva póliza</h3>
@@ -95,7 +109,6 @@
 
      <h4>Movimientos</h4>
 
-<!-- Buscador global y botón en la misma línea -->
 <div class="movs-toolbar">
   <label class="stacked flex-grow">
     <span class="hint">Buscar cuenta (código o nombre)</span>

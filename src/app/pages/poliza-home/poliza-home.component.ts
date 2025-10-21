@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
-import { ToastService, ToastState } from '@app/services/toast-service.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
-// Tipos locales para el toast (no dependemos del archivo del componente)
+
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 
@@ -18,8 +17,7 @@ type CfdiOption = {
   total?: number | string | null;
 };
 
-// Extendemos Poliza con id_poliza (si viene del backend)
-type PolizaRow = Poliza & { id_poliza?: number };
+type PolizaRow = Poliza & { id_poliza?: number; id?: number };
 
 @Component({
   selector: 'app-poliza-home',
@@ -30,7 +28,7 @@ type PolizaRow = Poliza & { id_poliza?: number };
     RouterModule,
     PolizasLayoutComponent,
     CurrencyPipe,
-    ToastMessageComponent
+    ToastMessageComponent,
   ],
   templateUrl: './poliza-home.component.html',
   styleUrls: ['./poliza-home.component.scss'],
@@ -38,7 +36,11 @@ type PolizaRow = Poliza & { id_poliza?: number };
 export class PolizaHomeComponent {
   sidebarOpen = true;
 
-  //  Listado 
+  volver() {
+    this.location.back();
+  }
+
+  //  Listado
   polizas: PolizaRow[] = [];
   polizasFiltradas: PolizaRow[] = []; // se muestra en la tabla
 
@@ -49,11 +51,12 @@ export class PolizaHomeComponent {
   mapTipos    = new Map<number, string>();
   mapPeriodos = new Map<number, string>();
   mapCentros  = new Map<number, string>();
+  cuentasMap  = new Map<number, { codigo: string; nombre: string }>();
 
   filtroTipo?: number;
   filtroPeriodo?: number;
 
-  //  Buscador 
+  //  Buscador
   q = '';
   private buscarTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -64,7 +67,7 @@ export class PolizaHomeComponent {
   cfdiOptions: CfdiOption[] = [];
   uuidSeleccionado?: string;
 
-  //  TOAST (estado
+  //  TOAST (estado)
   toast = {
     open: false,
     title: '',
@@ -75,14 +78,27 @@ export class PolizaHomeComponent {
     showClose: true
   };
 
-  constructor(private router: Router, private api: PolizasService) {}
+  loadingId: number | null = null; // para deshabilitar botones por fila
+
+  // “Ver más”
+  expandedId: number | null = null;                 // cuál fila está expandida
+  movsLoadingId: number | null = null;              // para mostrar "Cargando…"
+  movsLoaded: Record<number, boolean> = {};         // cache por id
+
+  constructor(
+    private location: Location,
+    private router: Router,
+    private api: PolizasService
+  ) {}
 
   ngOnInit() {
     this.cargarCatalogos();
     this.cargarPolizas();
     this.cargarCfdiRecientes();
+    this.cargarCuentas(); // importante para mostrar código/nombre de cuenta
   }
 
+  // ========= Utils =========
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
   }
@@ -95,9 +111,6 @@ export class PolizaHomeComponent {
     if (isNaN(dt.getTime())) return s;
     return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
   }
-  private toNumOrNull = (v: any) => (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
-  private toStrOrNull = (v: any) => (v == null ? null : String(v).trim() || null);
-
   private showToast(opts: { type?: ToastType; title?: string; message: string; autoCloseMs?: number; position?: ToastPosition }) {
     this.toast.type = opts.type ?? 'info';
     this.toast.title = opts.title ?? '';
@@ -108,6 +121,7 @@ export class PolizaHomeComponent {
   }
   onToastClosed = () => { this.toast.open = false; };
 
+  //  Catálogos 
   cargarCatalogos(): void {
     // Tipos
     this.api.getTiposPoliza().subscribe({
@@ -125,7 +139,7 @@ export class PolizaHomeComponent {
       },
     });
 
-    // Periodos -> "YYYY-MM-DD — YYYY-MM-DD"
+    // Periodos
     this.api.getPeriodos().subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r);
@@ -144,7 +158,7 @@ export class PolizaHomeComponent {
       },
     });
 
-    // Centros -> "SERIE — Nombre"
+    // Centros
     this.api.getCentros().subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r);
@@ -165,18 +179,84 @@ export class PolizaHomeComponent {
     });
   }
 
+  //  Cuentas ( CODIGO — Nombre) 
+  cargarCuentas() {
+    this.api.getCuentas().subscribe({
+      next: (r: any) => {
+        const arr = this.normalizeList(r);
+        this.cuentasMap.clear();
+        for (const c of arr) {
+          const id     = Number(c.id_cuenta ?? c.id ?? c.ID);
+          const codigo = String(c.codigo ?? c.clave ?? c.code ?? '').trim();
+          const nombre = String(c.nombre ?? c.descripcion ?? '').trim();
+          if (!Number.isNaN(id)) this.cuentasMap.set(id, { codigo, nombre });
+        }
+      },
+      error: (e) => console.error('Cuentas:', e)
+    });
+  }
+
+  cuentaEtiqueta(id?: number | null, m?: any): string {
+    if (id == null) {
+      const cod = m?.cuenta_codigo ?? m?.codigo ?? '';
+      const nom = m?.cuenta_nombre ?? m?.nombre ?? '';
+      return (cod || nom) ? `${cod}${cod && nom ? ' — ' : ''}${nom}` : '—';
+    }
+    const info = this.cuentasMap.get(Number(id));
+    if (info && (info.codigo || info.nombre)) {
+      return `${info.codigo}${info.codigo && info.nombre ? ' — ' : ''}${info.nombre}`;
+    }
+    const cod = m?.cuenta_codigo ?? m?.codigo ?? '';
+    const nom = m?.cuenta_nombre ?? m?.nombre ?? '';
+    if (cod || nom) return `${cod}${cod && nom ? ' — ' : ''}${nom}`;
+    return String(id);
+  }
+
+  //  ver mas(movimientos) 
+  getIdPoliza(p: PolizaRow): number | null {
+    const id = (p as any)?.id_poliza ?? (p as any)?.id;
+    return (id == null ? null : Number(id));
+  }
+
+  toggleVerMas(p: PolizaRow) {
+    const id = this.getIdPoliza(p);
+    if (!id) return;
+
+    if (this.expandedId === id) { // colapsa si ya está abierto
+      this.expandedId = null;
+      return;
+    }
+
+    this.expandedId = id;
+
+    if (this.movsLoaded[id]) return; // ya cargados
+
+    this.movsLoadingId = id;
+    this.api.getPolizaConMovimientos(id).subscribe({
+      next: (res: any) => {
+        (p as any).movimientos = res?.movimientos ?? [];
+        this.movsLoaded[id] = true;
+      },
+      error: (err) => {
+        console.error('getPolizaConMovimientos:', err);
+        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
+      },
+      complete: () => (this.movsLoadingId = null),
+    });
+  }
+
   //  Listado 
   cargarPolizas(): void {
     this.api.getPolizas({
       id_tipopoliza: this.filtroTipo,
-      id_periodo:    this.filtroPeriodo
+      id_periodo:    this.filtroPeriodo,
+      includeMovimientos: true
     } as any).subscribe({
       next: (r: any) => {
         const list = this.normalizeList(r) ?? (r?.polizas ?? []);
         this.polizas = Array.isArray(list) ? list : [];
-        this.aplicarFiltroLocal(); // filtra con this.q
+        this.aplicarFiltroLocal();
 
-        // Mensaje informativo si no hay resultados
         if (this.polizas.length === 0) {
           this.showToast({ type: 'info', message: 'No se encontraron pólizas para los filtros/búsqueda actuales.' });
         }
@@ -188,7 +268,7 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  Buscador 
+  // Buscador
   onBuscarChange(_: string) {
     if (this.buscarTimer) clearTimeout(this.buscarTimer);
     this.buscarTimer = setTimeout(() => {
@@ -228,7 +308,6 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  Estado 
   getEstado(p: any): 'Cuadrada' | 'Descuadrada' | 'Pendiente' | 'Cerrada' | 'Cancelada' | 'Borrador' | 'Activa' | string {
     const raw = (p.estado ?? p.estatus ?? p.status ?? p.state ?? '').toString().trim();
     if (raw) return raw;
@@ -264,15 +343,13 @@ export class PolizaHomeComponent {
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
   editarPoliza(p: PolizaRow) {
-    const id = (p as any)?.id_poliza ?? (p as any)?.id; // fallback por si tu back lo nombra 'id'
+    const id = (p as any)?.id_poliza ?? (p as any)?.id;
     if (!id) {
-      // Si quieres, muestra un toast/alert aquí porque sin ID no podemos ir a la pantalla de edición
       console.warn('No se encontró id_poliza en la fila seleccionada');
       return;
     }
     this.router.navigate(['/polizas', 'editar', String(id)]);
   }
-
 
   eliminarPoliza(id_poliza?: number): void {
     if (id_poliza == null) {
@@ -298,7 +375,51 @@ export class PolizaHomeComponent {
     this.router.navigate(['/polizas', 'nueva']);
   }
 
-  //  XML 
+  //  Cambio de estado 
+  private isAllowedEstado(e: any): e is 'Por revisar' | 'Revisada' | 'Contabilizada' {
+    return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
+  }
+
+  canMarcarRevisada(p: PolizaRow): boolean {
+    const e = (this.getEstado(p) || '').toLowerCase();
+    return !e.includes('cance') && !e.includes('cerr') && !e.includes('contab');
+  }
+
+  canMarcarContabilizada(p: PolizaRow): boolean {
+    const e = (this.getEstado(p) || '').toLowerCase();
+    return e.includes('revis') || e.includes('cuadra');
+  }
+
+  cambiarEstadoPoliza(p: PolizaRow, nuevo: 'Por revisar' | 'Revisada' | 'Contabilizada') {
+    if (!this.isAllowedEstado(nuevo)) {
+      this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Contabilizada.' });
+      return;
+    }
+    const id = this.getIdPoliza(p);
+    if (!id) {
+      this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede cambiar el estado: falta id_poliza.' });
+      return;
+    }
+
+    this.loadingId = id;
+    this.api.changeEstadoPoliza(id, nuevo).subscribe({
+      next: (res: any) => {
+        (p as any).estado = res?.estado ?? nuevo;
+        this.showToast({
+          type: 'success',
+          title: 'Estado actualizado',
+          message: `La póliza ${id} ahora está: ${(p as any).estado}.`
+        });
+      },
+      error: (err) => {
+        console.error('changeEstadoPoliza:', err);
+        const msg = err?.error?.message || 'No se pudo cambiar el estado.';
+        this.showToast({ type: 'error', title: 'Error', message: msg });
+      },
+      complete: () => (this.loadingId = null),
+    });
+  }
+
   triggerXmlPicker(input: HTMLInputElement) {
     this.uploadXmlError = '';
     input.value = '';
@@ -356,7 +477,7 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  CFDI recientes (GET /cfdi) 
+  //  CFDI recientes 
   cargarCfdiRecientes() {
     const svc: any = this.api as any;
     if (typeof svc.listCfdi !== 'function') return;

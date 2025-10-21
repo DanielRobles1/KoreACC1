@@ -30,6 +30,7 @@ var core_1 = require("@angular/core");
 var forms_1 = require("@angular/forms");
 var polizas_layout_component_1 = require("@app/components/polizas-layout/polizas-layout.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
+var router_1 = require("@angular/router");
 var PolizasComponent = /** @class */ (function () {
     function PolizasComponent(api) {
         var _this = this;
@@ -88,6 +89,9 @@ var PolizasComponent = /** @class */ (function () {
         this.normalizaStr = function (s) { var _a, _b; return (_b = (_a = s.normalize) === null || _a === void 0 ? void 0 : _a.call(s, 'NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) !== null && _b !== void 0 ? _b : s.toLowerCase(); };
         this.trackByFolio = function (_, x) { var _a; return (_a = x === null || x === void 0 ? void 0 : x.folio) !== null && _a !== void 0 ? _a : _; };
     }
+    PolizasComponent.prototype.volver = function () {
+        this.router.navigate(['/poliza-home']);
+    };
     PolizasComponent.prototype.ngOnInit = function () {
         this.initUsuarioActual(); // setea id_usuario
         this.cargarCatalogos(); // tipos/periodos/centros
@@ -108,7 +112,6 @@ var PolizasComponent = /** @class */ (function () {
             this.toast.position = opts.position;
         this.toast.open = true;
     };
-    // ========= Utils =========
     PolizasComponent.prototype.normalizeList = function (res) {
         var _a, _b, _c, _d;
         return Array.isArray(res) ? res : ((_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : []);
@@ -212,9 +215,8 @@ var PolizasComponent = /** @class */ (function () {
     PolizasComponent.prototype.onCuentaSeleccionadaGlobal = function () {
         this.cuentasQuery = ''; // limpia el buscador global
     };
-    // Devuelve las cuentas filtradas globalmente  (si hace falta) la actualmente seleccionada en esa fila
     PolizasComponent.prototype.getCuentasParaFila = function (index, selectedId) {
-        var base = this.getCuentasFiltradasGlobal(); // tu filtro global actual
+        var base = this.getCuentasFiltradasGlobal();
         if (!selectedId)
             return base;
         // Si ya está incluida, regresamos tal cual
@@ -280,14 +282,13 @@ var PolizasComponent = /** @class */ (function () {
             }
         });
     };
-    // centros de costo (para tabla Movimientos) mostrando la serie_venta en la etiqueta
     PolizasComponent.prototype.getCentros = function () {
         var _this = this;
         var svc = this.api;
         var fn = svc.getCentrosCosto || svc.listCentrosCosto ||
             svc.getCentroCostos || svc.listCentroCostos ||
             svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
-            svc.getCentros; // fallback por si tu service usa otro nombre
+            svc.getCentros;
         if (typeof fn !== 'function') {
             console.warn('No existe método de API para Centros de Costo; usando vacío.');
             this.centrosCosto = [];
@@ -693,7 +694,7 @@ var PolizasComponent = /** @class */ (function () {
         core_1.Component({
             selector: 'app-polizas',
             standalone: true,
-            imports: [common_1.CommonModule, forms_1.FormsModule, polizas_layout_component_1.PolizasLayoutComponent, toast_message_component_component_1.ToastMessageComponent],
+            imports: [common_1.CommonModule, forms_1.FormsModule, polizas_layout_component_1.PolizasLayoutComponent, toast_message_component_component_1.ToastMessageComponent, router_1.RouterModule],
             templateUrl: './polizas.component.html',
             styleUrls: ['./polizas.component.scss']
         })
