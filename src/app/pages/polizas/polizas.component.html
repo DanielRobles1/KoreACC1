@@ -1,33 +1,21 @@
 <app-polizas-layout
   [open]="sidebarOpen"
   (openChange)="onSidebarToggle($event)">
-<a [routerLink]="['/poliza-home']" style="text-decoration:none;">
-  <button
-    type="button"
-    style="background:none; border:none; cursor:pointer; padding:0;">
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      width="24"
-      height="24">
-      <polyline points="15 18 9 12 15 6"></polyline>
-    </svg>
-  </button>
-</a>
 
+  <a [routerLink]="['/poliza-home']" style="text-decoration:none;">
+    <button
+      type="button"
+      style="background:none; border:none; cursor:pointer; padding:0;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+  </a>
 
-  <!-- Título en la barra superior -->
   <span page-title>Pólizas</span>
 
   <div page-actions class="toolbar-filters">
-    <!-- Botón Cargar XML -->
-    <button
-      type="button"
-      class="btn ghost"
-      (click)="triggerXmlPicker(xmlInput)"
-      [disabled]="uploadingXml">
+    <button type="button" class="btn ghost" (click)="triggerXmlPicker(xmlInput)" [disabled]="uploadingXml">
       {{ uploadingXml ? 'Subiendo XML…' : 'Cargar XML' }}
     </button>
 
@@ -38,26 +26,29 @@
       hidden
       (change)="onXmlPicked($event)" />
 
-    <!-- Botón para recargar UUIDs desde BD -->
-    <button
-      type="button"
-      class="btn ghost"
-      (click)="cargarCfdiRecientes()">
+    <button type="button" class="btn ghost" (click)="cargarCfdiRecientes()">
       Refrescar UUIDs
     </button>
 
-    <!-- Estado de carga -->
-    <span *ngIf="selectedXmlName" class="hint">
-      {{ selectedXmlName }}
-    </span>
-    <span *ngIf="uploadXmlError" class="hint error">
-      {{ uploadXmlError }}
-    </span>
+    <span *ngIf="selectedXmlName" class="hint">{{ selectedXmlName }}</span>
+    <span *ngIf="uploadXmlError" class="hint error">{{ uploadXmlError }}</span>
   </div>
 
   <div class="polizas-container">
     <hr />
     <h3>Nueva póliza</h3>
+
+    <!-- Toggle MANUAL / MOTOR -->
+    <div class="mode-switch" style="margin:.5rem 0 1rem; display:flex; gap:1rem; align-items:center;">
+      <label style="display:flex; align-items:center; gap:.5rem;">
+        <input type="checkbox"
+               [checked]="modoCaptura==='motor'"
+               (change)="modoCaptura = (modoCaptura==='manual' ? 'motor' : 'manual')">
+        <span>Usar motor</span>
+      </label>
+      <small *ngIf="modoCaptura==='manual'">Captura manual de movimientos</small>
+      <small *ngIf="modoCaptura==='motor'">Generación automática (flujo + contrapartida + impuestos)</small>
+    </div>
 
     <form (ngSubmit)="guardarPoliza()" #polizaForm="ngForm" class="form-poliza">
       <div class="form-grid">
@@ -94,201 +85,230 @@
             <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
           </select>
         </label>
-
-        <label>
-  Usuario:
-  <input
-    class="field"
-    type="number"
-    [(ngModel)]="nuevaPoliza.id_usuario"
-    name="id_usuario"
-    readonly />
-</label>
-
       </div>
 
-     <h4>Movimientos</h4>
-
-<div class="movs-toolbar">
-  <label class="stacked flex-grow">
-    <span class="hint">Buscar cuenta (código o nombre)</span>
-    <input
-      class="field"
-      type="text"
-      [(ngModel)]="cuentasQuery"
-      name="cuentasQuery"
-      placeholder="Ej. 1001, caja, bancos…" />
-  </label>
-
-  <button type="button" class="btn pill" (click)="agregarMovimiento()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        width="18" height="18" stroke-linecap="round" stroke-linejoin="round"
-        class="icon">
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-    Agregar movimiento
-  </button>
-</div>
-
-
-      <div class="tabla-wrapper">
-        <table class="tabla-movimientos">
-          <thead>
-            <tr>
-              <th>Cuenta</th>
-              <th>Ref. Serie Venta</th>
-              <th>Operación</th>
-              <th>Monto</th>
-              <th>Cliente</th>
-              <th>Fecha</th>
-              <th>Centro Costo</th>
-              <th>UUID</th>
-              <th></th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr *ngFor="let mov of (nuevaPoliza.movimientos ?? []); let i = index">
-              <!-- CUENTA: solo select (filtrado por el buscador superior) -->
-              <td class="cell-cuenta">
-                <select
-  class="cell-input select"
-  [(ngModel)]="mov.id_cuenta"
-  name="id_cuenta{{i}}"
-  required
-  (ngModelChange)="onCuentaSeleccionadaGlobal()">
-  <option [ngValue]="null">— Selecciona cuenta —</option>
-
-  
-  <option *ngFor="let c of getCuentasParaFila(i, mov.id_cuenta)" [ngValue]="c.id_cuenta">
-    {{ c.codigo }} — {{ c.nombre }}
-  </option>
-</select>
-
-
-               
-              </td>
-
-              <td>
-                <input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" />
-              </td>
-
-              <td>
-                <select class="cell-input select" [(ngModel)]="mov.operacion" name="operacion{{i}}" required>
-                  <option [ngValue]="''" disabled>Selecciona…</option>
-                  <option [ngValue]="'0'">Cargo</option>
-                  <option [ngValue]="'1'">Abono</option>
-                </select>
-              </td>
-
-              <td>
-                <input class="cell-input" type="number" [(ngModel)]="mov.monto" name="monto{{i}}" min="0" step="0.01" required />
-              </td>
-
-              <td>
-                <input class="cell-input" [(ngModel)]="mov.cliente" name="cliente{{i}}" />
-              </td>
-
-              <td>
-                <input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" />
-              </td>
-
-              <td>
-                <select class="cell-input select" [(ngModel)]="mov.cc" name="cc{{i}}">
-                  <option [ngValue]="null">— Selecciona CC —</option>
-                  <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
-                    {{ cc.nombre }}
-                  </option>
-                </select>
-              </td>
-
-              <td class="uuid-cell">
-                <select class="cell-input select" [(ngModel)]="mov.uuid" name="uuid{{i}}">
-                  <option [ngValue]="null">— Seleccionar —</option>
-                  <option *ngFor="let cfdi of cfdiOptions" [ngValue]="cfdi.uuid">
-                    {{ cfdi.uuid }}{{ cfdi.folio ? ' — Folio ' + cfdi.folio : '' }}
-                  </option>
-                </select>
-              </td>
-
-              <td class="actions-cell">
-                <button
-                  type="button"
-                  class="icon-btn danger"
-                  (click)="eliminarMovimiento(i)"
-                  title="Eliminar movimiento"
-                  aria-label="Eliminar movimiento">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
-                    <path d="M10 11v6"></path>
-                    <path d="M14 11v6"></path>
-                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
-                  </svg>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- === BUSCADOR GLOBAL DE CUENTAS (visible en ambos modos) === -->
+      <div class="movs-toolbar" style="margin-top:.5rem;">
+        <label class="stacked flex-grow">
+          <span class="hint">Buscar cuenta (código o nombre)</span>
+          <input
+            class="field"
+            type="text"
+            [(ngModel)]="cuentasQuery"
+            name="cuentasQuery"
+            placeholder="Ej. 1001, caja, bancos…" />
+        </label>
       </div>
-<!-- Panel de totales -->
-<div class="totales-panel">
-  <div class="tot-card">
-    <div class="tot-label">TOTAL CARGOS</div>
-    <div class="tot-value">{{ getTotal(nuevaPoliza, '0') | number:'1.2-2' }}</div>
-  </div>
 
-  <div class="tot-card">
-    <div class="tot-label">TOTAL ABONOS</div>
-    <div class="tot-value">{{ getTotal(nuevaPoliza, '1') | number:'1.2-2' }}</div>
-  </div>
-<div class="tot-card">
-  <div class="tot-label font-semibold"
-       [style.color]="getDiferencia($any(nuevaPoliza)) === 0 ? '#16a34a' : '#dc2626'">
-    DIFERENCIA
-  </div>
-  <div class="tot-value font-bold"
-       [style.color]="getDiferencia($any(nuevaPoliza)) === 0 ? '#16a34a' : '#dc2626'">
-    {{ getDiferencia($any(nuevaPoliza)) | number:'1.2-2' }}
-  </div>
-</div>
+      <!-- PANEL DEL MOTOR (solo cuando modo = motor) -->
+      <div *ngIf="modoCaptura==='motor'" class="motor-panel" style="margin-top:1rem;">
+        <h4>Evento (motor)</h4>
+        <div class="form-grid">
+          <label> Tipo de operación:
+            <select class="field select" [(ngModel)]="evento.tipo_operacion" [ngModelOptions]="{standalone:true}">
+              <option [ngValue]="'ingreso'">Ingreso</option>
+              <option [ngValue]="'egreso'">Egreso</option>
+            </select>
+          </label>
 
+          <label> Monto base:
+            <input class="field" type="number" [(ngModel)]="evento.monto_base" [ngModelOptions]="{standalone:true}" min="0" step="0.01">
+          </label>
 
+          <label> Fecha operación:
+            <input class="field" type="date" [(ngModel)]="evento.fecha_operacion" [ngModelOptions]="{standalone:true}">
+          </label>
 
+          <label> Medio:
+            <select class="field select" [(ngModel)]="evento.medio_cobro_pago" [ngModelOptions]="{standalone:true}">
+              <option [ngValue]="'bancos'">Bancos</option>
+              <option [ngValue]="'caja'">Caja</option>
+              <option [ngValue]="'clientes'">Clientes</option>
+              <option [ngValue]="'proveedores'">Proveedores</option>
+            </select>
+          </label>
 
- <div
-  class="pill-status"
-  [ngClass]="{
-    'ok': getDiferencia($any(nuevaPoliza)) === 0,
-    'bad': getDiferencia($any(nuevaPoliza)) !== 0
-  }"
->
-  <span class="icon" aria-hidden="true">
-    {{ getDiferencia($any(nuevaPoliza)) === 0 ? '✔' : '⚠' }}
-  </span>
-  <span class="text">
-    {{ getDiferencia($any(nuevaPoliza)) === 0 ? 'Póliza cuadrada' : 'No cuadra' }}
-  </span>
-</div>
+          <!-- SELECT de Cuenta contrapartida (reutiliza catálogo y filtro global) -->
+          <label> Cuenta contrapartida:
+            <select class="field select"
+                    [(ngModel)]="evento.id_cuenta_contrapartida"
+                    [ngModelOptions]="{standalone:true}">
+              <option [ngValue]="null">— Selecciona cuenta —</option>
+              <option *ngFor="let c of getCuentasFiltradasGlobal()" [ngValue]="c.id_cuenta">
+                {{ c.codigo }} — {{ c.nombre }}
+              </option>
+            </select>
+            <small class="hint">El buscador de arriba filtra este listado.</small>
+            <div class="hint" *ngIf="evento.id_cuenta_contrapartida">
+              Seleccionada: <strong>{{ labelCuenta(evento.id_cuenta_contrapartida) }}</strong>
+            </div>
+          </label>
 
+          <label> Cliente (opcional):
+            <input class="field" [(ngModel)]="evento.cliente" [ngModelOptions]="{standalone:true}">
+          </label>
 
-</div>
+          <label> Ref. Serie (opcional):
+            <input class="field" [(ngModel)]="evento.ref_serie_venta" [ngModelOptions]="{standalone:true}">
+          </label>
+
+          <label> Centro de costo (opcional):
+            <select class="field select" [(ngModel)]="evento.cc" [ngModelOptions]="{standalone:true}">
+              <option [ngValue]="null">— Selecciona CC —</option>
+              <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
+                {{ cc.nombre }}
+              </option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- TABLA DE MOVIMIENTOS (solo cuando modo = manual) -->
+      <div *ngIf="modoCaptura==='manual'">
+        <h4>Movimientos</h4>
+
+        <div class="tabla-wrapper">
+          <table class="tabla-movimientos">
+            <thead>
+              <tr>
+                <th>Cuenta</th>
+                <th>Ref. Serie Venta</th>
+                <th>Operación</th>
+                <th>Monto</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Centro Costo</th>
+                <th>UUID</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let mov of (nuevaPoliza.movimientos ?? []); let i = index">
+                <td class="cell-cuenta">
+                  <select
+                    class="cell-input select"
+                    [(ngModel)]="mov.id_cuenta"
+                    name="id_cuenta{{i}}"
+                    required
+                    (ngModelChange)="onCuentaSeleccionadaGlobal()">
+                    <option [ngValue]="null">— Selecciona cuenta —</option>
+                    <option *ngFor="let c of getCuentasParaFila(i, mov.id_cuenta)" [ngValue]="c.id_cuenta">
+                      {{ c.codigo }} — {{ c.nombre }}
+                    </option>
+                  </select>
+                </td>
+
+                <td>
+                  <input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" />
+                </td>
+
+                <td>
+                  <select class="cell-input select" [(ngModel)]="mov.operacion" name="operacion{{i}}" required>
+                    <option [ngValue]="''" disabled>Selecciona…</option>
+                    <option [ngValue]="'0'">Cargo</option>
+                    <option [ngValue]="'1'">Abono</option>
+                  </select>
+                </td>
+
+                <td>
+                  <input class="cell-input" type="number" [(ngModel)]="mov.monto" name="monto{{i}}" min="0" step="0.01" required />
+                </td>
+
+                <td>
+                  <input class="cell-input" [(ngModel)]="mov.cliente" name="cliente{{i}}" />
+                </td>
+
+                <td>
+                  <input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" />
+                </td>
+
+                <td>
+                  <select class="cell-input select" [(ngModel)]="mov.cc" name="cc{{i}}">
+                    <option [ngValue]="null">— Selecciona CC —</option>
+                    <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
+                      {{ cc.nombre }}
+                    </option>
+                  </select>
+                </td>
+
+                <td class="uuid-cell">
+                  <select class="cell-input select" [(ngModel)]="mov.uuid" name="uuid{{i}}">
+                    <option [ngValue]="null">— Seleccionar —</option>
+                    <option *ngFor="let cfdi of cfdiOptions" [ngValue]="cfdi.uuid">
+                      {{ cfdi.uuid }}{{ cfdi.folio ? ' — Folio ' + cfdi.folio : '' }}
+                    </option>
+                  </select>
+                </td>
+
+                <td class="actions-cell">
+                  <button type="button" class="icon-btn danger" (click)="eliminarMovimiento(i)" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                      <path d="M10 11v6"></path>
+                      <path d="M14 11v6"></path>
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Panel de totales (solo manual) -->
+        <div class="totales-panel">
+          <div class="tot-card">
+            <div class="tot-label">TOTAL CARGOS</div>
+            <div class="tot-value">{{ getTotal(nuevaPoliza, '0') | number:'1.2-2' }}</div>
+          </div>
+
+          <div class="tot-card">
+            <div class="tot-label">TOTAL ABONOS</div>
+            <div class="tot-value">{{ getTotal(nuevaPoliza, '1') | number:'1.2-2' }}</div>
+          </div>
+
+          <div class="tot-card">
+            <div class="tot-label font-semibold"
+                 [style.color]="getDiferencia($any(nuevaPoliza)) === 0 ? '#16a34a' : '#dc2626'">
+              DIFERENCIA
+            </div>
+            <div class="tot-value font-bold"
+                 [style.color]="getDiferencia($any(nuevaPoliza)) === 0 ? '#16a34a' : '#dc2626'">
+              {{ getDiferencia($any(nuevaPoliza)) | number:'1.2-2' }}
+            </div>
+          </div>
+
+          <div class="pill-status"
+               [ngClass]="{ 'ok': getDiferencia($any(nuevaPoliza)) === 0, 'bad': getDiferencia($any(nuevaPoliza)) !== 0 }">
+            <span class="icon" aria-hidden="true">
+              {{ getDiferencia($any(nuevaPoliza)) === 0 ? '✔' : '⚠' }}
+            </span>
+            <span class="text">
+              {{ getDiferencia($any(nuevaPoliza)) === 0 ? 'Póliza cuadrada' : 'No cuadra' }}
+            </span>
+          </div>
+        </div>
+      </div> <!-- /modo manual -->
 
       <div class="actions">
-       
-
         <span *ngIf="!canGuardar()" class="hint error">
-          Completa folio, concepto, tipo, periodo, centro, usuario y cuadra partida doble.
+          <ng-container *ngIf="modoCaptura==='manual'">
+            Completa folio, concepto, tipo, periodo, centro, usuario y cuadra partida doble.
+          </ng-container>
+          <ng-container *ngIf="modoCaptura==='motor'">
+            Completa encabezado y evento (monto base, fecha, empresa y cuenta contrapartida).
+          </ng-container>
         </span>
 
         <button type="submit" class="btn primary" [disabled]="!canGuardar()">
-           Guardar póliza
+          Guardar póliza
         </button>
       </div>
     </form>
   </div>
-  
+
 </app-polizas-layout>
 
 <!-- Toast -->

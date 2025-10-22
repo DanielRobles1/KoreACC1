@@ -96,6 +96,12 @@ cuentasQuery = '';
     this.cargarCuentas();         // catálogo de cuentas para select
     this.cargarPolizas();         // listado
     this.cargarCfdiRecientes();   // UUIDs
+    if (!this.evento.id_empresa) {
+      this.evento.id_empresa = 1;
+    }
+    if (!this.evento.fecha_operacion) {
+      this.evento.fecha_operacion = this.todayISO();
+    }
   }
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
@@ -236,6 +242,39 @@ getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
   return sel
     ? [{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }, ...base]
     : base;
+}
+
+// --- defaults de modo y evento ---
+modoCaptura: 'manual' | 'motor' = 'manual';
+
+evento: {
+    tipo_operacion: 'ingreso' | 'egreso';
+    monto_base: number | null;
+    fecha_operacion: string; // 'YYYY-MM-DD'
+    id_empresa: number | null;
+    medio_cobro_pago: 'bancos' | 'caja' | 'clientes' | 'proveedores';
+    id_cuenta_contrapartida: number | null;
+    cliente: string;
+    ref_serie_venta: string;
+    cc: number | null;
+  } = {
+    tipo_operacion: 'ingreso',
+    monto_base: null,
+    fecha_operacion: '',      // se setea en ngOnInit()
+    id_empresa: 1,            // default 1
+    medio_cobro_pago: 'bancos',
+    id_cuenta_contrapartida: null,
+    cliente: '',
+    ref_serie_venta: '',
+    cc: null
+};
+
+// Helper: fecha hoy en ISO (YYYY-MM-DD)
+private todayISO(): string {
+    const d = new Date();
+    const mm = this.pad2(d.getMonth() + 1);
+    const dd = this.pad2(d.getDate());
+    return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
   //Catálogos 
@@ -469,43 +508,45 @@ private getCentros(): void {
 
   //  Validación previa al guardado 
   canGuardar(): boolean {
-    const p = this.nuevaPoliza;
-    if (!p) return false;
+  const p = this.nuevaPoliza;
+  if (!p) return false;
 
-    const okHeader =
-      !!(p.folio && String(p.folio).trim()) &&
-      !!(p.concepto && String(p.concepto).trim()) &&
-      this.N(p.id_tipopoliza) !== undefined &&
-      this.N(p.id_periodo) !== undefined &&
-      this.N(p.id_centro) !== undefined &&
-      this.N(p.id_usuario) !== undefined;
+  const okHeader =
+    !!(p.folio && String(p.folio).trim()) &&
+    !!(p.concepto && String(p.concepto).trim()) &&
+    this.N(p.id_tipopoliza) !== undefined &&
+    this.N(p.id_periodo)    !== undefined &&
+    this.N(p.id_centro)     !== undefined &&
+    this.N(p.id_usuario)    !== undefined;
 
-    if (!okHeader) return false;
+  if (!okHeader) return false;
 
-    // Validación de movimientos con saldo y operación
-    const movs = (p.movimientos ?? []).filter(m =>
-      this.toNumOrNull(m.id_cuenta) &&
-      (m.operacion === '0' || m.operacion === '1') &&
-      (this.toNumOrNull(m.monto) ?? 0) > 0
-    );
-
-    if (movs.length === 0) return false;
-
-    const cargos = movs.filter(m => m.operacion === '0').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
-    const abonos = movs.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
-
-    if (!(Math.abs(cargos - abonos) <= 0.001 && cargos > 0)) return false;
-
-    //  valida que las cuentas y centros de costo existan en los catálogos
-    for (const m of movs) {
-      const idCuenta = this.toNumOrNull(m.id_cuenta);
-      const idCc     = this.toNumOrNull(m.cc);
-      if (idCuenta == null || !this.cuentasMap.has(idCuenta)) return false;
-      if (idCc != null && !this.centrosCostoMap.has(idCc)) return false;
-    }
-
-    return true;
+  if (this.modoCaptura === 'motor') {
+    // Validación mínima para el motor
+    return !!(this.evento.monto_base && this.evento.fecha_operacion && this.evento.id_empresa && this.evento.id_cuenta_contrapartida);
   }
+
+  // === MODO MANUAL (igual que hoy) ===
+  const movs = (p.movimientos ?? []).filter(m =>
+    this.toNumOrNull(m.id_cuenta) &&
+    (m.operacion === '0' || m.operacion === '1') &&
+    (this.toNumOrNull(m.monto) ?? 0) > 0
+  );
+  if (movs.length === 0) return false;
+
+  const cargos = movs.filter(m => m.operacion === '0').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
+  const abonos = movs.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
+  if (!(Math.abs(cargos - abonos) <= 0.001 && cargos > 0)) return false;
+
+  for (const m of movs) {
+    const idCuenta = this.toNumOrNull(m.id_cuenta);
+    const idCc     = this.toNumOrNull(m.cc);
+    if (idCuenta == null || !this.cuentasMap.has(idCuenta)) return false;
+    if (idCc != null && !this.centrosCostoMap.has(idCc)) return false;
+  }
+
+  return true;
+}
 
   private validarYExplicarErrores(): boolean {
     const p = this.nuevaPoliza;
@@ -582,48 +623,145 @@ private getCentros(): void {
 
   //  Guardar 
   guardarPoliza(): void {
-    
+  if (this.modoCaptura === 'manual') {
+    // === FLUJO MANUAL (igual que hoy) ===
     if (!this.validarYExplicarErrores()) return;
 
     const p = this.nuevaPoliza;
-
     const payload = {
-      id_tipopoliza: this.toNumOrNull(p?.id_tipopoliza)!, // number
-      id_periodo:    this.toNumOrNull(p?.id_periodo)!,    // number
-      id_usuario:    this.toNumOrNull(p?.id_usuario)!,    // number
-      id_centro:     this.toNumOrNull(p?.id_centro)!,     // number
-      folio:         this.toStrOrNull(p?.folio)!,         // string
-      concepto:      this.toStrOrNull(p?.concepto)!,      // string
-      movimientos: (p?.movimientos ?? []).map(m => {
-        const op = (m.operacion === '0' || m.operacion === '1') ? m.operacion : null;
-        const uuidFinal = this.toStrOrNull(m.uuid) ?? this.toStrOrNull(this.uuidSeleccionado) ?? null;
-
-        return {
-          id_cuenta:       this.toNumOrNull(m.id_cuenta),
-          ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
-          operacion:       op,
-          monto:           this.toNumOrNull(m.monto),
-          cliente:         this.toStrOrNull(m.cliente),
-          fecha:           this.toDateOrNull(m.fecha),
-          cc:              this.toNumOrNull(m.cc),
-          uuid:            uuidFinal
-        };
-      })
+      id_tipopoliza: this.toNumOrNull(p?.id_tipopoliza)!,
+      id_periodo:    this.toNumOrNull(p?.id_periodo)!,
+      id_usuario:    this.toNumOrNull(p?.id_usuario)!,
+      id_centro:     this.toNumOrNull(p?.id_centro)!,
+      folio:         this.toStrOrNull(p?.folio)!,
+      concepto:      this.toStrOrNull(p?.concepto)!,
+      movimientos:  (p?.movimientos ?? []).map(m => ({
+        id_cuenta:       this.toNumOrNull(m.id_cuenta),
+        ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
+        operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+        monto:           this.toNumOrNull(m.monto),
+        cliente:         this.toStrOrNull(m.cliente),
+        fecha:           this.toDateOrNull(m.fecha),
+        cc:              this.toNumOrNull(m.cc),
+        uuid:            this.toStrOrNull(m.uuid) ?? this.toStrOrNull(this.uuidSeleccionado) ?? null,
+      }))
     };
 
     this.api.createPoliza(payload).subscribe({
       next: () => {
-        this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario }; // deja el usuario seteado
+        this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
         this.cargarPolizas();
         this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada correctamente.' });
       },
       error: err => {
         const msg = err?.error?.message || err?.error?.error || err?.message || 'Error al guardar póliza';
-        console.error('Guardar póliza:', err);
+        console.error('Guardar póliza (manual):', err);
+        this.showToast({ type: 'error', title: 'Error', message: msg });
+      }
+    });
+
+  } else {
+    // === FLUJO MOTOR (usa /polizas/from-evento) ===
+    const okHeader =
+      this.nuevaPoliza?.folio &&
+      this.nuevaPoliza?.concepto &&
+      this.nuevaPoliza?.id_tipopoliza &&
+      this.nuevaPoliza?.id_periodo &&
+      this.nuevaPoliza?.id_centro &&
+      this.nuevaPoliza?.id_usuario;
+
+    const okMotor =
+      this.evento.monto_base != null && this.evento.monto_base > 0 &&
+      !!this.evento.fecha_operacion &&
+      !!this.evento.id_empresa &&
+      !!this.evento.id_cuenta_contrapartida;
+
+    if (!okHeader || !okMotor) {
+      this.showToast({
+        type: 'warning',
+        title: 'Faltan datos',
+        message: 'Completa encabezado y datos del evento (monto, fecha, empresa y cuenta contrapartida).'
+      });
+      return;
+    }
+
+    const body = {
+      id_tipopoliza: this.toNumOrNull(this.nuevaPoliza.id_tipopoliza)!,
+      id_periodo:    this.toNumOrNull(this.nuevaPoliza.id_periodo)!,
+      id_usuario:    this.toNumOrNull(this.nuevaPoliza.id_usuario)!,
+      id_centro:     this.toNumOrNull(this.nuevaPoliza.id_centro)!,
+      folio:         this.toStrOrNull(this.nuevaPoliza.folio)!,
+      concepto:      this.toStrOrNull(this.nuevaPoliza.concepto)!,
+
+      // Motor:
+      tipo_operacion: this.evento.tipo_operacion,
+      monto_base:     Number(this.evento.monto_base),
+      fecha_operacion:this.toDateOrNull(this.evento.fecha_operacion)!,
+      id_empresa:     Number(this.evento.id_empresa),
+      medio_cobro_pago: this.evento.medio_cobro_pago,
+      id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
+
+      // Opcionales propagados:
+      cliente:         this.toStrOrNull(this.evento.cliente) ?? null,
+      ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
+      cc:              this.toNumOrNull(this.evento.cc) ?? null
+    };
+
+    this.api.createPolizaFromEvento(body).subscribe({
+      next: () => {
+        // Resetea sólo lo necesario
+        this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
+        // Mantener datos del motor si quieres capturar varios seguidos:
+        // this.evento = { ...this.evento, monto_base: null, ref_serie_venta: '', cliente: '' };
+        this.cargarPolizas();
+        this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada con el motor.' });
+      },
+      error: err => {
+        const msg = err?.error?.message || err?.message || 'Error al crear póliza con el motor';
+        console.error('Guardar póliza (motor):', err);
         this.showToast({ type: 'error', title: 'Error', message: msg });
       }
     });
   }
+}
+
+agregarEventoAPolizaExistente(id_poliza: number): void {
+  const okMotor =
+    this.evento.monto_base != null && this.evento.monto_base > 0 &&
+    !!this.evento.fecha_operacion &&
+    !!this.evento.id_empresa &&
+    !!this.evento.id_cuenta_contrapartida;
+
+  if (!okMotor) {
+    this.showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa los datos del evento.' });
+    return;
+  }
+
+  const body = {
+    tipo_operacion: this.evento.tipo_operacion,
+    monto_base: Number(this.evento.monto_base),
+    fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
+    id_empresa: Number(this.evento.id_empresa),
+    medio_cobro_pago: this.evento.medio_cobro_pago,
+    id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
+    cliente: this.toStrOrNull(this.evento.cliente) ?? null,
+    ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
+    cc: this.toNumOrNull(this.evento.cc) ?? null
+  };
+
+  this.api.expandEventoEnPoliza(id_poliza, body).subscribe({
+    next: (r) => {
+      this.showToast({ type: 'success', title: 'Agregado', message: `Se agregaron ${r?.count ?? ''} movimientos a la póliza ${id_poliza}.` });
+      // Si la vista muestra la póliza actual, refresca:
+      // this.getPolizaConMovimientos(id_poliza).subscribe(...);
+    },
+    error: (err) => {
+      const msg = err?.error?.message || err?.message || 'Error al agregar evento';
+      console.error('expand-evento:', err);
+      this.showToast({ type: 'error', title: 'Error', message: msg });
+    }
+  });
+}
 
   //  XML 
   triggerXmlPicker(input: HTMLInputElement) {

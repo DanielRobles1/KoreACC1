@@ -157,4 +157,43 @@ changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Revisada' | 'Cont
   return this.http.patch<any>(`${this.api}/poliza/${id_poliza}`, { estado });
 }
 
+/** POST /api/v1/polizas/from-evento  (crea póliza con el motor) */
+  createPolizaFromEvento(body: {
+    id_tipopoliza: number;
+    id_periodo: number;
+    id_usuario: number;
+    id_centro: number;
+    folio: string;
+    concepto: string;
+    // motor:
+    tipo_operacion: 'ingreso'|'egreso';
+    monto_base: number;
+    fecha_operacion: string;   // 'YYYY-MM-DD'
+    id_empresa: number;
+    medio_cobro_pago: 'bancos'|'caja'|'clientes'|'proveedores';
+    id_cuenta_contrapartida: number;
+    // opcionales:
+    cliente?: string | null;
+    ref_serie_venta?: string | null;
+    cc?: number | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.api}/poliza/from-evento`, body);
+  }
+
+  /** POST /api/v1/polizas/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
+  expandEventoEnPoliza(polizaId: number, body: {
+    tipo_operacion: 'ingreso'|'egreso';
+    monto_base: number;
+    fecha_operacion: string;   // 'YYYY-MM-DD'
+    id_empresa: number;
+    medio_cobro_pago: 'bancos'|'caja'|'clientes'|'proveedores';
+    id_cuenta_contrapartida: number;
+    // opcionales:
+    cliente?: string | null;
+    ref_serie_venta?: string | null;
+    cc?: number | null;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.api}/poliza/${polizaId}/expand-evento`, body);
+  }
+
 }
