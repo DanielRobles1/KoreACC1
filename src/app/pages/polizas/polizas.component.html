@@ -12,7 +12,6 @@
     </button>
   </a>
 
-  <span page-title>Pólizas</span>
 
   <div page-actions class="toolbar-filters">
     <button type="button" class="btn ghost" (click)="triggerXmlPicker(xmlInput)" [disabled]="uploadingXml">
@@ -35,7 +34,8 @@
   </div>
 
   <div class="polizas-container">
-    <hr />
+    <hr />  
+
     <h3>Nueva póliza</h3>
 
     <!-- Toggle MANUAL / MOTOR -->
@@ -138,7 +138,7 @@
                 {{ c.codigo }} — {{ c.nombre }}
               </option>
             </select>
-            <small class="hint">El buscador de arriba filtra este listado.</small>
+          
             <div class="hint" *ngIf="evento.id_cuenta_contrapartida">
               Seleccionada: <strong>{{ labelCuenta(evento.id_cuenta_contrapartida) }}</strong>
             </div>
@@ -313,7 +313,7 @@
         </span>
 
         <button type="submit" class="btn primary" [disabled]="!canGuardar()">
-          💾 Guardar póliza
+         Guardar póliza
         </button>
       </div>
     </form>

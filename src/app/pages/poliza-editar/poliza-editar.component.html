@@ -52,7 +52,7 @@
           class="btn primary"
           [disabled]="updating || !puedeActualizar()"
           (click)="actualizarPoliza()">
-          {{ updating ? 'Actualizando…' : '💾 Actualizar póliza' }}
+          {{ updating ? 'Actualizando…' : 'Actualizar póliza' }}
         </button>
       </div>
     </div>
@@ -289,7 +289,7 @@
           class="btn primary"
           [disabled]="updating || !puedeActualizar()"
           (click)="actualizarPoliza()">
-          {{ updating ? 'Actualizando…' : '💾 Actualizar póliza' }}
+          {{ updating ? 'Actualizando…' : ' Actualizar póliza' }}
         </button>
 
         <span class="hint" *ngIf="!puedeActualizar()">
@@ -306,7 +306,15 @@
     </div>
   </ng-template>
 </app-polizas-layout>
-
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>
 <!-- Toast -->
 <app-toast-message
   [open]="toast.open"
@@ -319,12 +327,3 @@
   (closed)="onToastClosed()">
 </app-toast-message>
 
-<app-modal
-  [open]="confirmOpen"
-  [title]="confirmTitle"
-  size="sm"
-  (closed)="closeConfirm()"
-  (canceled)="cancelConfirm()"
-  (confirmed)="confirmProceed()">
-  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
-</app-modal>

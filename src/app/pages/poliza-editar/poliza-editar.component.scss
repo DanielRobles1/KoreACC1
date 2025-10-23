@@ -64,12 +64,11 @@
 }
 .btn.sm { padding: .4rem .65rem; font-weight: 600; }
 .btn.lg { padding: .7rem 1.1rem; font-size: 1.05rem; }
-
-.btn.primary {
-  --btn-bg: var(--primary);
-  --btn-fg: #000000;
-  --btn-br: var(--primary);
-  --btn-bg-hover: var(--primary-600);
+ .btn.primary {
+  background: linear-gradient(90deg, #233645);
+  color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+  border-radius: 15px;
 }
 
 .btn.ghost {

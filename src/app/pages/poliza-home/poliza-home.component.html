@@ -21,7 +21,7 @@
   <span page-title>Pólizas</span>
 </div>
 
-  <span page-title>Pólizas</span>
+  
 
   <div page-actions class="toolbar-filters">
     <input
@@ -220,6 +220,7 @@
       </tbody>
     </table>
   </div>
+  
 </app-polizas-layout>
 
 <app-toast-message
@@ -232,3 +233,14 @@
   [showClose]="toast.showClose"
   (closed)="onToastClosed()">
 </app-toast-message>
+<app-modal
+  [open]="confirmModal.open"
+  [title]="confirmModal.title"
+  (confirmed)="confirmarConfirmModal()"
+  (canceled)="cerrarConfirmModal()"
+  (closed)="cerrarConfirmModal()"
+>
+  {{ confirmModal.message }}
+</app-modal>
+
+

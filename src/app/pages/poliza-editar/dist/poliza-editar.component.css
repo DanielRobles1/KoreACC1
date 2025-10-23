@@ -89,10 +89,10 @@
 }
 
 .btn.primary {
-  --btn-bg: var(--primary);
-  --btn-fg: #000000;
-  --btn-br: var(--primary);
-  --btn-bg-hover: var(--primary-600);
+  background: linear-gradient(90deg, #233645);
+  color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+  border-radius: 15px;
 }
 
 .btn.ghost {

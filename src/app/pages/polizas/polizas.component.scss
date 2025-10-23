@@ -108,6 +108,38 @@
   &:focus-visible { outline: none; box-shadow: var(--ring); }
   &.danger { color: var(--danger); border-color: #f1d5d5; background: #fff; }
 }
+/* ----- CENTRAR TÍTULO PRINCIPAL ----- */
+/* 🎯 TITULO PRINCIPAL SUPER CENTRADO Y DESTACADO */
+[page-title] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #1e293b;
+
+  margin: 1.5rem auto 2rem auto;
+  position: relative;
+  width: 100%;
+}
+
+/* 💠 Línea decorativa debajo del título */
+[page-title]::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2px 6px rgba(37,99,235,0.4);
+}
+
 
 /* =======================
    Contenedor principal
@@ -621,3 +653,196 @@ h3, h4 { margin: .5rem 0 .75rem; color: var(--text); }
 }
 
 
+/* ===================================================
+   🧾 FORMULARIO DE PÓLIZA - ESTILO COMPLETO ACTUALIZADO
+   =================================================== */
+
+/* ----- CONTENEDOR PRINCIPAL ----- */
+.form-poliza {
+  background: #fdfdfd;
+  border: 1px solid var(--line-soft);
+  border-radius: 1rem;
+  padding: 1rem 1.5rem 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* ----- GRID DE CAMPOS DE PÓLIZA ----- */
+.form-grid {
+  display: flex;
+  flex-wrap: wrap; /* puedes usar nowrap si quieres una sola línea fija */
+  gap: 1rem;
+  background: #f9fafb;
+  border: 1px solid var(--line-soft);
+  border-radius: .75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 180px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.form-grid .field,
+.form-grid .select.field {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  height: 34px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.form-grid .field:focus,
+.form-grid .select.field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+  outline: none;
+}
+
+/* ----- TÍTULO Y MODO ----- */
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.mode-switch {
+  background: #f1f5f9;
+  padding: .6rem 1rem;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
+}
+
+/* ----- TOOLBAR MOVIMIENTOS ----- */
+.movs-toolbar {
+  background: #f8fafc;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.movs-toolbar input.field {
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .45rem .75rem;
+  flex: 1;
+  transition: border-color .2s ease;
+}
+.movs-toolbar input.field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+}
+
+/* ----- PANEL MOTOR ----- */
+.motor-panel {
+  background: #f9fafb;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  padding: 1rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+.motor-panel h4 {
+  font-size: 1rem;
+  margin-bottom: .75rem;
+  color: #0f172a;
+}
+
+/* ----- TABLA DE MOVIMIENTOS ----- */
+.table-wrapper {
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-radius: .75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+table thead {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+table th, table td {
+  padding: .65rem .75rem;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+}
+
+table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* ----- BOTONES DE ACCIÓN ----- */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.actions .btn {
+  border: none;
+  border-radius: .75rem;
+  padding: .6rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.actions .btn.primary {
+  border-radius: 15px;
+  background: linear-gradient(90deg, #233645, #233645);
+  color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.actions .btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.35);
+}
+
+.actions .btn.primary:disabled {
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ----- CAMPOS DE FORMULARIO SECUNDARIOS ----- */
+input.field, select.field, textarea.field {
+  font-family: inherit;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .35rem .6rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ----- VARIABLES GLOBALES (POR SI NO EXISTEN) ----- */
+:root {
+  --primary: #2563eb;
+  --line: #cbd5e1;
+  --line-soft: #e2e8f0;
+  --text: #1e293b;
+}

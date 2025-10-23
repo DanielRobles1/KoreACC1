@@ -6,6 +6,7 @@ import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-l
 
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
+import { ModalComponent } from '@app/components/modal/modal/modal.component';
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
@@ -29,61 +30,13 @@ type PolizaRow = Poliza & { id_poliza?: number; id?: number };
     PolizasLayoutComponent,
     CurrencyPipe,
     ToastMessageComponent,
+    ModalComponent
   ],
   templateUrl: './poliza-home.component.html',
   styleUrls: ['./poliza-home.component.scss'],
 })
 export class PolizaHomeComponent {
   sidebarOpen = true;
-
-  volver() {
-    this.location.back();
-  }
-
-  //  Listado
-  polizas: PolizaRow[] = [];
-  polizasFiltradas: PolizaRow[] = []; // se muestra en la tabla
-
-  tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
-  periodos:     Array<{ id_periodo: number;  nombre: string }> = [];
-  centros:      Array<{ id_centro: number;   nombre: string }> = [];
-
-  mapTipos    = new Map<number, string>();
-  mapPeriodos = new Map<number, string>();
-  mapCentros  = new Map<number, string>();
-  cuentasMap  = new Map<number, { codigo: string; nombre: string }>();
-
-  filtroTipo?: number;
-  filtroPeriodo?: number;
-
-  //  Buscador
-  q = '';
-  private buscarTimer: ReturnType<typeof setTimeout> | undefined;
-
-  nuevaPoliza: Partial<Poliza> = { movimientos: [] };
-  uploadingXml = false;
-  selectedXmlName = '';
-  uploadXmlError = '';
-  cfdiOptions: CfdiOption[] = [];
-  uuidSeleccionado?: string;
-
-  //  TOAST (estado)
-  toast = {
-    open: false,
-    title: '',
-    message: '',
-    type: 'info' as ToastType,
-    position: 'top-right' as ToastPosition,
-    autoCloseMs: 3500,
-    showClose: true
-  };
-
-  loadingId: number | null = null; // para deshabilitar botones por fila
-
-  // “Ver más”
-  expandedId: number | null = null;                 // cuál fila está expandida
-  movsLoadingId: number | null = null;              // para mostrar "Cargando…"
-  movsLoaded: Record<number, boolean> = {};         // cache por id
 
   constructor(
     private location: Location,
@@ -95,10 +48,82 @@ export class PolizaHomeComponent {
     this.cargarCatalogos();
     this.cargarPolizas();
     this.cargarCfdiRecientes();
-    this.cargarCuentas(); // importante para mostrar código/nombre de cuenta
+    this.cargarCuentas();
   }
 
-  // ========= Utils =========
+  volver() { this.location.back(); }
+
+  confirmModal = {
+    open: false,
+    title: 'Confirmar eliminación',
+    message: '¿Deseas eliminar esta póliza?',
+    onConfirm: (() => {}) as () => void,
+  };
+
+  abrirConfirmModal(message: string, onConfirm: () => void, title = 'Confirmar eliminación') {
+    this.confirmModal.title = title;
+    this.confirmModal.message = message;
+    this.confirmModal.onConfirm = onConfirm;
+    this.confirmModal.open = true;
+  }
+
+  cerrarConfirmModal() {
+    this.confirmModal.open = false;
+    this.confirmModal.onConfirm = () => {};
+  }
+
+  confirmarConfirmModal() {
+    try {
+      this.confirmModal.onConfirm?.();
+    } finally {
+      this.cerrarConfirmModal();
+    }
+  }
+
+  onModalConfirmed() { this.confirmarConfirmModal(); }
+  onModalCanceled()  { this.cerrarConfirmModal(); }
+  onModalClosed()    { this.cerrarConfirmModal(); }
+
+  polizas: PolizaRow[] = [];
+  polizasFiltradas: PolizaRow[] = [];
+  tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
+  periodos: Array<{ id_periodo: number; nombre: string }> = [];
+  centros: Array<{ id_centro: number; nombre: string }> = [];
+
+  mapTipos = new Map<number, string>();
+  mapPeriodos = new Map<number, string>();
+  mapCentros = new Map<number, string>();
+  cuentasMap = new Map<number, { codigo: string; nombre: string }>();
+
+  filtroTipo?: number;
+  filtroPeriodo?: number;
+
+  q = '';
+  private buscarTimer: ReturnType<typeof setTimeout> | undefined;
+
+  nuevaPoliza: Partial<Poliza> = { movimientos: [] };
+  uploadingXml = false;
+  selectedXmlName = '';
+  uploadXmlError = '';
+  cfdiOptions: CfdiOption[] = [];
+  uuidSeleccionado?: string;
+
+  toast = {
+    open: false,
+    title: '',
+    message: '',
+    type: 'info' as ToastType,
+    position: 'top-right' as ToastPosition,
+    autoCloseMs: 3500,
+    showClose: true
+  };
+  onToastClosed = () => { this.toast.open = false; };
+
+  loadingId: number | null = null;
+  expandedId: number | null = null;
+  movsLoadingId: number | null = null;
+  movsLoaded: Record<number, boolean> = {};
+
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
   }
@@ -119,11 +144,8 @@ export class PolizaHomeComponent {
     if (opts.position) this.toast.position = opts.position;
     this.toast.open = true;
   }
-  onToastClosed = () => { this.toast.open = false; };
 
-  //  Catálogos 
   cargarCatalogos(): void {
-    // Tipos
     this.api.getTiposPoliza().subscribe({
       next: (r: any) => {
         this.tiposPoliza = this.normalizeList(r).map((t: any) => ({
@@ -139,7 +161,6 @@ export class PolizaHomeComponent {
       },
     });
 
-    // Periodos
     this.api.getPeriodos().subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r);
@@ -158,7 +179,6 @@ export class PolizaHomeComponent {
       },
     });
 
-    // Centros
     this.api.getCentros().subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r);
@@ -179,7 +199,6 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  Cuentas ( CODIGO — Nombre) 
   cargarCuentas() {
     this.api.getCuentas().subscribe({
       next: (r: any) => {
@@ -212,7 +231,6 @@ export class PolizaHomeComponent {
     return String(id);
   }
 
-  //  ver mas(movimientos) 
   getIdPoliza(p: PolizaRow): number | null {
     const id = (p as any)?.id_poliza ?? (p as any)?.id;
     return (id == null ? null : Number(id));
@@ -222,14 +240,14 @@ export class PolizaHomeComponent {
     const id = this.getIdPoliza(p);
     if (!id) return;
 
-    if (this.expandedId === id) { // colapsa si ya está abierto
+    if (this.expandedId === id) {
       this.expandedId = null;
       return;
     }
 
     this.expandedId = id;
 
-    if (this.movsLoaded[id]) return; // ya cargados
+    if (this.movsLoaded[id]) return;
 
     this.movsLoadingId = id;
     this.api.getPolizaConMovimientos(id).subscribe({
@@ -245,7 +263,6 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  Listado 
   cargarPolizas(): void {
     this.api.getPolizas({
       id_tipopoliza: this.filtroTipo,
@@ -268,20 +285,14 @@ export class PolizaHomeComponent {
     });
   }
 
-  // Buscador
   onBuscarChange(_: string) {
     if (this.buscarTimer) clearTimeout(this.buscarTimer);
-    this.buscarTimer = setTimeout(() => {
-      this.cargarPolizas();
-    }, 250);
+    this.buscarTimer = setTimeout(() => this.cargarPolizas(), 250);
   }
 
   private aplicarFiltroLocal() {
     const term = (this.q || '').trim().toLowerCase();
-    if (!term) {
-      this.polizasFiltradas = this.polizas.slice();
-      return;
-    }
+    if (!term) { this.polizasFiltradas = this.polizas.slice(); return; }
 
     this.polizasFiltradas = this.polizas.filter(p => {
       const folio    = String(p.folio ?? '').toLowerCase();
@@ -292,19 +303,13 @@ export class PolizaHomeComponent {
 
       const movMatch = Array.isArray(p.movimientos) && p.movimientos.some(m => {
         const uuid    = String((m as any)?.uuid ?? '').toLowerCase();
-        const cliente = String((m as any)?.cliente ?? '').toLowerCase();
+         const cliente = String((m as any)?.cliente ?? '').toLowerCase();
         const ref     = String((m as any)?.ref_serie_venta ?? '').toLowerCase();
         return uuid.includes(term) || cliente.includes(term) || ref.includes(term);
       });
 
-      return (
-        folio.includes(term) ||
-        concepto.includes(term) ||
-        centro.includes(term) ||
-        tipo.includes(term) ||
-        periodo.includes(term) ||
-        movMatch
-      );
+      return folio.includes(term) || concepto.includes(term) || centro.includes(term) ||
+             tipo.includes(term) || periodo.includes(term) || movMatch;
     });
   }
 
@@ -330,25 +335,24 @@ export class PolizaHomeComponent {
     return 'estado warn';
   }
 
-  nombreCentro = (id: number | null | undefined) =>
-    (id == null ? '' : (this.mapCentros.get(id) ?? String(id)));
-  nombreTipo = (id: number | null | undefined) =>
-    (id == null ? '' : (this.mapTipos.get(id) ?? String(id)));
-  nombrePeriodo = (id: number | null | undefined) =>
-    (id == null ? '' : (this.mapPeriodos.get(id) ?? String(id)));
+  nombreCentro = (id: number | null | undefined) => (id == null ? '' : (this.mapCentros.get(id) ?? String(id)));
+  nombreTipo   = (id: number | null | undefined) => (id == null ? '' : (this.mapTipos.get(id) ?? String(id)));
+  nombrePeriodo= (id: number | null | undefined) => (id == null ? '' : (this.mapPeriodos.get(id) ?? String(id)));
 
-  //  Acciones 
   trackByFolio = (_: number, p: PolizaRow) => p?.id_poliza ?? p?.folio ?? _;
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
   editarPoliza(p: PolizaRow) {
     const id = (p as any)?.id_poliza ?? (p as any)?.id;
-    if (!id) {
-      console.warn('No se encontró id_poliza en la fila seleccionada');
-      return;
-    }
+    if (!id) { console.warn('No se encontró id_poliza en la fila seleccionada'); return; }
     this.router.navigate(['/polizas', 'editar', String(id)]);
+  }
+
+  eliminarPolizaDeFila(p: PolizaRow) {
+    const id = this.getIdPoliza(p);
+    if (!id) { this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' }); return; }
+    this.eliminarPoliza(id);
   }
 
   eliminarPoliza(id_poliza?: number): void {
@@ -356,35 +360,31 @@ export class PolizaHomeComponent {
       this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' });
       return;
     }
-    if (!confirm('¿Deseas eliminar esta póliza?')) return;
 
-    this.api.deletePoliza(id_poliza).subscribe({
-      next: () => {
-        this.cargarPolizas();
-        this.showToast({ type: 'success', title: 'Listo', message: 'Póliza eliminada correctamente.' });
-      },
-      error: err => {
-        console.error('Error al eliminar póliza:', err);
-        const msg = err?.error?.message || 'No se pudo eliminar la póliza.';
-        this.showToast({ type: 'error', title: 'Error', message: msg });
-      }
+    this.abrirConfirmModal('¿Deseas eliminar esta póliza?', () => {
+      this.api.deletePoliza(id_poliza).subscribe({
+        next: () => {
+          this.cargarPolizas();
+          this.showToast({ type: 'success', title: 'Listo', message: 'Póliza eliminada correctamente.' });
+        },
+        error: err => {
+          console.error('Error al eliminar póliza:', err);
+          const msg = err?.error?.message || 'No se pudo eliminar la póliza.';
+          this.showToast({ type: 'error', title: 'Error', message: msg });
+        }
+      });
     });
   }
 
-  irANueva() {
-    this.router.navigate(['/polizas', 'nueva']);
-  }
+  irANueva() { this.router.navigate(['/polizas', 'nueva']); }
 
-  //  Cambio de estado 
   private isAllowedEstado(e: any): e is 'Por revisar' | 'Revisada' | 'Contabilizada' {
     return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
   }
-
   canMarcarRevisada(p: PolizaRow): boolean {
     const e = (this.getEstado(p) || '').toLowerCase();
     return !e.includes('cance') && !e.includes('cerr') && !e.includes('contab');
   }
-
   canMarcarContabilizada(p: PolizaRow): boolean {
     const e = (this.getEstado(p) || '').toLowerCase();
     return e.includes('revis') || e.includes('cuadra');
@@ -420,6 +420,7 @@ export class PolizaHomeComponent {
     });
   }
 
+  // ===== XML =====
   triggerXmlPicker(input: HTMLInputElement) {
     this.uploadXmlError = '';
     input.value = '';
@@ -477,7 +478,6 @@ export class PolizaHomeComponent {
     });
   }
 
-  //  CFDI recientes 
   cargarCfdiRecientes() {
     const svc: any = this.api as any;
     if (typeof svc.listCfdi !== 'function') return;

@@ -20,6 +20,7 @@ var forms_1 = require("@angular/forms");
 var router_1 = require("@angular/router");
 var polizas_layout_component_1 = require("@app/components/polizas-layout/polizas-layout.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
+var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var PolizaHomeComponent = /** @class */ (function () {
     function PolizaHomeComponent(location, router, api) {
         var _this = this;
@@ -27,9 +28,14 @@ var PolizaHomeComponent = /** @class */ (function () {
         this.router = router;
         this.api = api;
         this.sidebarOpen = true;
-        //  Listado
+        this.confirmModal = {
+            open: false,
+            title: 'Confirmar eliminación',
+            message: '¿Deseas eliminar esta póliza?',
+            onConfirm: (function () { })
+        };
         this.polizas = [];
-        this.polizasFiltradas = []; // se muestra en la tabla
+        this.polizasFiltradas = [];
         this.tiposPoliza = [];
         this.periodos = [];
         this.centros = [];
@@ -37,14 +43,12 @@ var PolizaHomeComponent = /** @class */ (function () {
         this.mapPeriodos = new Map();
         this.mapCentros = new Map();
         this.cuentasMap = new Map();
-        //  Buscador
         this.q = '';
         this.nuevaPoliza = { movimientos: [] };
         this.uploadingXml = false;
         this.selectedXmlName = '';
         this.uploadXmlError = '';
         this.cfdiOptions = [];
-        //  TOAST (estado)
         this.toast = {
             open: false,
             title: '',
@@ -54,28 +58,46 @@ var PolizaHomeComponent = /** @class */ (function () {
             autoCloseMs: 3500,
             showClose: true
         };
-        this.loadingId = null; // para deshabilitar botones por fila
-        // “Ver más”
-        this.expandedId = null; // cuál fila está expandida
-        this.movsLoadingId = null; // para mostrar "Cargando…"
-        this.movsLoaded = {}; // cache por id
         this.onToastClosed = function () { _this.toast.open = false; };
+        this.loadingId = null;
+        this.expandedId = null;
+        this.movsLoadingId = null;
+        this.movsLoaded = {};
         this.nombreCentro = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapCentros.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
         this.nombreTipo = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapTipos.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
         this.nombrePeriodo = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapPeriodos.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
-        //  Acciones 
         this.trackByFolio = function (_, p) { var _a, _b; return (_b = (_a = p === null || p === void 0 ? void 0 : p.id_poliza) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.folio) !== null && _b !== void 0 ? _b : _; };
     }
-    PolizaHomeComponent.prototype.volver = function () {
-        this.location.back();
-    };
     PolizaHomeComponent.prototype.ngOnInit = function () {
         this.cargarCatalogos();
         this.cargarPolizas();
         this.cargarCfdiRecientes();
-        this.cargarCuentas(); // importante para mostrar código/nombre de cuenta
+        this.cargarCuentas();
     };
-    // ========= Utils =========
+    PolizaHomeComponent.prototype.volver = function () { this.location.back(); };
+    PolizaHomeComponent.prototype.abrirConfirmModal = function (message, onConfirm, title) {
+        if (title === void 0) { title = 'Confirmar eliminación'; }
+        this.confirmModal.title = title;
+        this.confirmModal.message = message;
+        this.confirmModal.onConfirm = onConfirm;
+        this.confirmModal.open = true;
+    };
+    PolizaHomeComponent.prototype.cerrarConfirmModal = function () {
+        this.confirmModal.open = false;
+        this.confirmModal.onConfirm = function () { };
+    };
+    PolizaHomeComponent.prototype.confirmarConfirmModal = function () {
+        var _a, _b;
+        try {
+            (_b = (_a = this.confirmModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
+        }
+        finally {
+            this.cerrarConfirmModal();
+        }
+    };
+    PolizaHomeComponent.prototype.onModalConfirmed = function () { this.confirmarConfirmModal(); };
+    PolizaHomeComponent.prototype.onModalCanceled = function () { this.cerrarConfirmModal(); };
+    PolizaHomeComponent.prototype.onModalClosed = function () { this.cerrarConfirmModal(); };
     PolizaHomeComponent.prototype.normalizeList = function (res) {
         var _a, _b, _c, _d;
         return Array.isArray(res) ? res : ((_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : []);
@@ -103,10 +125,8 @@ var PolizaHomeComponent = /** @class */ (function () {
             this.toast.position = opts.position;
         this.toast.open = true;
     };
-    //  Catálogos 
     PolizaHomeComponent.prototype.cargarCatalogos = function () {
         var _this = this;
-        // Tipos
         this.api.getTiposPoliza().subscribe({
             next: function (r) {
                 _this.tiposPoliza = _this.normalizeList(r).map(function (t) {
@@ -127,7 +147,6 @@ var PolizaHomeComponent = /** @class */ (function () {
                 _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
             }
         });
-        // Periodos
         this.api.getPeriodos().subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
@@ -149,7 +168,6 @@ var PolizaHomeComponent = /** @class */ (function () {
                 _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
             }
         });
-        // Centros
         this.api.getCentros().subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
@@ -173,7 +191,6 @@ var PolizaHomeComponent = /** @class */ (function () {
             }
         });
     };
-    //  Cuentas ( CODIGO — Nombre) 
     PolizaHomeComponent.prototype.cargarCuentas = function () {
         var _this = this;
         this.api.getCuentas().subscribe({
@@ -210,7 +227,6 @@ var PolizaHomeComponent = /** @class */ (function () {
             return "" + cod + (cod && nom ? ' — ' : '') + nom;
         return String(id);
     };
-    //  ver mas(movimientos) 
     PolizaHomeComponent.prototype.getIdPoliza = function (p) {
         var _a, _b, _c;
         var id = (_b = (_a = p) === null || _a === void 0 ? void 0 : _a.id_poliza) !== null && _b !== void 0 ? _b : (_c = p) === null || _c === void 0 ? void 0 : _c.id;
@@ -221,13 +237,13 @@ var PolizaHomeComponent = /** @class */ (function () {
         var id = this.getIdPoliza(p);
         if (!id)
             return;
-        if (this.expandedId === id) { // colapsa si ya está abierto
+        if (this.expandedId === id) {
             this.expandedId = null;
             return;
         }
         this.expandedId = id;
         if (this.movsLoaded[id])
-            return; // ya cargados
+            return;
         this.movsLoadingId = id;
         this.api.getPolizaConMovimientos(id).subscribe({
             next: function (res) {
@@ -242,7 +258,6 @@ var PolizaHomeComponent = /** @class */ (function () {
             complete: function () { return (_this.movsLoadingId = null); }
         });
     };
-    //  Listado 
     PolizaHomeComponent.prototype.cargarPolizas = function () {
         var _this = this;
         this.api.getPolizas({
@@ -265,14 +280,11 @@ var PolizaHomeComponent = /** @class */ (function () {
             }
         });
     };
-    // Buscador
     PolizaHomeComponent.prototype.onBuscarChange = function (_) {
         var _this = this;
         if (this.buscarTimer)
             clearTimeout(this.buscarTimer);
-        this.buscarTimer = setTimeout(function () {
-            _this.cargarPolizas();
-        }, 250);
+        this.buscarTimer = setTimeout(function () { return _this.cargarPolizas(); }, 250);
     };
     PolizaHomeComponent.prototype.aplicarFiltroLocal = function () {
         var _this = this;
@@ -295,12 +307,8 @@ var PolizaHomeComponent = /** @class */ (function () {
                 var ref = String((_f = (_e = m) === null || _e === void 0 ? void 0 : _e.ref_serie_venta) !== null && _f !== void 0 ? _f : '').toLowerCase();
                 return uuid.includes(term) || cliente.includes(term) || ref.includes(term);
             });
-            return (folio.includes(term) ||
-                concepto.includes(term) ||
-                centro.includes(term) ||
-                tipo.includes(term) ||
-                periodo.includes(term) ||
-                movMatch);
+            return folio.includes(term) || concepto.includes(term) || centro.includes(term) ||
+                tipo.includes(term) || periodo.includes(term) || movMatch;
         });
     };
     PolizaHomeComponent.prototype.getEstado = function (p) {
@@ -341,31 +349,36 @@ var PolizaHomeComponent = /** @class */ (function () {
         }
         this.router.navigate(['/polizas', 'editar', String(id)]);
     };
+    PolizaHomeComponent.prototype.eliminarPolizaDeFila = function (p) {
+        var id = this.getIdPoliza(p);
+        if (!id) {
+            this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' });
+            return;
+        }
+        this.eliminarPoliza(id);
+    };
     PolizaHomeComponent.prototype.eliminarPoliza = function (id_poliza) {
         var _this = this;
         if (id_poliza == null) {
             this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' });
             return;
         }
-        if (!confirm('¿Deseas eliminar esta póliza?'))
-            return;
-        this.api.deletePoliza(id_poliza).subscribe({
-            next: function () {
-                _this.cargarPolizas();
-                _this.showToast({ type: 'success', title: 'Listo', message: 'Póliza eliminada correctamente.' });
-            },
-            error: function (err) {
-                var _a;
-                console.error('Error al eliminar póliza:', err);
-                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo eliminar la póliza.';
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
-            }
+        this.abrirConfirmModal('¿Deseas eliminar esta póliza?', function () {
+            _this.api.deletePoliza(id_poliza).subscribe({
+                next: function () {
+                    _this.cargarPolizas();
+                    _this.showToast({ type: 'success', title: 'Listo', message: 'Póliza eliminada correctamente.' });
+                },
+                error: function (err) {
+                    var _a;
+                    console.error('Error al eliminar póliza:', err);
+                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo eliminar la póliza.';
+                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                }
+            });
         });
     };
-    PolizaHomeComponent.prototype.irANueva = function () {
-        this.router.navigate(['/polizas', 'nueva']);
-    };
-    //  Cambio de estado 
+    PolizaHomeComponent.prototype.irANueva = function () { this.router.navigate(['/polizas', 'nueva']); };
     PolizaHomeComponent.prototype.isAllowedEstado = function (e) {
         return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
     };
@@ -408,6 +421,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             complete: function () { return (_this.loadingId = null); }
         });
     };
+    // ===== XML =====
     PolizaHomeComponent.prototype.triggerXmlPicker = function (input) {
         this.uploadXmlError = '';
         input.value = '';
@@ -464,7 +478,6 @@ var PolizaHomeComponent = /** @class */ (function () {
             complete: function () { return (_this.uploadingXml = false); }
         });
     };
-    //  CFDI recientes 
     PolizaHomeComponent.prototype.cargarCfdiRecientes = function () {
         var _this = this;
         var svc = this.api;
@@ -503,6 +516,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 polizas_layout_component_1.PolizasLayoutComponent,
                 common_1.CurrencyPipe,
                 toast_message_component_component_1.ToastMessageComponent,
+                modal_component_1.ModalComponent
             ],
             templateUrl: './poliza-home.component.html',
             styleUrls: ['./poliza-home.component.scss']
