@@ -494,7 +494,7 @@ private getCentros(): void {
       operacion: '',          // "0" cargo | "1" abono (string)
       monto: null,
       cliente: '',
-      fecha: '',
+      fecha: this.todayISO(),
       cc: defaultCc,
       uuid: null as unknown as any,
       _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''

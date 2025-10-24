@@ -58,16 +58,16 @@
         </label>
 
         <label>
-          Concepto:
-          <input class="field" [(ngModel)]="nuevaPoliza.concepto" name="concepto" required />
-        </label>
-
-        <label>
           Tipo póliza:
           <select class="field select" [(ngModel)]="nuevaPoliza.id_tipopoliza" name="id_tipopoliza" required>
             <option [ngValue]="undefined" disabled>Seleccione…</option>
             <option *ngFor="let t of tiposPoliza" [ngValue]="t.id_tipopoliza">{{ t.nombre }}</option>
           </select>
+        </label>
+
+        <label>
+          Concepto:
+          <input class="field" [(ngModel)]="nuevaPoliza.concepto" name="concepto" required />
         </label>
 
         <label>
@@ -144,15 +144,15 @@
             </div>
           </label>
 
-          <label> Cliente (opcional):
+          <label> Cliente:
             <input class="field" [(ngModel)]="evento.cliente" [ngModelOptions]="{standalone:true}">
           </label>
 
-          <label> Ref. Serie (opcional):
+          <label> Ref. Serie:
             <input class="field" [(ngModel)]="evento.ref_serie_venta" [ngModelOptions]="{standalone:true}">
           </label>
 
-          <label> Centro de costo (opcional):
+          <label> Centro de costo:
             <select class="field select" [(ngModel)]="evento.cc" [ngModelOptions]="{standalone:true}">
               <option [ngValue]="null">— Selecciona CC —</option>
               <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">

@@ -236,6 +236,7 @@
 <app-modal
   [open]="confirmModal.open"
   [title]="confirmModal.title"
+  [size]="'sm'"
   (confirmed)="confirmarConfirmModal()"
   (canceled)="cerrarConfirmModal()"
   (closed)="cerrarConfirmModal()"

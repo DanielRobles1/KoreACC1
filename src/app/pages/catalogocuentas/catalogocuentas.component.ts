@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
-import { CrudPanelComponent } from '@app/components/crud-panel/crud-panel.component';
+import { CrudPanelComponent, CrudTab } from '@app/components/crud-panel/crud-panel.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 
@@ -63,7 +63,10 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   
   sidebarOpen = true;
   title = 'Catálogo de Cuentas';
-  tabs = [{ id: 'datos', label: 'Cuentas' }];
+  tabs: CrudTab[] = [
+      { id: 'Cuentas', label: 'Cuentas', icon: 'assets/svgs/catalog-cuentas.svg', iconAlt: 'Cuentas', route: '/catalogos/cuentas' },
+      { id: 'Centros de costo', label: 'Centros de costo', icon: 'assets/svgs/catalogue-catalog.svg', iconAlt: 'centros-costo', route: '/centros-costo' },
+    ];
   activeTabId: 'datos' = 'datos';
 
   
