@@ -108,9 +108,9 @@
                 <!-- Revisada -->
                 <button
                   type="button"
-                  (click)="cambiarEstadoPoliza(p, 'Revisada')"
+                  (click)="abrirApproveModal(p)"
                   [disabled]="loadingId === getIdPoliza(p) || !canMarcarRevisada(p)"
-                  title="Marcar como Revisada"
+                  title="Marcar como Aprobada"
                   class="icon-btn"
                   [ngStyle]="{
                     cursor: 'pointer',
@@ -212,10 +212,6 @@
     </div>
   </td>
 </tr>
-
- 
-
-
         </ng-container>
       </tbody>
     </table>
@@ -244,4 +240,14 @@
   {{ confirmModal.message }}
 </app-modal>
 
-
+<!-- Modal de confirmación: APROBAR PÓLIZA -->
+<app-modal
+  [open]="approveModal.open"
+  [title]="approveModal.title"
+  [size]="'sm'"
+  (confirmed)="confirmarApproveModal()"
+  (canceled)="cerrarApproveModal()"
+  (closed)="cerrarApproveModal()"
+>
+  {{ approveModal.message }}
+</app-modal>

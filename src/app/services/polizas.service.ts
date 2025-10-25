@@ -153,7 +153,7 @@ getMe() {
   return this.http.get<any>('/api/me'); 
 }
 // polizas.service.ts
-changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Revisada' | 'Contabilizada') {
+changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Aprobada' | 'Contabilizada') {
   return this.http.patch<any>(`${this.api}/poliza/${id_poliza}`, { estado });
 }
 

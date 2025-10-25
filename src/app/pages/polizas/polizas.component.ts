@@ -317,7 +317,7 @@ private todayISO(): string {
         this.centros = items.map((c: any) => {
           const id     = Number(c.id_centro ?? c.id ?? c.ID);
           const serie  = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
-          const nombre = String(c.nombre ?? c.descripcion ?? '').trim();
+          const nombre = String(c.nombre_centro ?? c.descripcion ?? '').trim();
           const etiqueta = serie && nombre ? `${serie} — ${nombre}` : (serie || nombre || `Centro ${id}`);
           return { id_centro: id, nombre: etiqueta };
         });

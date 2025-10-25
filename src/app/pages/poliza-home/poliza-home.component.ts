@@ -42,7 +42,7 @@ export class PolizaHomeComponent {
     private location: Location,
     private router: Router,
     private api: PolizasService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.cargarCatalogos();
@@ -57,7 +57,14 @@ export class PolizaHomeComponent {
     open: false,
     title: 'Confirmar eliminación',
     message: '¿Deseas eliminar esta póliza?',
-    onConfirm: (() => {}) as () => void,
+    onConfirm: (() => { }) as () => void,
+  };
+
+  approveModal = {
+    open: false,
+    title: 'Confirmar aprobación',
+    message: '¿Deseas marcar esta póliza como Aprobada?',
+    onConfirm: (() => { }) as () => void,
   };
 
   abrirConfirmModal(message: string, onConfirm: () => void, title = 'Confirmar eliminación') {
@@ -69,7 +76,7 @@ export class PolizaHomeComponent {
 
   cerrarConfirmModal() {
     this.confirmModal.open = false;
-    this.confirmModal.onConfirm = () => {};
+    this.confirmModal.onConfirm = () => { };
   }
 
   confirmarConfirmModal() {
@@ -80,9 +87,53 @@ export class PolizaHomeComponent {
     }
   }
 
+  abrirApproveModal(p: PolizaRow) {
+    const id = this.getIdPoliza(p);
+    if (!id) {
+      this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede aprobar: falta id_poliza.' });
+      return;
+    }
+    this.approveModal.title = 'Confirmar aprobación';
+    this.approveModal.message = `Vas a marcar la póliza ${id} como Aprobada. ¿Continuar?`;
+    this.approveModal.onConfirm = () => {
+      // Marcamos loading para ese id mientras cambia el estado
+      this.loadingId = id;
+      this.api.changeEstadoPoliza(id, 'Aprobada').subscribe({
+        next: (res: any) => {
+          (p as any).estado = res?.estado ?? 'Aprobada';
+          this.showToast({
+            type: 'success',
+            title: 'Estado actualizado',
+            message: `La póliza ${id} ahora está: ${(p as any).estado}.`
+          });
+        },
+        error: (err) => {
+          console.error('changeEstadoPoliza (Aprobada):', err);
+          const msg = err?.error?.message || 'No se pudo cambiar el estado a Aprobada.';
+          this.showToast({ type: 'error', title: 'Error', message: msg });
+        },
+        complete: () => (this.loadingId = null),
+      });
+    };
+    this.approveModal.open = true;
+  }
+
+  cerrarApproveModal() {
+    this.approveModal.open = false;
+    this.approveModal.onConfirm = () => { };
+  }
+
+  confirmarApproveModal() {
+    try {
+      this.approveModal.onConfirm?.();
+    } finally {
+      this.cerrarApproveModal();
+    }
+  }
+
   onModalConfirmed() { this.confirmarConfirmModal(); }
-  onModalCanceled()  { this.cerrarConfirmModal(); }
-  onModalClosed()    { this.cerrarConfirmModal(); }
+  onModalCanceled() { this.cerrarConfirmModal(); }
+  onModalClosed() { this.cerrarConfirmModal(); }
 
   polizas: PolizaRow[] = [];
   polizasFiltradas: PolizaRow[] = [];
@@ -165,9 +216,9 @@ export class PolizaHomeComponent {
       next: (r: any) => {
         const items = this.normalizeList(r);
         this.periodos = items.map((p: any) => {
-          const id  = Number(p.id_periodo ?? p.id ?? p.ID);
+          const id = Number(p.id_periodo ?? p.id ?? p.ID);
           const fi0 = p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini;
-          const ff0 = p.fecha_fin    ?? p.fechaFin    ?? p.fin    ?? p.end_date   ?? p.fecha_fin;
+          const ff0 = p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin;
           return { id_periodo: id, nombre: `${this.fmtDate(fi0)} — ${this.fmtDate(ff0)}` };
         });
         this.mapPeriodos.clear();
@@ -183,8 +234,8 @@ export class PolizaHomeComponent {
       next: (r: any) => {
         const items = this.normalizeList(r);
         this.centros = items.map((c: any) => {
-          const id     = Number(c.id_centro ?? c.id ?? c.ID);
-          const serie  = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
+          const id = Number(c.id_centro ?? c.id ?? c.ID);
+          const serie = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
           const nombre = String(c.nombre ?? c.descripcion ?? '').trim();
           const etiqueta = serie && nombre ? `${serie} — ${nombre}` : (serie || nombre || `Centro ${id}`);
           return { id_centro: id, nombre: etiqueta };
@@ -205,7 +256,7 @@ export class PolizaHomeComponent {
         const arr = this.normalizeList(r);
         this.cuentasMap.clear();
         for (const c of arr) {
-          const id     = Number(c.id_cuenta ?? c.id ?? c.ID);
+          const id = Number(c.id_cuenta ?? c.id ?? c.ID);
           const codigo = String(c.codigo ?? c.clave ?? c.code ?? '').trim();
           const nombre = String(c.nombre ?? c.descripcion ?? '').trim();
           if (!Number.isNaN(id)) this.cuentasMap.set(id, { codigo, nombre });
@@ -266,7 +317,7 @@ export class PolizaHomeComponent {
   cargarPolizas(): void {
     this.api.getPolizas({
       id_tipopoliza: this.filtroTipo,
-      id_periodo:    this.filtroPeriodo,
+      id_periodo: this.filtroPeriodo,
       includeMovimientos: true
     } as any).subscribe({
       next: (r: any) => {
@@ -295,21 +346,21 @@ export class PolizaHomeComponent {
     if (!term) { this.polizasFiltradas = this.polizas.slice(); return; }
 
     this.polizasFiltradas = this.polizas.filter(p => {
-      const folio    = String(p.folio ?? '').toLowerCase();
+      const folio = String(p.folio ?? '').toLowerCase();
       const concepto = String(p.concepto ?? '').toLowerCase();
-      const centro   = this.nombreCentro(p.id_centro).toLowerCase();
-      const tipo     = this.nombreTipo(p.id_tipopoliza).toLowerCase();
-      const periodo  = this.nombrePeriodo(p.id_periodo).toLowerCase();
+      const centro = this.nombreCentro(p.id_centro).toLowerCase();
+      const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
+      const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
 
       const movMatch = Array.isArray(p.movimientos) && p.movimientos.some(m => {
-        const uuid    = String((m as any)?.uuid ?? '').toLowerCase();
-         const cliente = String((m as any)?.cliente ?? '').toLowerCase();
-        const ref     = String((m as any)?.ref_serie_venta ?? '').toLowerCase();
+        const uuid = String((m as any)?.uuid ?? '').toLowerCase();
+        const cliente = String((m as any)?.cliente ?? '').toLowerCase();
+        const ref = String((m as any)?.ref_serie_venta ?? '').toLowerCase();
         return uuid.includes(term) || cliente.includes(term) || ref.includes(term);
       });
 
       return folio.includes(term) || concepto.includes(term) || centro.includes(term) ||
-             tipo.includes(term) || periodo.includes(term) || movMatch;
+        tipo.includes(term) || periodo.includes(term) || movMatch;
     });
   }
 
@@ -327,17 +378,17 @@ export class PolizaHomeComponent {
   estadoClass(p: any): string {
     const e = this.getEstado(p).toLowerCase();
     if (e.includes('cuadra')) return 'estado ok';
-    if (e.includes('cerr'))   return 'estado ok';
+    if (e.includes('cerr')) return 'estado ok';
     if (e.includes('activa')) return 'estado ok';
-    if (e.includes('pend'))   return 'estado warn';
-    if (e.includes('borr'))   return 'estado warn';
-    if (e.includes('canc'))   return 'estado bad';
+    if (e.includes('pend')) return 'estado warn';
+    if (e.includes('borr')) return 'estado warn';
+    if (e.includes('canc')) return 'estado bad';
     return 'estado warn';
   }
 
   nombreCentro = (id: number | null | undefined) => (id == null ? '' : (this.mapCentros.get(id) ?? String(id)));
-  nombreTipo   = (id: number | null | undefined) => (id == null ? '' : (this.mapTipos.get(id) ?? String(id)));
-  nombrePeriodo= (id: number | null | undefined) => (id == null ? '' : (this.mapPeriodos.get(id) ?? String(id)));
+  nombreTipo = (id: number | null | undefined) => (id == null ? '' : (this.mapTipos.get(id) ?? String(id)));
+  nombrePeriodo = (id: number | null | undefined) => (id == null ? '' : (this.mapPeriodos.get(id) ?? String(id)));
 
   trackByFolio = (_: number, p: PolizaRow) => p?.id_poliza ?? p?.folio ?? _;
 
@@ -390,9 +441,9 @@ export class PolizaHomeComponent {
     return e.includes('revis') || e.includes('cuadra');
   }
 
-  cambiarEstadoPoliza(p: PolizaRow, nuevo: 'Por revisar' | 'Revisada' | 'Contabilizada') {
+  cambiarEstadoPoliza(p: PolizaRow, nuevo: 'Por revisar' | 'Aprobada' | 'Contabilizada') {
     if (!this.isAllowedEstado(nuevo)) {
-      this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Contabilizada.' });
+      this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Aprobada, Contabilizada.' });
       return;
     }
     const id = this.getIdPoliza(p);
@@ -457,7 +508,7 @@ export class PolizaHomeComponent {
     this.api.uploadCfdiXml(file, ctx).subscribe({
       next: (res) => {
         const opt: CfdiOption = {
-          uuid:  res?.uuid || res?.UUID || '',
+          uuid: res?.uuid || res?.UUID || '',
           folio: res?.folio ?? res?.Folio ?? null,
           fecha: res?.fecha ?? res?.Fecha ?? null,
           total: res?.total ?? res?.Total ?? null,
@@ -487,7 +538,7 @@ export class PolizaHomeComponent {
         const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
         this.cfdiOptions = arr
           .map((x: any) => ({
-            uuid:  String(x.uuid ?? x.UUID ?? '').trim(),
+            uuid: String(x.uuid ?? x.UUID ?? '').trim(),
             folio: x.folio ?? x.Folio ?? null,
             fecha: x.fecha ?? x.Fecha ?? null,
             total: x.total ?? x.Total ?? null,
