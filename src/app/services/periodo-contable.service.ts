@@ -56,6 +56,10 @@ export class PeriodoContableService {
     return this.http.get<PeriodoContableDto>(`${this.baseUrl}/${id_periodo}`);
   }
 
+  getPeriodosByEjercicio(id_ejercicio: number): Observable<PeriodoContableDto[]> {
+    return this.http.get<PeriodoContableDto[]>(`${this.baseUrl}/ejercicio/${id_ejercicio}`);
+  }
+
   create(payload: PeriodoContableDto): Observable<PeriodoContableDto> {
     return this.http.post<PeriodoContableDto>(this.baseUrl, payload);
   }

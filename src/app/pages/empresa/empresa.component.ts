@@ -298,9 +298,19 @@ export class EmpresaComponent implements OnInit {
 
   loadPeriodos() {
     const idEmp = this.empresaId();
-    if (!idEmp) return;
+    if (!idEmp) {  
+      this.periodos = [];
+      return;
+    }
+
     const idEj = this.ejercicioSeleccionado?.id_ejercicio;
-    this.periodosService.listByEmpresa(idEmp, idEj).subscribe({
+
+    if (!idEj) {
+      this.periodos = [];
+      return;
+    }
+
+    this.periodosService.getPeriodosByEjercicio(idEj).subscribe({
       next: (items) => this.periodos = items ?? [],
       error: (err) => this.openError('Error al cargar los períodos', err),
     });
@@ -563,6 +573,7 @@ export class EmpresaComponent implements OnInit {
   setEjercicioSeleccionado(ej: EjercicioContableDto | null) {
     this.ejercicioSeleccionado = ej;
     this.saveEjercicioSeleccionado(ej);
+    this.loadPeriodos();
   }
 
   // Guardar ejercicio desde modal
@@ -732,6 +743,7 @@ export class EmpresaComponent implements OnInit {
           next: () => {
             this.ejercicios = this.ejercicios.filter(e => e.id_ejercicio !== id);
             if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(null);
+            this.loadPeriodos();
             this.openSuccess('Ejercicio eliminado.');
           },
           error: (err) => this.openError('No se pudo eliminar el ejercicio', err),

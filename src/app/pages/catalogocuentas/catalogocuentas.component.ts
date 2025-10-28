@@ -17,20 +17,26 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 
 const API = 'http://localhost:3000/api/v1/cuentas';
 
+type CuentaTipo = 'ACTIVO' | 'PASIVO' | 'CAPITAL' | 'INGRESO' | 'GASTO';
+type Naturaleza = 'DEUDORA' | 'ACREEDORA';
+
 interface Cuenta {
   id: number;
   codigo: string;
   nombre: string;
-  ctaMayor: boolean;     // true = cuenta padre
+  ctaMayor: boolean;
+  posteable: boolean;      
+  tipo: CuentaTipo;        
+  naturaleza: Naturaleza;  
   parentId: number | null;
   deleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  // Campos de vista 
   padreCodigo?: string | null;
   padreNombre?: string | null;
   icon?: string;
 }
+
 
 interface ToastVM {
   open: boolean;
@@ -60,6 +66,10 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private subs: Subscription[] = [];
 
+  // Añade arriba en el componente
+  TIPO_OPTS: CuentaTipo[] = ['ACTIVO','PASIVO','CAPITAL','INGRESO','GASTO'];
+  NAT_OPTS: Naturaleza[] = ['DEUDORA','ACREEDORA'];
+
   
   sidebarOpen = true;
   title = 'Catálogo de Cuentas';
@@ -77,6 +87,8 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     { key: 'codigo', header: 'Código', width: '140' },
     { key: 'nombre', header: 'Nombre', width: '260' },
     { key: 'ctaMayor', header: '¿Mayor?', width: '90', format: (v: boolean): string => (v ? 'Sí' : 'No') },
+    { key: 'tipo', header: 'Tipo', width: '120' },
+    { key: 'naturaleza', header: 'Naturaleza', width: '120' },
     { key: 'padreCodigo', header: 'Padre (código)', width: '140' },
     { key: 'padreNombre', header: 'Padre (nombre)', width: '220' },
   ];
@@ -103,6 +115,9 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     codigo: '',
     nombre: '',
     ctaMayor: false,
+    posteable: true,            
+    tipo: 'ACTIVO',          
+    naturaleza: 'DEUDORA',   
     parentId: null,
   };
 
@@ -197,8 +212,12 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       codigo: '',
       nombre: '',
       ctaMayor: false,
-      parentId: null,
+      posteable: true,
+      tipo: 'ACTIVO',
+      naturaleza: 'DEUDORA',
+      parentId: this.parentPreselectedId ?? null,
     };
+    this.enforcePosteableRule();
     this.resetValidation();
     this.editOpen = true;
   }
@@ -211,8 +230,12 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       codigo: row.codigo,
       nombre: row.nombre,
       ctaMayor: row.ctaMayor,
+      posteable: row.posteable,
+      tipo: row.tipo,
+      naturaleza: row.naturaleza,
       parentId: row.parentId ?? null,
     };
+    this.enforcePosteableRule();
     this.resetValidation();
     this.editOpen = true;
   }
@@ -236,8 +259,12 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
         codigo: '',
         nombre: '',
         ctaMayor: false,
+        posteable: true,       
+        tipo: 'ACTIVO',        
+        naturaleza: 'DEUDORA',
         parentId: row.id,
       };
+      this.enforcePosteableRule();
       this.resetValidation();
       this.editOpen = true;
       return;
@@ -287,7 +314,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   cancelModal(): void { this.editOpen = false; }
 
   confirmModal(): void {
-    // Valida antes de enviar
+    this.enforcePosteableRule();
     this.touched = { codigo: true, nombre: true };
     this.validate();
 
@@ -304,6 +331,9 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       codigo: (this.formCuenta.codigo ?? '').trim(),
       nombre: (this.formCuenta.nombre ?? '').trim(),
       ctaMayor: !!this.formCuenta.ctaMayor,
+      posteable: !!this.formCuenta.posteable,  
+      tipo: this.formCuenta.tipo!,                     
+      naturaleza: this.formCuenta.naturaleza!,    
       parentId: this.formCuenta.parentId ?? null,
     };
 
@@ -325,10 +355,27 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.closeConfirm();
   }
 
- 
+  private enforcePosteableRule(): void {
+    if (this.formCuenta.ctaMayor) {
+      this.formCuenta.posteable = false;
+    } else {
+      // si deja de ser mayor, lo normal es permitir postear; default a true si venía en false
+      if (this.formCuenta.posteable === false) this.formCuenta.posteable = true;
+    }
+  }
+
+  onCtaMayorChange(v: boolean) {
+    this.formCuenta.ctaMayor = !!v;
+    if (this.formCuenta.ctaMayor) this.formCuenta.parentId = null;
+    this.enforcePosteableRule();
+  }
+
   getParentOptions(): Cuenta[] {
     const excludeId = this.editId;
-    return this.allCuentas.filter(c => c.id !== excludeId);
+    return this.allCuentas.filter(c =>
+      c.id !== excludeId &&
+      c.ctaMayor === true
+    );
   }
 
   getCodigoPadre(id: number | null): string | null {
@@ -383,6 +430,9 @@ exportToExcel(): void {
     Código: r.codigo,
     Nombre: r.nombre,
     '¿Mayor?': r.ctaMayor ? 'Sí' : 'No',
+    Posteable: r.posteable ? 'Sí' : 'No',
+    Tipo: r.tipo,
+    Naturaleza: r.naturaleza,
     'Padre (Código)': r.padreCodigo ?? '',
     'Padre (Nombre)': r.padreNombre ?? '',
   }));

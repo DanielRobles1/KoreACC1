@@ -95,9 +95,43 @@
     <!-- Toggle cuenta mayor -->
     <div style="display: flex; align-items: center; gap: 8px;">
       <label class="field-label" style="margin: 0;">Cuenta mayor</label>
-      <input type="checkbox" name="ctaMayor" [(ngModel)]="formCuenta.ctaMayor" />
+      <input type="checkbox" name="ctaMayor" [(ngModel)]="formCuenta.ctaMayor" (ngModelChange)="onCtaMayorChange($event)"/>
       <span style="font-size: 12px; opacity: 0.8;">
         (si se marca, puede tener subcuentas)
+      </span>
+    </div>
+
+    <!-- Clasificación contable -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <label class="field-label required">Tipo</label>
+        <select class="field-input" name="tipo" required [(ngModel)]="formCuenta.tipo">
+          <option *ngFor="let t of TIPO_OPTS" [ngValue]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label required">Naturaleza</label>
+        <select class="field-input" name="naturaleza" required [(ngModel)]="formCuenta.naturaleza">
+          <option *ngFor="let n of NAT_OPTS" [ngValue]="n">{{ n }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Posteable: disabled no puede recibir undefined -->
+    <div style="display:flex; align-items:center; gap:8px;">
+      <label class="field-label" style="margin:0;">Posteable</label>
+      <input
+        type="checkbox"
+        name="posteable"
+        [(ngModel)]="formCuenta.posteable"
+        [disabled]="!!formCuenta.ctaMayor" />
+      <span style="font-size:12px; opacity:.8;">
+        <ng-container *ngIf="!!formCuenta.ctaMayor">
+          (Las cuentas mayor no son posteables)
+        </ng-container>
+        <ng-container *ngIf="!formCuenta.ctaMayor">
+          (Las subcuentas pueden ser posteables)
+        </ng-container>
       </span>
     </div>
 
