@@ -405,6 +405,51 @@ export class PolizaHomeComponent {
     if (!id) { this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' }); return; }
     this.eliminarPoliza(id);
   }
+filtros = {
+  folio: '',
+  concepto: '',
+  centro: '',
+  tipo: '',
+  periodo: '',
+  estado: ''
+};
+
+aplicarFiltros() {
+  this.polizasFiltradas = this.polizas.filter(p => {
+    const folio = (p.folio || '').toString().toLowerCase();
+    const concepto = (p.concepto || '').toLowerCase();
+    const centro = this.nombreCentro(p.id_centro).toLowerCase();
+    const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
+    const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
+    const estado = this.getEstado(p).toLowerCase();
+
+    return (
+      folio.includes(this.filtros.folio.toLowerCase()) &&
+      concepto.includes(this.filtros.concepto.toLowerCase()) &&
+      centro.includes(this.filtros.centro.toLowerCase()) &&
+      tipo.includes(this.filtros.tipo.toLowerCase()) &&
+      periodo.includes(this.filtros.periodo.toLowerCase()) &&
+      estado.includes(this.filtros.estado.toLowerCase())
+    );
+  });
+}
+showFilter: Record<string, boolean> = {
+  folio: false,
+  concepto: false,
+  centro: false,
+  tipo: false,
+  periodo: false,
+  estado: false
+};
+
+toggleFilter(col: string) {
+  // Cierra los demás filtros si quieres
+  for (const key in this.showFilter) {
+    if (key !== col) this.showFilter[key] = false;
+  }
+  // Abre/cierra el filtro de esta columna
+  this.showFilter[col] = !this.showFilter[col];
+}
 
   eliminarPoliza(id_poliza?: number): void {
     if (id_poliza == null) {

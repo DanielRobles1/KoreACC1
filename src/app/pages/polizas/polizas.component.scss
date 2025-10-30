@@ -846,3 +846,73 @@ input.field, select.field, textarea.field {
   --line-soft: #e2e8f0;
   --text: #1e293b;
 }
+.th-with-filter {
+  position: relative;
+  padding: .5rem .6rem; /* ajusta según necesites */
+}
+
+.th-with-filter .th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+.tabla-movimientos {
+  min-width: 100%; /* fuerza a que el thead y tbody tengan mismo ancho */
+}
+/* Evita que inputs/selects descuadren el ancho fijo */
+.tabla-movimientos td > * { width: 100%; min-width: 0; }
+.tabla-movimientos th, .tabla-movimientos td { box-sizing: border-box; }
+.uuid-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+
+  &.has-uuid .uuid-badge {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-xml {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;         /* gris oscuro por defecto */
+  transition: all .2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+  }
+
+  /* Estado con XML asociado */
+  &.ok {
+    color: #16a34a;       /* verde */
+    border-color: #16a34a33;
+    background: #16a34a0d;
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+  }
+}
+
+.uuid-badge {
+  font-size: .75rem;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: .15rem .4rem;
+  border-radius: 9999px;
+  letter-spacing: .02em;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: all .2s ease;
+}

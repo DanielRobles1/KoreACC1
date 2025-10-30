@@ -7,6 +7,8 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
+import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component';
+import { firstValueFrom } from 'rxjs';
 type CfdiOption = {
   uuid: string;
   folio?: string | null;
@@ -15,7 +17,13 @@ type CfdiOption = {
 };
 
 type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
-
+type Ejercicio = {
+  id_ejercicio: number;
+  nombre?: string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  activo?: boolean | number | '1' | '0';
+};
 type CentroCostoItem = {
   serie_venta: any;
   id_centrocosto: number;
@@ -32,13 +40,18 @@ type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 @Component({
   selector: 'app-polizas',
   standalone: true,
-  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent,RouterModule],
+  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent,RouterModule, ModalSeleccionCuentaComponent],
   templateUrl: './polizas.component.html',
   styleUrls: ['./polizas.component.scss']
 })
 export class PolizasComponent implements OnInit {
+   ejercicioActual: Ejercicio | null = null;
   sidebarOpen = true;
-
+// --- Manejo de XML por movimiento ---
+xmlMovimientoIndex: number | null = null;
+uploadingXml = false;
+selectedXmlName = '';
+uploadXmlError = '';
   // Usuario actual y CC
   currentUser: UsuarioLigero | null = null;
   centrosCosto: CentroCostoItem[] = [];
@@ -67,10 +80,8 @@ cuentasQuery = '';
   // Formulario de nueva póliza
   nuevaPoliza: Partial<Poliza> = { movimientos: [] };
 
-  // XML
-  uploadingXml = false;
-  selectedXmlName = '';
-  uploadXmlError = '';
+
+  
 
   // CFDI importados y selección de UUID
   cfdiOptions: CfdiOption[] = [];
@@ -90,6 +101,8 @@ cuentasQuery = '';
   constructor(private api: PolizasService) {}
 
   ngOnInit(): void {
+    
+    this.cargarEjercicioActivo();
     this.initUsuarioActual();     // setea id_usuario
     this.cargarCatalogos();       // tipos/periodos/centros
     this.getCentros(); // centros de costo para tabla
@@ -103,6 +116,25 @@ cuentasQuery = '';
       this.evento.fecha_operacion = this.todayISO();
     }
   }
+modalCuentasAbierto = false;
+indiceMovimientoSeleccionado: number | null = null;
+
+abrirModalCuentas(index: number): void {
+  this.indiceMovimientoSeleccionado = index;
+  this.modalCuentasAbierto = true;
+}
+
+cerrarModalCuentas(): void {
+  this.modalCuentasAbierto = false;
+  this.indiceMovimientoSeleccionado = null;
+}
+
+onCuentaSeleccionadaModal(cuenta: CuentaLigera): void {
+  if (this.indiceMovimientoSeleccionado != null) {
+    this.nuevaPoliza.movimientos![this.indiceMovimientoSeleccionado].id_cuenta = cuenta.id_cuenta;
+  }
+  this.cerrarModalCuentas();
+}
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
@@ -128,6 +160,7 @@ cuentasQuery = '';
     if (isNaN(dt.getTime())) return s;
     return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
   }
+  
   private toNumOrNull = (v: any): number | null =>
     (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
   private toStrOrNull = (v: any): string | null =>
@@ -243,7 +276,89 @@ getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
     ? [{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }, ...base]
     : base;
 }
+private cargarEjercicioActivo(): void {
+  const svc: any = this.api as any;
+  const fn =
+    svc.getEjercicioActivo ||
+    svc.fetchEjercicioActivo ||
+    svc.getEjercicio ||
+    svc.fetchEjercicio ||
+    svc.listEjercicios ||
+    svc.getEjercicios;
 
+  if (typeof fn !== 'function') {
+    console.warn('⚠ No existe método de API para Ejercicio.');
+    this.ejercicioActual = null;
+    return;
+  }
+
+  const isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
+
+  fn.call(this.api).subscribe({
+    next: (r: any) => {
+      console.log('🔍 Resultado de ejercicios:', r); // 👈 esto te dirá qué devuelve tu backend
+
+      const items = isList ? this.normalizeList(r) : [r];
+      if (!items || !items.length) {
+        console.warn('⚠ No se encontraron ejercicios.');
+        this.ejercicioActual = null;
+        return;
+      }
+
+      // Elige el ejercicio activo o vigente
+      let elegido =
+        items.find((e: any) => e?.activo === true || e?.activo === 1 || e?.activo === '1') ??
+        items.find((e: any) => {
+          const hoy = new Date().toISOString().slice(0, 10);
+          const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
+          const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
+          return fi <= hoy && hoy <= ff;
+        }) ??
+        items[0];
+
+      if (!elegido) {
+        console.warn('⚠ No se encontró ejercicio activo.');
+        this.ejercicioActual = null;
+        return;
+      }
+
+      this.ejercicioActual = {
+        id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? elegido.ID ?? 0),
+        nombre: String(
+          elegido.nombre ??
+          elegido.descripcion ??
+          elegido.year ??
+          elegido.ejercicio ??
+          ''
+        ).trim() || `Ejercicio ${elegido.id_ejercicio ?? ''}`,
+        fecha_inicio: this.fmtDate(elegido.fecha_inicio ?? elegido.inicio),
+        fecha_fin: this.fmtDate(elegido.fecha_fin ?? elegido.fin),
+        activo: Boolean(elegido.activo)
+      };
+
+      console.log('✅ Ejercicio elegido:', this.ejercicioActual);
+    },
+    error: (err: any) => {
+      console.error('❌ Error al cargar ejercicio:', err);
+      this.showToast({
+        type: 'error',
+        title: 'Error',
+        message: 'No se pudo cargar el ejercicio actual.'
+      });
+      this.ejercicioActual = null;
+    }
+  });
+}
+
+
+
+  // Etiqueta legible para UI
+  get ejercicioLabel(): string {
+    const e = this.ejercicioActual;
+    if (!e) return '—';
+    const nombre = (e.nombre && e.nombre !== '—') ? e.nombre : (e.fecha_inicio && e.fecha_fin ? `${e.fecha_inicio} — ${e.fecha_fin}` : '');
+    return nombre || '—';
+  }
 // --- defaults de modo y evento ---
 modoCaptura: 'manual' | 'motor' = 'manual';
 
@@ -399,8 +514,9 @@ private getCentros(): void {
         const parsed: CuentaLigera[] = (items || []).map((x: any) => {
           const id = Number(x.id_cuenta ?? x.id ?? x.ID);
           const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
+          const posteable= x.posteable ?? x.es_posteable ?? x.posteable_flag ?? x.posteable_indicator;
           const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
-          return { id_cuenta: id, codigo, nombre };
+          return { id_cuenta: id, codigo, nombre, posteable };
         }).filter((c: CuentaLigera) => Number.isFinite(c.id_cuenta)); 
 
         parsed.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
@@ -467,6 +583,18 @@ private getCentros(): void {
     if (!movs[index]) return;
     (movs[index] as any)._cuentaQuery = value ?? '';
   }
+// Detectar cambio de centro principal
+onCentroSeleccionado(): void {
+  const idCentro = this.nuevaPoliza.id_centro;
+
+  // Recorre los movimientos existentes
+  (this.nuevaPoliza.movimientos ?? []).forEach(mov => {
+    // Solo asignar si aún no tiene centro (para no sobrescribir cambios del usuario)
+    if (!mov.cc) {
+      mov.cc = idCentro;
+    }
+  });
+}
 
   getCuentasFiltradas(index: number): CuentaLigera[] {
     const movs = (this.nuevaPoliza.movimientos ?? []);
@@ -484,6 +612,64 @@ private getCentros(): void {
     return c ? `${c.codigo} — ${c.nombre}` : '—';
   }
 
+
+triggerXmlPickerForMovimiento(input: HTMLInputElement, index: number): void {
+  this.xmlMovimientoIndex = index;
+  input.click();
+}
+
+
+
+async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
+  const file: File = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    this.uploadingXml = true;
+    this.selectedXmlName = file.name;
+    this.uploadXmlError = '';
+
+    const response = await firstValueFrom(
+      this.api.uploadCfdiXml(file, {
+        folio: this.nuevaPoliza.folio,
+        id_periodo: Number(this.nuevaPoliza.id_periodo),
+        id_centro: Number(this.nuevaPoliza.id_centro),
+        id_tipopoliza: Number(this.nuevaPoliza.id_tipopoliza)
+      })
+    );
+
+    const uuid = response?.uuid || response?.UUID || null;
+    if (uuid) {
+      if (!this.nuevaPoliza.movimientos) this.nuevaPoliza.movimientos = [];
+      if (!this.nuevaPoliza.movimientos[index]) this.nuevaPoliza.movimientos[index] = {} as any;
+
+      // 👇 clave: asociar el UUID al movimiento específico
+      this.nuevaPoliza.movimientos[index].uuid = uuid;
+
+      // (opcional) mostrar el nombre del xml en la fila
+      (this.nuevaPoliza.movimientos[index] as any)._xmlName = file.name;
+
+      this.showToast({
+        title: 'XML asociado',
+        message: `UUID ${uuid} vinculado al movimiento ${index + 1}`,
+        type: 'success',
+        autoCloseMs: 3500,
+      });
+    } else {
+      this.showToast({ title: 'Aviso', message: 'El servidor no devolvió UUID.', type: 'warning' });
+    }
+  } catch (error: any) {
+    console.error('Error al subir XML:', error);
+    this.uploadXmlError = error?.error?.message || 'Error al subir el XML.';
+    this.showToast({ title: 'Error', message: this.uploadXmlError, type: 'error', autoCloseMs: 4000 });
+  } finally {
+    this.uploadingXml = false;
+    event.target.value = '';
+  }
+}
+
+
+
   agregarMovimiento(): void {
     const defaultCc = this.centrosCosto.length ? this.centrosCosto[0].id_centrocosto : null;
     const defaultCuenta = this.cuentas.length ? this.cuentas[0].id_cuenta : null;
@@ -495,7 +681,7 @@ private getCentros(): void {
       monto: null,
       cliente: '',
       fecha: this.todayISO(),
-      cc: defaultCc,
+       cc: this.nuevaPoliza.id_centro ?? null,
       uuid: null as unknown as any,
       _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''
     };
@@ -536,7 +722,6 @@ private getCentros(): void {
 
   const cargos = movs.filter(m => m.operacion === '0').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
   const abonos = movs.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
-  if (!(Math.abs(cargos - abonos) <= 0.001 && cargos > 0)) return false;
 
   for (const m of movs) {
     const idCuenta = this.toNumOrNull(m.id_cuenta);
@@ -615,7 +800,7 @@ private getCentros(): void {
     const abonos = movsValidos.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
     if (Math.abs(cargos - abonos) > 0.001) {
       this.showToast({ type: 'warning', title: 'Partida doble', message: `No cuadra.\nCargos: ${cargos}\nAbonos: ${abonos}` });
-      return false;
+      
     }
 
     return true;
@@ -643,7 +828,7 @@ private getCentros(): void {
         cliente:         this.toStrOrNull(m.cliente),
         fecha:           this.toDateOrNull(m.fecha),
         cc:              this.toNumOrNull(m.cc),
-        uuid:            this.toStrOrNull(m.uuid) ?? this.toStrOrNull(this.uuidSeleccionado) ?? null,
+        uuid: this.toStrOrNull(m.uuid),
       }))
     };
 

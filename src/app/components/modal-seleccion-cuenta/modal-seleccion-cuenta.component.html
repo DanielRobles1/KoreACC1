@@ -1,0 +1,74 @@
+<!-- Fondo oscuro del modal -->
+<div *ngIf="open" class="modal-backdrop" (click)="cerrar()"></div>
+
+<!-- Contenedor principal del modal -->
+<div *ngIf="open" class="modal-cuentas">
+  <!-- Encabezado -->
+  <div class="modal-header">
+    <h3>Seleccionar cuenta contable</h3>
+    <button type="button" class="close-btn" (click)="cerrar()">×</button>
+  </div>
+
+  <!-- Cuerpo -->
+  <div class="modal-body">
+    <input
+      type="text"
+      class="field full"
+      [(ngModel)]="filtro"
+      placeholder="Buscar por código o nombre…" />
+
+    <!-- Tabla de cuentas -->
+   <table class="tabla-cuentas" *ngIf="cuentasFiltradas.length; else sinCuentas">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Código</th>
+      <th>Nombre</th>
+      
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr *ngFor="let c of cuentasFiltradas"
+        [class.cuenta-grupo]="!esPosteable(c)">
+
+      <td>
+        <input type="checkbox"
+               [disabled]="!esPosteable(c)"
+               [checked]="c.id_cuenta === cuentaSeleccionada?.id_cuenta"
+               (change)="seleccionarCuenta(c)" />
+      </td>
+
+      <td [style.font-weight]="!esPosteable(c) ? 800 : null">{{ c.codigo }}</td>
+      <td [style.font-weight]="!esPosteable(c) ? 800 : null">
+        {{ c.nombre }}
+        
+      </td>
+      
+    </tr>
+  </tbody>
+</table>
+
+<ng-template #sinCuentas>
+  <p style="padding:1rem; text-align:center; color:#6b7280;">
+    No se encontraron cuentas.
+  </p>
+</ng-template>
+
+<div class="modal-footer">
+  <button type="button" class="btn ghost" (click)="cerrar()">Cancelar</button>
+  <button type="button" class="btn primary" (click)="confirmar()">Guardar</button>
+</div>
+
+
+
+    <!-- Mensaje si no hay cuentas -->
+    <ng-template #sinCuentas>
+      <p style="padding:1rem; text-align:center; color:#6b7280;">
+        No se encontraron cuentas.
+      </p>
+    </ng-template>
+  </div>
+
+
+</div>

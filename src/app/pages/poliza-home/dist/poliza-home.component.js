@@ -34,6 +34,12 @@ var PolizaHomeComponent = /** @class */ (function () {
             message: '¿Deseas eliminar esta póliza?',
             onConfirm: (function () { })
         };
+        this.approveModal = {
+            open: false,
+            title: 'Confirmar aprobación',
+            message: '¿Deseas marcar esta póliza como Aprobada?',
+            onConfirm: (function () { })
+        };
         this.polizas = [];
         this.polizasFiltradas = [];
         this.tiposPoliza = [];
@@ -67,6 +73,22 @@ var PolizaHomeComponent = /** @class */ (function () {
         this.nombreTipo = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapTipos.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
         this.nombrePeriodo = function (id) { var _a; return (id == null ? '' : ((_a = _this.mapPeriodos.get(id)) !== null && _a !== void 0 ? _a : String(id))); };
         this.trackByFolio = function (_, p) { var _a, _b; return (_b = (_a = p === null || p === void 0 ? void 0 : p.id_poliza) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.folio) !== null && _b !== void 0 ? _b : _; };
+        this.filtros = {
+            folio: '',
+            concepto: '',
+            centro: '',
+            tipo: '',
+            periodo: '',
+            estado: ''
+        };
+        this.showFilter = {
+            folio: false,
+            concepto: false,
+            centro: false,
+            tipo: false,
+            periodo: false,
+            estado: false
+        };
     }
     PolizaHomeComponent.prototype.ngOnInit = function () {
         this.cargarCatalogos();
@@ -93,6 +115,52 @@ var PolizaHomeComponent = /** @class */ (function () {
         }
         finally {
             this.cerrarConfirmModal();
+        }
+    };
+    PolizaHomeComponent.prototype.abrirApproveModal = function (p) {
+        var _this = this;
+        var id = this.getIdPoliza(p);
+        if (!id) {
+            this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede aprobar: falta id_poliza.' });
+            return;
+        }
+        this.approveModal.title = 'Confirmar aprobación';
+        this.approveModal.message = "Vas a marcar la p\u00F3liza " + id + " como Aprobada. \u00BFContinuar?";
+        this.approveModal.onConfirm = function () {
+            // Marcamos loading para ese id mientras cambia el estado
+            _this.loadingId = id;
+            _this.api.changeEstadoPoliza(id, 'Aprobada').subscribe({
+                next: function (res) {
+                    var _a;
+                    p.estado = (_a = res === null || res === void 0 ? void 0 : res.estado) !== null && _a !== void 0 ? _a : 'Aprobada';
+                    _this.showToast({
+                        type: 'success',
+                        title: 'Estado actualizado',
+                        message: "La p\u00F3liza " + id + " ahora est\u00E1: " + p.estado + "."
+                    });
+                },
+                error: function (err) {
+                    var _a;
+                    console.error('changeEstadoPoliza (Aprobada):', err);
+                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo cambiar el estado a Aprobada.';
+                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                },
+                complete: function () { return (_this.loadingId = null); }
+            });
+        };
+        this.approveModal.open = true;
+    };
+    PolizaHomeComponent.prototype.cerrarApproveModal = function () {
+        this.approveModal.open = false;
+        this.approveModal.onConfirm = function () { };
+    };
+    PolizaHomeComponent.prototype.confirmarApproveModal = function () {
+        var _a, _b;
+        try {
+            (_b = (_a = this.approveModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
+        }
+        finally {
+            this.cerrarApproveModal();
         }
     };
     PolizaHomeComponent.prototype.onModalConfirmed = function () { this.confirmarConfirmModal(); };
@@ -357,6 +425,32 @@ var PolizaHomeComponent = /** @class */ (function () {
         }
         this.eliminarPoliza(id);
     };
+    PolizaHomeComponent.prototype.aplicarFiltros = function () {
+        var _this = this;
+        this.polizasFiltradas = this.polizas.filter(function (p) {
+            var folio = (p.folio || '').toString().toLowerCase();
+            var concepto = (p.concepto || '').toLowerCase();
+            var centro = _this.nombreCentro(p.id_centro).toLowerCase();
+            var tipo = _this.nombreTipo(p.id_tipopoliza).toLowerCase();
+            var periodo = _this.nombrePeriodo(p.id_periodo).toLowerCase();
+            var estado = _this.getEstado(p).toLowerCase();
+            return (folio.includes(_this.filtros.folio.toLowerCase()) &&
+                concepto.includes(_this.filtros.concepto.toLowerCase()) &&
+                centro.includes(_this.filtros.centro.toLowerCase()) &&
+                tipo.includes(_this.filtros.tipo.toLowerCase()) &&
+                periodo.includes(_this.filtros.periodo.toLowerCase()) &&
+                estado.includes(_this.filtros.estado.toLowerCase()));
+        });
+    };
+    PolizaHomeComponent.prototype.toggleFilter = function (col) {
+        // Cierra los demás filtros si quieres
+        for (var key in this.showFilter) {
+            if (key !== col)
+                this.showFilter[key] = false;
+        }
+        // Abre/cierra el filtro de esta columna
+        this.showFilter[col] = !this.showFilter[col];
+    };
     PolizaHomeComponent.prototype.eliminarPoliza = function (id_poliza) {
         var _this = this;
         if (id_poliza == null) {
@@ -393,7 +487,7 @@ var PolizaHomeComponent = /** @class */ (function () {
     PolizaHomeComponent.prototype.cambiarEstadoPoliza = function (p, nuevo) {
         var _this = this;
         if (!this.isAllowedEstado(nuevo)) {
-            this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Contabilizada.' });
+            this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Aprobada, Contabilizada.' });
             return;
         }
         var id = this.getIdPoliza(p);

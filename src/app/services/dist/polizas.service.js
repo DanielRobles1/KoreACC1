@@ -99,6 +99,9 @@ var PolizasService = /** @class */ (function () {
             movimiento_ids: movimientoIds
         });
     };
+    PolizasService.prototype.getEjercicios = function () {
+        return this.http.get(this.api + "/ejercicios");
+    };
     /** GET /api/v1/cfdi */
     PolizasService.prototype.listCfdi = function (params) {
         var httpParams = new http_1.HttpParams();
@@ -115,6 +118,14 @@ var PolizasService = /** @class */ (function () {
     // polizas.service.ts
     PolizasService.prototype.changeEstadoPoliza = function (id_poliza, estado) {
         return this.http.patch(this.api + "/poliza/" + id_poliza, { estado: estado });
+    };
+    /** POST /api/v1/polizas/from-evento  (crea póliza con el motor) */
+    PolizasService.prototype.createPolizaFromEvento = function (body) {
+        return this.http.post(this.api + "/poliza/from-evento", body);
+    };
+    /** POST /api/v1/polizas/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
+    PolizasService.prototype.expandEventoEnPoliza = function (polizaId, body) {
+        return this.http.post(this.api + "/poliza/" + polizaId + "/expand-evento", body);
     };
     PolizasService = __decorate([
         core_1.Injectable({ providedIn: 'root' })

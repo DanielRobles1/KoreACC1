@@ -40,7 +40,8 @@
   </div>
 
   <!-- Contenido -->
-  <div class="polizas-container">
+<div class="polizas-container" style="width:100%; overflow-x:auto;">
+
     <h2>Pólizas registradas</h2>
 
     <button type="button" class="pill-btn" routerLink="/polizas">
@@ -53,25 +54,103 @@
 
     <!-- Buscador -->
     <input
-      type="search"
-      [(ngModel)]="q"
-      (ngModelChange)="onBuscarChange($event)"
-      placeholder="Buscar pólizas por folio, concepto, UUID, cliente…"
-      style="min-width:280px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgba(10, 10, 10, 0.25); background:transparent; color:#0a0a0a; outline:none; margin-bottom:.75rem; margin-left:1rem;" />
+     
+      style="min-width:280px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgb(255, 255, 255); background:transparent; color:#ffffff; outline:none; margin-bottom:.75rem; margin-left:1rem;" />
 
     <table class="tabla-polizas">
-      <thead>
-        <tr>
-          <th>Ver más</th>
-          <th>Folio</th>
-          <th>Concepto</th>
-          <th>Centro</th>
-          <th>Tipo</th>
-          <th>Periodo</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
+   <thead>
+  
+    <th>Ver más</th>
+
+    <!-- Folio -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Folio
+        <span class="filter-icon" (click)="toggleFilter('folio')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['folio']">
+        <input type="text" [(ngModel)]="filtros.folio" (input)="aplicarFiltros()" placeholder="Filtrar folio" />
+      </div>
+    </th>
+
+    <!-- Concepto -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Concepto
+        <span class="filter-icon" (click)="toggleFilter('concepto')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['concepto']">
+        <input type="text" [(ngModel)]="filtros.concepto" (input)="aplicarFiltros()" placeholder="Filtrar concepto" />
+      </div>
+    </th>
+
+    <!-- Centro -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Centro
+        <span class="filter-icon" (click)="toggleFilter('centro')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['centro']">
+        <select [(ngModel)]="filtros.centro" (change)="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option *ngFor="let c of centros" [value]="c.nombre">{{ c.nombre }}</option>
+        </select>
+      </div>
+    </th>
+
+    <!-- Tipo -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Tipo
+        <span class="filter-icon" (click)="toggleFilter('tipo')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['tipo']">
+        <select [(ngModel)]="filtros.tipo" (change)="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option *ngFor="let t of tiposPoliza" [value]="t.nombre">{{ t.nombre }}</option>
+        </select>
+      </div>
+    </th>
+
+    <!-- Periodo -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Periodo
+        <span class="filter-icon" (click)="toggleFilter('periodo')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['periodo']">
+        <select [(ngModel)]="filtros.periodo" (change)="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option *ngFor="let p of periodos" [value]="p.nombre">{{ p.nombre }}</option>
+        </select>
+      </div>
+    </th>
+
+    <!-- Estado -->
+    <th class="th-with-filter">
+      <div class="th-content">
+        Estado
+        <span class="filter-icon" (click)="toggleFilter('estado')">▼</span>
+      </div>
+      <div class="filter-dropdown" *ngIf="showFilter['estado']">
+        <select [(ngModel)]="filtros.estado" (change)="aplicarFiltros()">
+          <option value="">Todos</option>
+          <option value="Aprobada">Aprobada</option>
+          <option value="Por revisar">Por revisar</option>
+        </select>
+      </div>
+    </th>
+
+    <th>Acciones</th>
+ 
+</thead>
+
+ 
+
+ 
+
+
+
 
       <tbody>
         <ng-container *ngFor="let p of (polizasFiltradas ?? []); trackBy: trackByFolio">
@@ -104,7 +183,8 @@
 
             <!-- Acciones -->
             <td>
-              <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+              <div class="acciones">
+
                 <!-- Revisada -->
                 <button
                   type="button"

@@ -208,3 +208,96 @@
   outline: 2px solid #7aa2ff;
   outline-offset: 2px;
 }
+
+/* Fila de filtros debajo del encabezado */
+/* === FILA DE FILTROS (look corporativo) === */
+.filter-row {
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filter-row th {
+  padding: 10px 12px;
+}
+
+/* === INPUTS DE FILTRO === */
+.filter-row input {
+  width: 80%;
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Placeholder elegante */
+.filter-row input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* === HOVER & FOCUS (efecto premium) === */
+.filter-row input:hover {
+  border-color: #94a3b8;
+  background-color: #f9fafb;
+}
+
+.filter-row input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  transform: scale(1.02);
+}
+
+/* === TABLA EN CONJUNTO === */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+/* === Ajuste de alineación visual === */
+.filter-row input {
+  text-align: center;
+}
+
+/* === Sombra superior para separar encabezado === */
+thead tr:first-child {
+  background-color: #f9fafb;
+  box-shadow: inset 0 -2px 0 #e2e8f0;
+}
+
+/* === Sutil animación al interactuar === */
+.filter-row input {
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.1s;
+}
+
+.th-with-filter {
+  position: relative;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  /* justo debajo del título */
+  left: 0;
+  background: #1a1a1a;
+  padding: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  min-width: 120px;
+}

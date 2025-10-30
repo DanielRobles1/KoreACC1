@@ -102,6 +102,7 @@ export class PolizasService {
     return this.http.delete<any>(`${this.api}/movimiento-poliza/${id}`);
   }
 
+
   /** DELETE /api/v1/poliza/:ID */
  deletePoliza(id: number): Observable<any> {
   return this.http.delete<any>(`${this.api}/poliza/${id}`);
@@ -140,6 +141,9 @@ return this.http.get<any>(`${this.api}/centros`);  }
       movimiento_ids: movimientoIds,
     });
   }
+getEjercicios() {
+  return this.http.get<any>(`${this.api}/ejercicios`);
+}
 
   /** GET /api/v1/cfdi */
   listCfdi(params?: { limit?: number; q?: string }): Observable<CfdiRow[] | any> {
