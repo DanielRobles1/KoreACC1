@@ -8,10 +8,10 @@ export type PeriodoTipo = 'SEMANAL' | 'MENSUAL' | 'ANUAL' | 'PERSONALIZADO';
 export interface PeriodoContableDto {
   id_periodo?: number;
   id_empresa: number;
-  id_ejercicio: number;    
+  id_ejercicio: number;
   tipo_periodo: PeriodoTipo;
-  fecha_inicio: string; 
-  fecha_fin: string;      
+  fecha_inicio: string;
+  fecha_fin: string;
   periodo_daterange?: any;
   esta_abierto?: boolean;
   created_at?: string;
@@ -23,17 +23,17 @@ export interface PeriodoQuery {
   id_ejercicio?: number;           // ⬅️ Permite filtrar por ejercicio
   tipo_periodo?: PeriodoTipo;
   esta_abierto?: boolean;
-  desde?: string; 
-  hasta?: string; 
+  desde?: string;
+  hasta?: string;
 }
 
 export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
 
 @Injectable({ providedIn: 'root' })
 export class PeriodoContableService {
-  private baseUrl ='http://localhost:3000/api/v1/periodos';
+  private baseUrl = 'http://localhost:3000/api/v1/periodos';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   list(query: PeriodoQuery = {}): Observable<PeriodoContableDto[]> {
     let params = new HttpParams();
@@ -64,10 +64,11 @@ export class PeriodoContableService {
     return this.http.post<PeriodoContableDto>(this.baseUrl, payload);
   }
 
-  generate(id_ejercicio: number, frecuencia: FrecuenciaPeriodo): Observable<PeriodoContableDto[]> {
+  generate(id_ejercicio: number, frecuencia: FrecuenciaPeriodo, id_usuario: number, id_centro: number): Observable<any> {
     const url = `${this.baseUrl}/generar`;
-    return this.http.post<PeriodoContableDto[]>(url, { id_ejercicio, frecuencia });
+    return this.http.post<any>(url, { id_ejercicio, frecuencia, id_usuario, id_centro });
   }
+
 
   update(id_periodo: number, payload: Partial<PeriodoContableDto>): Observable<PeriodoContableDto> {
     return this.http.put<PeriodoContableDto>(`${this.baseUrl}/${id_periodo}`, payload);

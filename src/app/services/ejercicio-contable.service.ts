@@ -14,9 +14,9 @@ export interface EjercicioContableDto {
 
 @Injectable({ providedIn: 'root' })
 export class EjercicioContableService {
-  private baseUrl = 'http://localhost:3000/api/v1/ejercicios'; 
+  private baseUrl = 'http://localhost:3000/api/v1/ejercicios';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   listByEmpresa(id_empresa: number): Observable<EjercicioContableDto[]> {
     return this.http.get<EjercicioContableDto[]>(`${this.baseUrl}?id_empresa=${id_empresa}`);
@@ -38,7 +38,7 @@ export class EjercicioContableService {
     return this.http.patch<EjercicioContableDto>(`${this.baseUrl}/${id}/abrir`, {});
   }
 
-  cerrar(id: number): Observable<EjercicioContableDto> {
-    return this.http.patch<EjercicioContableDto>(`${this.baseUrl}/${id}/cerrar`, {});
+  cerrar(id: number, payload: {cuentaResultadosId: number;traspasarACapital?: boolean; cuentaCapitalId?: number | null;id_usuario: number; id_centro: number;}): Observable<any> {
+    return this.http.patch<any>(`${this.baseUrl}/${id}/cerrar`, payload);
   }
 }

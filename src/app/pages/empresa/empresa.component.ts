@@ -554,7 +554,7 @@ export class EmpresaComponent implements OnInit {
       case 'cerrar':
         if (!this.canEdit) return this.openError('No tienes permisos para cerrar ejercicios');
         this.confirmTitle = 'Confirmar cierre';
-        this.confirmMessage = `¿Marcar como CERRADO el ejercicio ${evt.row.anio}?`;
+        this.confirmMessage = `¿Marcar como CERRADO el ejercicio ${evt.row.anio}? Esto generará la póliza de cierre y actualizará la apertura del siguiente ejercicio (si existe).`;
         this.confirmKind = 'ejercicio-cerrar';
         this.confirmPayload = { id_ejercicio: evt.row.id_ejercicio };
         this.confirmOpen = true;
@@ -768,11 +768,40 @@ export class EmpresaComponent implements OnInit {
       case 'ejercicio-cerrar': {
         const id = payload?.id_ejercicio as number | undefined;
         if (!id) return this.openError('No se encontró el identificador del ejercicio.');
-        this.ejerciciosService.cerrar(id).subscribe({
+
+        // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
+        const userId = 1;
+        if (!userId) {
+          return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
+        }
+        // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
+        const centroId = 300;
+        if (!centroId) {
+          return this.openError('No se pudo determinar el centro de costo (id_centro).');
+        }
+
+        const cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
+        const traspasarACapital  = false;
+        const cuentaCapitalId    = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
+
+        this.ejerciciosService.cerrar(id, {
+          cuentaResultadosId,
+          traspasarACapital,
+          cuentaCapitalId,
+          id_usuario: userId,
+          id_centro: centroId,
+        }).subscribe({
           next: (res) => {
-            this.ejercicios = this.ejercicios.map(e => e.id_ejercicio === id ? { ...e, ...res } : e);
-            if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(res);
-            this.openSuccess('Ejercicio marcado como CERRADO.');
+            this.ejercicios = this.ejercicios.map(e =>
+              e.id_ejercicio === id ? { ...e, esta_abierto: false } : e
+            );
+            if (this.ejercicioSeleccionado?.id_ejercicio === id) {
+              this.setEjercicioSeleccionado({ ...this.ejercicioSeleccionado, esta_abierto: false } as any);
+            }
+            this.openSuccess(
+              res?.mensaje ||
+              'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
+            );
           },
           error: (err) => this.openError('No se pudo cerrar el ejercicio', err),
         });
@@ -823,8 +852,11 @@ export class EmpresaComponent implements OnInit {
 
     this.isGenerating = true;
     this.openSuccess(`Generando períodos ${tipo.toLowerCase()}...`);
+    // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
+    const userId = 1;
+    const centroId = 300;
 
-    this.periodosService.generate(ej.id_ejercicio!, tipo).subscribe({
+    this.periodosService.generate(ej.id_ejercicio!, tipo, userId, centroId).subscribe({
       next: (periodosGenerados) => {
         this.loadPeriodos(); 
         const n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
