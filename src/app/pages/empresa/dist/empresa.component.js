@@ -80,12 +80,13 @@ var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
 var EmpresaComponent = /** @class */ (function () {
-    function EmpresaComponent(empresaService, periodosService, auth, toast, ejerciciosService) {
+    function EmpresaComponent(empresaService, periodosService, auth, toast, ejerciciosService, polizasService) {
         this.empresaService = empresaService;
         this.periodosService = periodosService;
         this.auth = auth;
         this.toast = toast;
         this.ejerciciosService = ejerciciosService;
+        this.polizasService = polizasService;
         // }Layout
         this.sidebarOpen = true;
         // tablas
@@ -135,6 +136,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.actions2 = [
             { id: 'edit', label: 'Editar', tooltip: 'Editar' },
             { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
+            { id: 'cerrar', label: 'Cerrar', tooltip: 'Cerrar' },
         ];
         // Modal período
         this.modalPeriodoOpen = false;
@@ -237,7 +239,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.canEdit = this.auth.hasPermission('editar_empresa');
         this.canDelete = this.auth.hasPermission('eliminar_empresa');
         this.actions = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Empresa' }] : []));
-        this.actions2 = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []));
+        this.actions2 = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []), (this.canEdit ? [{ id: 'cerrar', tooltip: 'Cerrar Periodo' }] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []));
         this.actions3 = __spreadArrays((this.canEdit ? [
             { id: 'edit', tooltip: 'Editar Ejercicio' },
             { id: 'abrir', tooltip: 'Marcar como abierto' },
@@ -310,10 +312,16 @@ var EmpresaComponent = /** @class */ (function () {
         var _this = this;
         var _a;
         var idEmp = this.empresaId();
-        if (!idEmp)
+        if (!idEmp) {
+            this.periodos = [];
             return;
+        }
         var idEj = (_a = this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio;
-        this.periodosService.listByEmpresa(idEmp, idEj).subscribe({
+        if (!idEj) {
+            this.periodos = [];
+            return;
+        }
+        this.periodosService.getPeriodosByEjercicio(idEj).subscribe({
             next: function (items) { return _this.periodos = items !== null && items !== void 0 ? items : []; },
             error: function (err) { return _this.openError('Error al cargar los períodos', err); }
         });
@@ -411,6 +419,15 @@ var EmpresaComponent = /** @class */ (function () {
                 this.confirmPayload = { id_periodo: evt.row.id_periodo };
                 this.confirmOpen = true;
                 break;
+            case 'cerrar': {
+                var row = evt.row;
+                this.confirmTitle = 'Cerrar período';
+                this.confirmMessage = "\u00BFSeguro que deseas cerrar el per\u00EDodo " + (row === null || row === void 0 ? void 0 : row.fecha_inicio) + " \u2192 " + (row === null || row === void 0 ? void 0 : row.fecha_fin) + "?";
+                this.confirmKind = 'periodo-cerrar';
+                this.confirmPayload = { id_periodo: row.id_periodo };
+                this.confirmOpen = true;
+                break;
+            }
             default:
                 this.openError("Acci\u00F3n no soportada: " + evt.action);
         }
@@ -541,7 +558,7 @@ var EmpresaComponent = /** @class */ (function () {
                 if (!this.canEdit)
                     return this.openError('No tienes permisos para cerrar ejercicios');
                 this.confirmTitle = 'Confirmar cierre';
-                this.confirmMessage = "\u00BFMarcar como CERRADO el ejercicio " + evt.row.anio + "?";
+                this.confirmMessage = "\u00BFMarcar como CERRADO el ejercicio " + evt.row.anio + "? Esto generar\u00E1 la p\u00F3liza de cierre y actualizar\u00E1 la apertura del siguiente ejercicio (si existe).";
                 this.confirmKind = 'ejercicio-cerrar';
                 this.confirmPayload = { id_ejercicio: evt.row.id_ejercicio };
                 this.confirmOpen = true;
@@ -557,6 +574,17 @@ var EmpresaComponent = /** @class */ (function () {
     EmpresaComponent.prototype.setEjercicioSeleccionado = function (ej) {
         this.ejercicioSeleccionado = ej;
         this.saveEjercicioSeleccionado(ej);
+        this.loadPeriodos();
+        if (ej === null || ej === void 0 ? void 0 : ej.id_ejercicio) {
+            this.polizasService.selectEjercicio(ej.id_ejercicio).subscribe({
+                next: function () {
+                    console.log('✅ Ejercicio seleccionado reflejado en base de datos');
+                },
+                error: function (err) {
+                    console.error('❌ Error al actualizar el ejercicio en la base de datos:', err);
+                }
+            });
+        }
     };
     // Guardar ejercicio desde modal
     EmpresaComponent.prototype.confirmEjercicioModal = function () {
@@ -644,13 +672,29 @@ var EmpresaComponent = /** @class */ (function () {
                 });
                 break;
             }
-            case 'periodo-delete': {
+            case 'periodo-cerrar': {
                 var idp_1 = payload === null || payload === void 0 ? void 0 : payload.id_periodo;
                 if (!idp_1)
                     return this.openError('No se encontró el identificador del período.');
-                this.periodosService["delete"](idp_1).subscribe({
+                this.periodosService.cerrar(idp_1).subscribe({
+                    next: function (res) {
+                        // Actualiza el registro localmente a cerrado
+                        _this.periodos = _this.periodos.map(function (p) {
+                            return p.id_periodo === idp_1 ? __assign(__assign({}, p), { esta_abierto: false }) : p;
+                        });
+                        _this.openSuccess((res === null || res === void 0 ? void 0 : res.message) || 'Período cerrado correctamente.');
+                    },
+                    error: function (err) { return _this.openError('No se pudo cerrar el período', err); }
+                });
+                break;
+            }
+            case 'periodo-delete': {
+                var idp_2 = payload === null || payload === void 0 ? void 0 : payload.id_periodo;
+                if (!idp_2)
+                    return this.openError('No se encontró el identificador del período.');
+                this.periodosService["delete"](idp_2).subscribe({
                     next: function () {
-                        _this.periodos = _this.periodos.filter(function (p) { return p.id_periodo !== idp_1; });
+                        _this.periodos = _this.periodos.filter(function (p) { return p.id_periodo !== idp_2; });
                         _this.openSuccess('Período eliminado.');
                     },
                     error: function (err) { return _this.openError('No se pudo eliminar el período', err); }
@@ -703,6 +747,7 @@ var EmpresaComponent = /** @class */ (function () {
                         _this.ejercicios = _this.ejercicios.filter(function (e) { return e.id_ejercicio !== id_1; });
                         if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_1)
                             _this.setEjercicioSeleccionado(null);
+                        _this.loadPeriodos();
                         _this.openSuccess('Ejercicio eliminado.');
                     },
                     error: function (err) { return _this.openError('No se pudo eliminar el ejercicio', err); }
@@ -729,13 +774,36 @@ var EmpresaComponent = /** @class */ (function () {
                 var id_3 = payload === null || payload === void 0 ? void 0 : payload.id_ejercicio;
                 if (!id_3)
                     return this.openError('No se encontró el identificador del ejercicio.');
-                this.ejerciciosService.cerrar(id_3).subscribe({
+                // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
+                var userId = 1;
+                if (!userId) {
+                    return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
+                }
+                // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
+                var centroId = 300;
+                if (!centroId) {
+                    return this.openError('No se pudo determinar el centro de costo (id_centro).');
+                }
+                var cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
+                var traspasarACapital = false;
+                var cuentaCapitalId = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
+                this.ejerciciosService.cerrar(id_3, {
+                    cuentaResultadosId: cuentaResultadosId,
+                    traspasarACapital: traspasarACapital,
+                    cuentaCapitalId: cuentaCapitalId,
+                    id_usuario: userId,
+                    id_centro: centroId
+                }).subscribe({
                     next: function (res) {
                         var _a;
-                        _this.ejercicios = _this.ejercicios.map(function (e) { return e.id_ejercicio === id_3 ? __assign(__assign({}, e), res) : e; });
-                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_3)
-                            _this.setEjercicioSeleccionado(res);
-                        _this.openSuccess('Ejercicio marcado como CERRADO.');
+                        _this.ejercicios = _this.ejercicios.map(function (e) {
+                            return e.id_ejercicio === id_3 ? __assign(__assign({}, e), { esta_abierto: false }) : e;
+                        });
+                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_3) {
+                            _this.setEjercicioSeleccionado(__assign(__assign({}, _this.ejercicioSeleccionado), { esta_abierto: false }));
+                        }
+                        _this.openSuccess((res === null || res === void 0 ? void 0 : res.mensaje) ||
+                            'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).');
                     },
                     error: function (err) { return _this.openError('No se pudo cerrar el ejercicio', err); }
                 });
@@ -764,7 +832,7 @@ var EmpresaComponent = /** @class */ (function () {
     EmpresaComponent.prototype.generatePeriodsForSelectedExercise = function (tipo) {
         if (tipo === void 0) { tipo = 'MENSUAL'; }
         return __awaiter(this, void 0, void 0, function () {
-            var ej, idEmp;
+            var ej, idEmp, userId, centroId;
             var _this = this;
             return __generator(this, function (_a) {
                 try {
@@ -780,7 +848,9 @@ var EmpresaComponent = /** @class */ (function () {
                 }
                 this.isGenerating = true;
                 this.openSuccess("Generando per\u00EDodos " + tipo.toLowerCase() + "...");
-                this.periodosService.generate(ej.id_ejercicio, tipo).subscribe({
+                userId = 1;
+                centroId = 300;
+                this.periodosService.generate(ej.id_ejercicio, tipo, userId, centroId).subscribe({
                     next: function (periodosGenerados) {
                         _this.loadPeriodos();
                         var n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;

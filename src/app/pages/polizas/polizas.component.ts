@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
-import { Location } from '@angular/common';
-import { Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
 import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component';
 import { firstValueFrom } from 'rxjs';
+
 type CfdiOption = {
   uuid: string;
   folio?: string | null;
@@ -40,33 +39,37 @@ type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 @Component({
   selector: 'app-polizas',
   standalone: true,
-  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent,RouterModule, ModalSeleccionCuentaComponent],
+  imports: [CommonModule, FormsModule, PolizasLayoutComponent, ToastMessageComponent, RouterModule, ModalSeleccionCuentaComponent],
   templateUrl: './polizas.component.html',
   styleUrls: ['./polizas.component.scss']
 })
 export class PolizasComponent implements OnInit {
-   ejercicioActual: Ejercicio | null = null;
+  ejercicioActual!: any; // objeto completo
+  ejercicioActualId!: number; // id del ejercicio seleccionado
+
   sidebarOpen = true;
-// --- Manejo de XML por movimiento ---
-xmlMovimientoIndex: number | null = null;
-uploadingXml = false;
-selectedXmlName = '';
-uploadXmlError = '';
+  // --- Manejo de XML por movimiento ---
+  xmlMovimientoIndex: number | null = null;
+  uploadingXml = false;
+  selectedXmlName = '';
+  uploadXmlError = '';
   // Usuario actual y CC
   currentUser: UsuarioLigero | null = null;
   centrosCosto: CentroCostoItem[] = [];
   private centrosCostoMap = new Map<number, CentroCostoItem>();
   location: any;
   router: any;
-volver() {
-this.router.navigate(['/poliza-home']);}
+  volver() { this.router.navigate(['/poliza-home']); }
+
   // Listado
   polizas: Poliza[] = [];
-cuentasQuery = '';
+  cuentasQuery = '';
+  ejercicios: any[] = []; // array de ejercicios para el select
 
   tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
-  periodos:     Array<{ id_periodo: number;  nombre: string }> = [];
-  centros:      Array<{ id_centro: number;   nombre: string }> = [];
+  periodos: Array<{ id_periodo: number; nombre: string }> = [];
+  private allPeriodos: any[] = []; // <- NUEVO: todos los periodos sin filtrar
+  centros: Array<{ id_centro: number; nombre: string }> = [];
 
   // Catálogo de cuentas (para movimientos)
   cuentas: CuentaLigera[] = [];
@@ -79,9 +82,6 @@ cuentasQuery = '';
 
   // Formulario de nueva póliza
   nuevaPoliza: Partial<Poliza> = { movimientos: [] };
-
-
-  
 
   // CFDI importados y selección de UUID
   cfdiOptions: CfdiOption[] = [];
@@ -101,40 +101,36 @@ cuentasQuery = '';
   constructor(private api: PolizasService) {}
 
   ngOnInit(): void {
-    
     this.cargarEjercicioActivo();
     this.initUsuarioActual();     // setea id_usuario
     this.cargarCatalogos();       // tipos/periodos/centros
-    this.getCentros(); // centros de costo para tabla
+    this.getCentros();            // centros de costo para tabla
     this.cargarCuentas();         // catálogo de cuentas para select
     this.cargarPolizas();         // listado
     this.cargarCfdiRecientes();   // UUIDs
-    if (!this.evento.id_empresa) {
-      this.evento.id_empresa = 1;
-    }
-    if (!this.evento.fecha_operacion) {
-      this.evento.fecha_operacion = this.todayISO();
-    }
+    if (!this.evento.id_empresa) this.evento.id_empresa = 1;
+    if (!this.evento.fecha_operacion) this.evento.fecha_operacion = this.todayISO();
   }
-modalCuentasAbierto = false;
-indiceMovimientoSeleccionado: number | null = null;
 
-abrirModalCuentas(index: number): void {
-  this.indiceMovimientoSeleccionado = index;
-  this.modalCuentasAbierto = true;
-}
+  modalCuentasAbierto = false;
+  indiceMovimientoSeleccionado: number | null = null;
 
-cerrarModalCuentas(): void {
-  this.modalCuentasAbierto = false;
-  this.indiceMovimientoSeleccionado = null;
-}
-
-onCuentaSeleccionadaModal(cuenta: CuentaLigera): void {
-  if (this.indiceMovimientoSeleccionado != null) {
-    this.nuevaPoliza.movimientos![this.indiceMovimientoSeleccionado].id_cuenta = cuenta.id_cuenta;
+  abrirModalCuentas(index: number): void {
+    this.indiceMovimientoSeleccionado = index;
+    this.modalCuentasAbierto = true;
   }
-  this.cerrarModalCuentas();
-}
+
+  cerrarModalCuentas(): void {
+    this.modalCuentasAbierto = false;
+    this.indiceMovimientoSeleccionado = null;
+  }
+
+  onCuentaSeleccionadaModal(cuenta: CuentaLigera): void {
+    if (this.indiceMovimientoSeleccionado != null) {
+      this.nuevaPoliza.movimientos![this.indiceMovimientoSeleccionado].id_cuenta = cuenta.id_cuenta;
+    }
+    this.cerrarModalCuentas();
+  }
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
@@ -160,7 +156,7 @@ onCuentaSeleccionadaModal(cuenta: CuentaLigera): void {
     if (isNaN(dt.getTime())) return s;
     return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
   }
-  
+
   private toNumOrNull = (v: any): number | null =>
     (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
   private toStrOrNull = (v: any): string | null =>
@@ -245,112 +241,163 @@ onCuentaSeleccionadaModal(cuenta: CuentaLigera): void {
     } catch { return null; }
   }
 
-getCuentasFiltradasGlobal(): CuentaLigera[] {
-  const q = this.normalizaStr(String(this.cuentasQuery || '').trim());
-  if (!q) return this.cuentas;
-  return this.cuentas.filter(c => {
-    const cad = `${c.codigo} ${c.nombre}`;
-    return this.normalizaStr(cad).includes(q);
-  });
-}
-onCuentaSeleccionada(index: number) {
-  const movs = (this.nuevaPoliza.movimientos ?? []);
-  if (!movs[index]) return;
-  // Limpia el texto del buscador cuando se selecciona una cuenta
-  (movs[index] as any)._cuentaQuery = '';
-}
-onCuentaSeleccionadaGlobal(): void {
-  this.cuentasQuery = ''; // limpia el buscador global
-}
-getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
-  const base = this.getCuentasFiltradasGlobal(); 
-
-  if (!selectedId) return base;
-
-  // Si ya está incluida, regresamos tal cual
-  if (base.some(c => c.id_cuenta === selectedId)) return base;
-
-  // Si no está, la armamos desde el mapa y la agregamos al inicio
-  const sel = this.cuentasMap.get(selectedId);
-  return sel
-    ? [{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }, ...base]
-    : base;
-}
-private cargarEjercicioActivo(): void {
-  const svc: any = this.api as any;
-  const fn =
-    svc.getEjercicioActivo ||
-    svc.fetchEjercicioActivo ||
-    svc.getEjercicio ||
-    svc.fetchEjercicio ||
-    svc.listEjercicios ||
-    svc.getEjercicios;
-
-  if (typeof fn !== 'function') {
-    console.warn('⚠ No existe método de API para Ejercicio.');
-    this.ejercicioActual = null;
-    return;
+  getCuentasFiltradasGlobal(): CuentaLigera[] {
+    const q = this.normalizaStr(String(this.cuentasQuery || '').trim());
+    if (!q) return this.cuentas;
+    return this.cuentas.filter(c => {
+      const cad = `${c.codigo} ${c.nombre}`;
+      return this.normalizaStr(cad).includes(q);
+    });
+  }
+  onCuentaSeleccionada(index: number) {
+    const movs = (this.nuevaPoliza.movimientos ?? []);
+    if (!movs[index]) return;
+    (movs[index] as any)._cuentaQuery = '';
+  }
+  onCuentaSeleccionadaGlobal(): void { this.cuentasQuery = ''; }
+  getCuentasParaFila(index: number, selectedId?: number | null): CuentaLigera[] {
+    const base = this.getCuentasFiltradasGlobal();
+    if (!selectedId) return base;
+    if (base.some(c => c.id_cuenta === selectedId)) return base;
+    const sel = this.cuentasMap.get(selectedId);
+    return sel ? [{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }, ...base] : base;
   }
 
-  const isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
+  private cargarEjercicioActivo(): void {
+    const svc: any = this.api as any;
+    const fn =
+      svc.getEjercicioActivo ||
+      svc.fetchEjercicioActivo ||
+      svc.getEjercicio ||
+      svc.fetchEjercicio ||
+      svc.listEjercicios ||
+      svc.getEjercicios;
 
-  fn.call(this.api).subscribe({
-    next: (r: any) => {
-      console.log('🔍 Resultado de ejercicios:', r); // 👈 esto te dirá qué devuelve tu backend
-
-      const items = isList ? this.normalizeList(r) : [r];
-      if (!items || !items.length) {
-        console.warn('⚠ No se encontraron ejercicios.');
-        this.ejercicioActual = null;
-        return;
-      }
-
-      // Elige el ejercicio activo o vigente
-      let elegido =
-        items.find((e: any) => e?.activo === true || e?.activo === 1 || e?.activo === '1') ??
-        items.find((e: any) => {
-          const hoy = new Date().toISOString().slice(0, 10);
-          const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
-          const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
-          return fi <= hoy && hoy <= ff;
-        }) ??
-        items[0];
-
-      if (!elegido) {
-        console.warn('⚠ No se encontró ejercicio activo.');
-        this.ejercicioActual = null;
-        return;
-      }
-
-      this.ejercicioActual = {
-        id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? elegido.ID ?? 0),
-        nombre: String(
-          elegido.nombre ??
-          elegido.descripcion ??
-          elegido.year ??
-          elegido.ejercicio ??
-          ''
-        ).trim() || `Ejercicio ${elegido.id_ejercicio ?? ''}`,
-        fecha_inicio: this.fmtDate(elegido.fecha_inicio ?? elegido.inicio),
-        fecha_fin: this.fmtDate(elegido.fecha_fin ?? elegido.fin),
-        activo: Boolean(elegido.activo)
-      };
-
-      console.log('✅ Ejercicio elegido:', this.ejercicioActual);
-    },
-    error: (err: any) => {
-      console.error('❌ Error al cargar ejercicio:', err);
-      this.showToast({
-        type: 'error',
-        title: 'Error',
-        message: 'No se pudo cargar el ejercicio actual.'
-      });
+    if (typeof fn !== 'function') {
+      console.warn('⚠ No existe método de API para Ejercicio.');
       this.ejercicioActual = null;
+      return;
     }
-  });
-}
 
+    const isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
 
+    fn.call(this.api).subscribe({
+      next: (r: any) => {
+        console.log('🔍 Resultado de ejercicios:', r);
+
+        const items = isList ? this.normalizeList(r) : [r];
+
+        // Solo incluir ejercicios abiertos o activos
+        this.ejercicios = items.filter((e: any) => {
+          const activoFlag = e.activo === true || e.activo === 1 || e.activo === '1' || e.activo_flag === 1 || e.esta_abierto === true;
+          const hoy = new Date().toISOString().slice(0, 10);
+
+          const fiRaw = e.fecha_inicio ?? e.inicio ?? e.fechaInicio ?? e.inicio_ejercicio;
+          const ffRaw = e.fecha_fin ?? e.fin ?? e.fechaFin ?? e.fin_ejercicio;
+          const fi = this.fmtDate(fiRaw);
+          const ff = this.fmtDate(ffRaw);
+
+          const dentroDeFechas = !!(fi && ff && fi <= hoy && hoy <= ff);
+          return activoFlag || dentroDeFechas;
+        });
+
+        const seleccionado = items.find((e: any) => e.is_selected) ?? items[0];
+        if (seleccionado) this.ejercicioActualId = Number(seleccionado.id_ejercicio ?? seleccionado.id);
+
+        if (!items || !items.length) {
+          console.warn('⚠ No se encontraron ejercicios.');
+          this.ejercicioActual = null;
+          return;
+        }
+
+        let elegido = items.find((e: any) => e?.is_selected) ??
+                      items.find((e: any) => {
+                        const hoy = new Date().toISOString().slice(0, 10);
+                        const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
+                        const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
+                        return fi <= hoy && hoy <= ff;
+                      }) ?? items[0];
+
+        if (!elegido) {
+          console.warn('⚠ No se encontró ejercicio activo.');
+          this.ejercicioActual = null;
+          return;
+        }
+
+        this.ejercicioActual = {
+          id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? elegido.ID ?? 0),
+          nombre: String(
+            elegido.nombre ??
+            elegido.descripcion ??
+            elegido.year ??
+            elegido.ejercicio ??
+            ''
+          ).trim() || `Ejercicio ${elegido.id_ejercicio ?? ''}`,
+          fecha_inicio: this.fmtDate(elegido.fecha_inicio ?? elegido.inicio),
+          fecha_fin: this.fmtDate(elegido.fecha_fin ?? elegido.fin),
+          activo: Boolean(elegido.activo ?? elegido.esta_abierto)
+        };
+
+        console.log('✅ Ejercicio elegido:', this.ejercicioActual);
+
+        // NUEVO: filtrar periodos según el ejercicio elegido
+        this.applyPeriodoFilter();
+      },
+      error: (err: any) => {
+        console.error('❌ Error al cargar ejercicio:', err);
+        this.showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'No se pudo cargar el ejercicio actual.'
+        });
+        this.ejercicioActual = null;
+      }
+    });
+  }
+
+  onEjercicioSeleccionado(id: any) {
+    const ejercicioId = Number(id);
+    const seleccionado = this.ejercicios.find(e => Number(e.id_ejercicio) === ejercicioId);
+
+    if (seleccionado) {
+      this.ejercicioActual = seleccionado;
+      this.ejercicioActualId = ejercicioId;
+      this.guardarEjercicioSeleccionado(ejercicioId);
+      // NUEVO: actualizar periodos mostrados
+      this.applyPeriodoFilter();
+    }
+  }
+
+  private guardarEjercicioSeleccionado(id_ejercicio: number) {
+    if (!this.api.selectEjercicio) {
+      console.warn('⚠ No hay método API para guardar ejercicio seleccionado');
+      this.showToast({
+        type: 'warning',
+        title: 'Aviso',
+        message: 'El servicio no expone selectEjercicio().'
+      });
+      return;
+    }
+
+    this.api.selectEjercicio(id_ejercicio).subscribe({
+      next: () => {
+        console.log('✅ Ejercicio seleccionado guardado en BD:', id_ejercicio);
+        this.showToast({
+          type: 'success',
+          title: 'Ejercicio actualizado',
+          message: `Se guardó el ejercicio ${id_ejercicio} como activo.`
+        });
+      },
+      error: (err) => {
+        console.error('❌ Error al guardar ejercicio seleccionado:', err);
+        this.showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'No se pudo actualizar el ejercicio seleccionado.'
+        });
+      }
+    });
+  }
 
   // Etiqueta legible para UI
   get ejercicioLabel(): string {
@@ -359,10 +406,11 @@ private cargarEjercicioActivo(): void {
     const nombre = (e.nombre && e.nombre !== '—') ? e.nombre : (e.fecha_inicio && e.fecha_fin ? `${e.fecha_inicio} — ${e.fecha_fin}` : '');
     return nombre || '—';
   }
-// --- defaults de modo y evento ---
-modoCaptura: 'manual' | 'motor' = 'manual';
 
-evento: {
+  // --- defaults de modo y evento ---
+  modoCaptura: 'manual' | 'motor' = 'manual';
+
+  evento: {
     tipo_operacion: 'ingreso' | 'egreso';
     monto_base: number | null;
     fecha_operacion: string; // 'YYYY-MM-DD'
@@ -375,24 +423,24 @@ evento: {
   } = {
     tipo_operacion: 'ingreso',
     monto_base: null,
-    fecha_operacion: '',      // se setea en ngOnInit()
-    id_empresa: 1,            // default 1
+    fecha_operacion: '',
+    id_empresa: 1,
     medio_cobro_pago: 'bancos',
     id_cuenta_contrapartida: null,
     cliente: '',
     ref_serie_venta: '',
     cc: null
-};
+  };
 
-// Helper: fecha hoy en ISO (YYYY-MM-DD)
-private todayISO(): string {
+  // Helper: fecha hoy en ISO (YYYY-MM-DD)
+  private todayISO(): string {
     const d = new Date();
     const mm = this.pad2(d.getMonth() + 1);
     const dd = this.pad2(d.getDate());
     return `${d.getFullYear()}-${mm}-${dd}`;
-}
+  }
 
-  //Catálogos 
+  // Catálogos
   cargarCatalogos(): void {
     // Tipos de póliza
     this.api.getTiposPoliza().subscribe({
@@ -408,16 +456,18 @@ private todayISO(): string {
       }
     });
 
-    // Periodos
+    // Periodos (NUEVO: guardamos todos y filtramos aparte)
     this.api.getPeriodos().subscribe({
       next: (r: any) => {
-        const items = this.normalizeList(r);
-        this.periodos = items.map((p: any) => {
-          const id  = Number(p.id_periodo ?? p.id ?? p.ID);
-          const fi0 = p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini;
-          const ff0 = p.fecha_fin    ?? p.fechaFin    ?? p.fin    ?? p.end_date   ?? p.fecha_fin;
-          return { id_periodo: id, nombre: `${this.fmtDate(fi0)} — ${this.fmtDate(ff0)}` };
-        });
+        const items = this.normalizeList(r) ?? [];
+        this.allPeriodos = items.map((p: any) => ({
+          id_periodo: Number(p.id_periodo ?? p.id ?? p.ID),
+          id_ejercicio: Number(p.id_ejercicio ?? p.ejercicio_id ?? p.ejercicio ?? p.idEjercicio ?? p.ID_EJERCICIO ?? NaN),
+          fecha_inicio: this.fmtDate(p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini),
+          fecha_fin:    this.fmtDate(p.fecha_fin    ?? p.fechaFin    ?? p.fin    ?? p.end_date   ?? p.fecha_fin),
+          _raw: p
+        }));
+        this.applyPeriodoFilter();
       },
       error: err => {
         console.error('Periodos:', err);
@@ -444,56 +494,85 @@ private todayISO(): string {
     });
   }
 
-private getCentros(): void {
-  const svc: any = this.api as any;
-  const fn =
-    svc.getCentrosCosto   || svc.listCentrosCosto ||
-    svc.getCentroCostos   || svc.listCentroCostos ||
-    svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
-    svc.getCentros; 
+  // NUEVO: filtrar periodos según ejercicio actual
+  private applyPeriodoFilter(): void {
+    if (!Array.isArray(this.allPeriodos) || this.allPeriodos.length === 0) {
+      this.periodos = [];
+      return;
+    }
 
-  if (typeof fn !== 'function') {
-    console.warn('No existe método de API para Centros de Costo; usando vacío.');
-    this.centrosCosto = [];
-    this.centrosCostoMap.clear();
-    return;
+    const ej = this.ejercicioActual;
+    if (!ej) {
+      // Si aún no hay ejercicio resuelto, muestra todos
+      this.periodos = this.allPeriodos.map(p => ({
+        id_periodo: p.id_periodo,
+        nombre: `${p.fecha_inicio ?? '—'} — ${p.fecha_fin ?? '—'}`
+      }));
+      return;
+    }
+
+    const idEj = Number(ej.id_ejercicio);
+    const ejIni = this.fmtDate(ej.fecha_inicio ?? ej.inicio);
+    const ejFin = this.fmtDate(ej.fecha_fin ?? ej.fin);
+
+    let filtrados = this.allPeriodos.filter(p => Number.isFinite(p.id_ejercicio) && p.id_ejercicio === idEj);
+
+    if (filtrados.length === 0 && ejIni && ejFin) {
+      filtrados = this.allPeriodos.filter(p => {
+        const pi = p.fecha_inicio, pf = p.fecha_fin;
+        if (!pi || !pf) return false;
+        return (pi <= ejFin) && (pf >= ejIni); // solapamiento
+      });
+    }
+
+    this.periodos = filtrados.map(p => ({
+      id_periodo: p.id_periodo,
+      nombre: `${p.fecha_inicio ?? '—'} — ${p.fecha_fin ?? '—'}`
+    }));
   }
 
+  private getCentros(): void {
+    const svc: any = this.api as any;
+    const fn =
+      svc.getCentrosCosto   || svc.listCentrosCosto ||
+      svc.getCentroCostos   || svc.listCentroCostos ||
+      svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
+      svc.getCentros;
 
-  fn.call(this.api).subscribe({
-    next: (r: any) => {
-      const items = this.normalizeList(r);
-
-      this.centrosCosto = (items || [])
-        .map((x: any) => {
-          const id   = Number(x.id_centro ?? x.id_centro ?? x.id ?? x.ID);
-
-          const serie = String(x.serie_venta ?? x.serie ?? x.codigo ?? '').trim();
-          const nom   = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`).trim();
-          const clave = String(x.clave ?? x.codigo ?? '').trim();
-
-          const etiqueta = serie
-            ? `${serie} — ${nom}`
-            : (clave ? `${clave} — ${nom}` : nom);
-
-          return { id_centrocosto: id, nombre: etiqueta } as CentroCostoItem;
-        })
-        .filter((cc: CentroCostoItem) => Number.isFinite(cc.id_centrocosto));
-
-      // Map SIEMPRE por ID (número), no por serie
-      this.centrosCostoMap = new Map(this.centrosCosto.map(cc => [cc.id_centrocosto, cc]));
-    },
-    error: (err: any) => {
-      console.error('Centros de Costo:', err);
-      this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
+    if (typeof fn !== 'function') {
+      console.warn('No existe método de API para Centros de Costo; usando vacío.');
       this.centrosCosto = [];
       this.centrosCostoMap.clear();
+      return;
     }
-  });
-}
 
+    fn.call(this.api).subscribe({
+      next: (r: any) => {
+        const items = this.normalizeList(r);
 
-  // Catálogo de cuentas (para movimientos)  
+        this.centrosCosto = (items || [])
+          .map((x: any) => {
+            const id   = Number(x.id_centro ?? x.id_centro ?? x.id ?? x.ID);
+            const serie = String(x.serie_venta ?? x.serie ?? x.codigo ?? '').trim();
+            const nom   = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`).trim();
+            const clave = String(x.clave ?? x.codigo ?? '').trim();
+            const etiqueta = serie ? `${serie} — ${nom}` : (clave ? `${clave} — ${nom}` : nom);
+            return { id_centrocosto: id, nombre: etiqueta } as CentroCostoItem;
+          })
+          .filter((cc: CentroCostoItem) => Number.isFinite(cc.id_centrocosto));
+
+        this.centrosCostoMap = new Map(this.centrosCosto.map(cc => [cc.id_centrocosto, cc]));
+      },
+      error: (err: any) => {
+        console.error('Centros de Costo:', err);
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
+        this.centrosCosto = [];
+        this.centrosCostoMap.clear();
+      }
+    });
+  }
+
+  // Catálogo de cuentas (para movimientos)
   private cargarCuentas(): void {
     const svc: any = this.api as any;
     const fn =
@@ -514,10 +593,10 @@ private getCentros(): void {
         const parsed: CuentaLigera[] = (items || []).map((x: any) => {
           const id = Number(x.id_cuenta ?? x.id ?? x.ID);
           const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
-          const posteable= x.posteable ?? x.es_posteable ?? x.posteable_flag ?? x.posteable_indicator;
+          const posteable = x.posteable ?? x.es_posteable ?? x.posteable_flag ?? x.posteable_indicator;
           const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
-          return { id_cuenta: id, codigo, nombre, posteable };
-        }).filter((c: CuentaLigera) => Number.isFinite(c.id_cuenta)); 
+          return { id_cuenta: id, codigo, nombre, posteable } as any;
+        }).filter((c: CuentaLigera) => Number.isFinite(c.id_cuenta));
 
         parsed.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
 
@@ -553,7 +632,7 @@ private getCentros(): void {
     });
   }
 
-  //  CFDI 
+  // CFDI
   cargarCfdiRecientes(): void {
     this.api.listCfdi({ limit: 100 }).subscribe({
       next: (r: any) => {
@@ -574,8 +653,7 @@ private getCentros(): void {
     });
   }
 
-  //  Movimientos 
-
+  // Movimientos
   private normalizaStr = (s: string) => s.normalize?.('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() ?? s.toLowerCase();
 
   onCuentaQueryChange(index: number, value: string) {
@@ -583,18 +661,14 @@ private getCentros(): void {
     if (!movs[index]) return;
     (movs[index] as any)._cuentaQuery = value ?? '';
   }
-// Detectar cambio de centro principal
-onCentroSeleccionado(): void {
-  const idCentro = this.nuevaPoliza.id_centro;
 
-  // Recorre los movimientos existentes
-  (this.nuevaPoliza.movimientos ?? []).forEach(mov => {
-    // Solo asignar si aún no tiene centro (para no sobrescribir cambios del usuario)
-    if (!mov.cc) {
-      mov.cc = idCentro;
-    }
-  });
-}
+  // Detectar cambio de centro principal
+  onCentroSeleccionado(): void {
+    const idCentro = this.nuevaPoliza.id_centro;
+    (this.nuevaPoliza.movimientos ?? []).forEach(mov => {
+      if (!mov.cc) mov.cc = idCentro;
+    });
+  }
 
   getCuentasFiltradas(index: number): CuentaLigera[] {
     const movs = (this.nuevaPoliza.movimientos ?? []);
@@ -612,66 +686,57 @@ onCentroSeleccionado(): void {
     return c ? `${c.codigo} — ${c.nombre}` : '—';
   }
 
-
-triggerXmlPickerForMovimiento(input: HTMLInputElement, index: number): void {
-  this.xmlMovimientoIndex = index;
-  input.click();
-}
-
-
-
-async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
-  const file: File = event.target.files?.[0];
-  if (!file) return;
-
-  try {
-    this.uploadingXml = true;
-    this.selectedXmlName = file.name;
-    this.uploadXmlError = '';
-
-    const response = await firstValueFrom(
-      this.api.uploadCfdiXml(file, {
-        folio: this.nuevaPoliza.folio,
-        id_periodo: Number(this.nuevaPoliza.id_periodo),
-        id_centro: Number(this.nuevaPoliza.id_centro),
-        id_tipopoliza: Number(this.nuevaPoliza.id_tipopoliza)
-      })
-    );
-
-    const uuid = response?.uuid || response?.UUID || null;
-    if (uuid) {
-      if (!this.nuevaPoliza.movimientos) this.nuevaPoliza.movimientos = [];
-      if (!this.nuevaPoliza.movimientos[index]) this.nuevaPoliza.movimientos[index] = {} as any;
-
-      // 👇 clave: asociar el UUID al movimiento específico
-      this.nuevaPoliza.movimientos[index].uuid = uuid;
-
-      // (opcional) mostrar el nombre del xml en la fila
-      (this.nuevaPoliza.movimientos[index] as any)._xmlName = file.name;
-
-      this.showToast({
-        title: 'XML asociado',
-        message: `UUID ${uuid} vinculado al movimiento ${index + 1}`,
-        type: 'success',
-        autoCloseMs: 3500,
-      });
-    } else {
-      this.showToast({ title: 'Aviso', message: 'El servidor no devolvió UUID.', type: 'warning' });
-    }
-  } catch (error: any) {
-    console.error('Error al subir XML:', error);
-    this.uploadXmlError = error?.error?.message || 'Error al subir el XML.';
-    this.showToast({ title: 'Error', message: this.uploadXmlError, type: 'error', autoCloseMs: 4000 });
-  } finally {
-    this.uploadingXml = false;
-    event.target.value = '';
+  triggerXmlPickerForMovimiento(input: HTMLInputElement, index: number): void {
+    this.xmlMovimientoIndex = index;
+    input.click();
   }
-}
 
+  async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
+    const file: File = event.target.files?.[0];
+    if (!file) return;
 
+    try {
+      this.uploadingXml = true;
+      this.selectedXmlName = file.name;
+      this.uploadXmlError = '';
+
+      const response = await firstValueFrom(
+        this.api.uploadCfdiXml(file, {
+          folio: this.nuevaPoliza.folio,
+          id_periodo: Number(this.nuevaPoliza.id_periodo),
+          id_centro: Number(this.nuevaPoliza.id_centro),
+          id_tipopoliza: Number(this.nuevaPoliza.id_tipopoliza)
+        })
+      );
+
+      const uuid = response?.uuid || response?.UUID || null;
+      if (uuid) {
+        if (!this.nuevaPoliza.movimientos) this.nuevaPoliza.movimientos = [];
+        if (!this.nuevaPoliza.movimientos[index]) this.nuevaPoliza.movimientos[index] = {} as any;
+
+        this.nuevaPoliza.movimientos[index].uuid = uuid;
+        (this.nuevaPoliza.movimientos[index] as any)._xmlName = file.name;
+
+        this.showToast({
+          title: 'XML asociado',
+          message: `UUID ${uuid} vinculado al movimiento ${index + 1}`,
+          type: 'success',
+          autoCloseMs: 3500,
+        });
+      } else {
+        this.showToast({ title: 'Aviso', message: 'El servidor no devolvió UUID.', type: 'warning' });
+      }
+    } catch (error: any) {
+      console.error('Error al subir XML:', error);
+      this.uploadXmlError = error?.error?.message || 'Error al subir el XML.';
+      this.showToast({ title: 'Error', message: this.uploadXmlError, type: 'error', autoCloseMs: 4000 });
+    } finally {
+      this.uploadingXml = false;
+      event.target.value = '';
+    }
+  }
 
   agregarMovimiento(): void {
-    const defaultCc = this.centrosCosto.length ? this.centrosCosto[0].id_centrocosto : null;
     const defaultCuenta = this.cuentas.length ? this.cuentas[0].id_cuenta : null;
 
     const nuevo: Movimiento & { _cuentaQuery?: string } = {
@@ -681,7 +746,7 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
       monto: null,
       cliente: '',
       fecha: this.todayISO(),
-       cc: this.nuevaPoliza.id_centro ?? null,
+      cc: this.nuevaPoliza.id_centro ?? null,
       uuid: null as unknown as any,
       _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''
     };
@@ -692,46 +757,41 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
     this.nuevaPoliza.movimientos?.splice(i, 1);
   }
 
-  //  Validación previa al guardado 
+  // Validación previa al guardado
   canGuardar(): boolean {
-  const p = this.nuevaPoliza;
-  if (!p) return false;
+    const p = this.nuevaPoliza;
+    if (!p) return false;
 
-  const okHeader =
-    !!(p.folio && String(p.folio).trim()) &&
-    !!(p.concepto && String(p.concepto).trim()) &&
-    this.N(p.id_tipopoliza) !== undefined &&
-    this.N(p.id_periodo)    !== undefined &&
-    this.N(p.id_centro)     !== undefined &&
-    this.N(p.id_usuario)    !== undefined;
+    const okHeader =
+      !!(p.folio && String(p.folio).trim()) &&
+      !!(p.concepto && String(p.concepto).trim()) &&
+      this.N(p.id_tipopoliza) !== undefined &&
+      this.N(p.id_periodo)    !== undefined &&
+      this.N(p.id_centro)     !== undefined &&
+      this.N(p.id_usuario)    !== undefined;
 
-  if (!okHeader) return false;
+    if (!okHeader) return false;
 
-  if (this.modoCaptura === 'motor') {
-    // Validación mínima para el motor
-    return !!(this.evento.monto_base && this.evento.fecha_operacion && this.evento.id_empresa && this.evento.id_cuenta_contrapartida);
+    if (this.modoCaptura === 'motor') {
+      return !!(this.evento.monto_base && this.evento.fecha_operacion && this.evento.id_empresa && this.evento.id_cuenta_contrapartida);
+    }
+
+    const movs = (p.movimientos ?? []).filter(m =>
+      this.toNumOrNull(m.id_cuenta) &&
+      (m.operacion === '0' || m.operacion === '1') &&
+      (this.toNumOrNull(m.monto) ?? 0) > 0
+    );
+    if (movs.length === 0) return false;
+
+    for (const m of movs) {
+      const idCuenta = this.toNumOrNull(m.id_cuenta);
+      const idCc     = this.toNumOrNull(m.cc);
+      if (idCuenta == null || !this.cuentasMap.has(idCuenta)) return false;
+      if (idCc != null && !this.centrosCostoMap.has(idCc)) return false;
+    }
+
+    return true;
   }
-
-  // === MODO MANUAL (igual que hoy) ===
-  const movs = (p.movimientos ?? []).filter(m =>
-    this.toNumOrNull(m.id_cuenta) &&
-    (m.operacion === '0' || m.operacion === '1') &&
-    (this.toNumOrNull(m.monto) ?? 0) > 0
-  );
-  if (movs.length === 0) return false;
-
-  const cargos = movs.filter(m => m.operacion === '0').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
-  const abonos = movs.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
-
-  for (const m of movs) {
-    const idCuenta = this.toNumOrNull(m.id_cuenta);
-    const idCc     = this.toNumOrNull(m.cc);
-    if (idCuenta == null || !this.cuentasMap.has(idCuenta)) return false;
-    if (idCc != null && !this.centrosCostoMap.has(idCc)) return false;
-  }
-
-  return true;
-}
 
   private validarYExplicarErrores(): boolean {
     const p = this.nuevaPoliza;
@@ -740,7 +800,6 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
       return false;
     }
 
-    // Encabezado
     const faltantes: string[] = [];
     if (!p.folio)       faltantes.push('Folio');
     if (!p.concepto)    faltantes.push('Concepto');
@@ -760,7 +819,6 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
       return false;
     }
 
-    // Reglas por movimiento
     for (let i = 0; i < movs.length; i++) {
       const m = movs[i];
       const idCuenta = this.toNumOrNull(m.id_cuenta);
@@ -790,7 +848,6 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
       }
     }
 
-    // Partida doble
     const movsValidos = movs.filter(m =>
       this.toNumOrNull(m.id_cuenta) &&
       (m.operacion === '0' || m.operacion === '1') &&
@@ -800,158 +857,148 @@ async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
     const abonos = movsValidos.filter(m => m.operacion === '1').reduce((s, m) => s + (this.toNumOrNull(m.monto) || 0), 0);
     if (Math.abs(cargos - abonos) > 0.001) {
       this.showToast({ type: 'warning', title: 'Partida doble', message: `No cuadra.\nCargos: ${cargos}\nAbonos: ${abonos}` });
-      
     }
 
     return true;
   }
 
-  //  Guardar 
+  // Guardar
   guardarPoliza(): void {
-  if (this.modoCaptura === 'manual') {
-    // === FLUJO MANUAL (igual que hoy) ===
-    if (!this.validarYExplicarErrores()) return;
+    if (this.modoCaptura === 'manual') {
+      if (!this.validarYExplicarErrores()) return;
 
-    const p = this.nuevaPoliza;
-    const payload = {
-      id_tipopoliza: this.toNumOrNull(p?.id_tipopoliza)!,
-      id_periodo:    this.toNumOrNull(p?.id_periodo)!,
-      id_usuario:    this.toNumOrNull(p?.id_usuario)!,
-      id_centro:     this.toNumOrNull(p?.id_centro)!,
-      folio:         this.toStrOrNull(p?.folio)!,
-      concepto:      this.toStrOrNull(p?.concepto)!,
-      movimientos:  (p?.movimientos ?? []).map(m => ({
-        id_cuenta:       this.toNumOrNull(m.id_cuenta),
-        ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
-        operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
-        monto:           this.toNumOrNull(m.monto),
-        cliente:         this.toStrOrNull(m.cliente),
-        fecha:           this.toDateOrNull(m.fecha),
-        cc:              this.toNumOrNull(m.cc),
-        uuid: this.toStrOrNull(m.uuid),
-      }))
-    };
+      const p = this.nuevaPoliza;
+      const payload = {
+        id_tipopoliza: this.toNumOrNull(p?.id_tipopoliza)!,
+        id_periodo:    this.toNumOrNull(p?.id_periodo)!,
+        id_usuario:    this.toNumOrNull(p?.id_usuario)!,
+        id_centro:     this.toNumOrNull(p?.id_centro)!,
+        folio:         this.toStrOrNull(p?.folio)!,
+        concepto:      this.toStrOrNull(p?.concepto)!,
+        movimientos:  (p?.movimientos ?? []).map(m => ({
+          id_cuenta:       this.toNumOrNull(m.id_cuenta),
+          ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
+          operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+          monto:           this.toNumOrNull(m.monto),
+          cliente:         this.toStrOrNull(m.cliente),
+          fecha:           this.toDateOrNull(m.fecha),
+          cc:              this.toNumOrNull(m.cc),
+          uuid:            this.toStrOrNull(m.uuid),
+        }))
+      };
 
-    this.api.createPoliza(payload).subscribe({
-      next: () => {
-        this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
-        this.cargarPolizas();
-        this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada correctamente.' });
-      },
-      error: err => {
-        const msg = err?.error?.message || err?.error?.error || err?.message || 'Error al guardar póliza';
-        console.error('Guardar póliza (manual):', err);
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+      this.api.createPoliza(payload).subscribe({
+        next: () => {
+          this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
+          this.cargarPolizas();
+          this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada correctamente.' });
+        },
+        error: err => {
+          const msg = err?.error?.message || err?.error?.error || err?.message || 'Error al guardar póliza';
+          console.error('Guardar póliza (manual):', err);
+          this.showToast({ type: 'error', title: 'Error', message: msg });
+        }
+      });
+
+    } else {
+      const okHeader =
+        this.nuevaPoliza?.folio &&
+        this.nuevaPoliza?.concepto &&
+        this.nuevaPoliza?.id_tipopoliza &&
+        this.nuevaPoliza?.id_periodo &&
+        this.nuevaPoliza?.id_centro &&
+        this.nuevaPoliza?.id_usuario;
+
+      const okMotor =
+        this.evento.monto_base != null && this.evento.monto_base > 0 &&
+        !!this.evento.fecha_operacion &&
+        !!this.evento.id_empresa &&
+        !!this.evento.id_cuenta_contrapartida;
+
+      if (!okHeader || !okMotor) {
+        this.showToast({
+          type: 'warning',
+          title: 'Faltan datos',
+          message: 'Completa encabezado y datos del evento (monto, fecha, empresa y cuenta contrapartida).'
+        });
+        return;
       }
-    });
 
-  } else {
-    // === FLUJO MOTOR (usa /polizas/from-evento) ===
-    const okHeader =
-      this.nuevaPoliza?.folio &&
-      this.nuevaPoliza?.concepto &&
-      this.nuevaPoliza?.id_tipopoliza &&
-      this.nuevaPoliza?.id_periodo &&
-      this.nuevaPoliza?.id_centro &&
-      this.nuevaPoliza?.id_usuario;
+      const body = {
+        id_tipopoliza: this.toNumOrNull(this.nuevaPoliza.id_tipopoliza)!,
+        id_periodo:    this.toNumOrNull(this.nuevaPoliza.id_periodo)!,
+        id_usuario:    this.toNumOrNull(this.nuevaPoliza.id_usuario)!,
+        id_centro:     this.toNumOrNull(this.nuevaPoliza.id_centro)!,
+        folio:         this.toStrOrNull(this.nuevaPoliza.folio)!,
+        concepto:      this.toStrOrNull(this.nuevaPoliza.concepto)!,
 
+        tipo_operacion: this.evento.tipo_operacion,
+        monto_base:     Number(this.evento.monto_base),
+        fecha_operacion:this.toDateOrNull(this.evento.fecha_operacion)!,
+        id_empresa:     Number(this.evento.id_empresa),
+        medio_cobro_pago: this.evento.medio_cobro_pago,
+        id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
+
+        cliente:         this.toStrOrNull(this.evento.cliente) ?? null,
+        ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
+        cc:              this.toNumOrNull(this.evento.cc) ?? null
+      };
+
+      this.api.createPolizaFromEvento(body).subscribe({
+        next: () => {
+          this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
+          this.cargarPolizas();
+          this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada con el motor.' });
+        },
+        error: err => {
+          const msg = err?.error?.message || err?.message || 'Error al crear póliza con el motor';
+          console.error('Guardar póliza (motor):', err);
+          this.showToast({ type: 'error', title: 'Error', message: msg });
+        }
+      });
+    }
+  }
+
+  agregarEventoAPolizaExistente(id_poliza: number): void {
     const okMotor =
       this.evento.monto_base != null && this.evento.monto_base > 0 &&
       !!this.evento.fecha_operacion &&
       !!this.evento.id_empresa &&
       !!this.evento.id_cuenta_contrapartida;
 
-    if (!okHeader || !okMotor) {
-      this.showToast({
-        type: 'warning',
-        title: 'Faltan datos',
-        message: 'Completa encabezado y datos del evento (monto, fecha, empresa y cuenta contrapartida).'
-      });
+    if (!okMotor) {
+      this.showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa los datos del evento.' });
       return;
     }
 
     const body = {
-      id_tipopoliza: this.toNumOrNull(this.nuevaPoliza.id_tipopoliza)!,
-      id_periodo:    this.toNumOrNull(this.nuevaPoliza.id_periodo)!,
-      id_usuario:    this.toNumOrNull(this.nuevaPoliza.id_usuario)!,
-      id_centro:     this.toNumOrNull(this.nuevaPoliza.id_centro)!,
-      folio:         this.toStrOrNull(this.nuevaPoliza.folio)!,
-      concepto:      this.toStrOrNull(this.nuevaPoliza.concepto)!,
-
-      // Motor:
       tipo_operacion: this.evento.tipo_operacion,
-      monto_base:     Number(this.evento.monto_base),
-      fecha_operacion:this.toDateOrNull(this.evento.fecha_operacion)!,
-      id_empresa:     Number(this.evento.id_empresa),
+      monto_base: Number(this.evento.monto_base),
+      fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
+      id_empresa: Number(this.evento.id_empresa),
       medio_cobro_pago: this.evento.medio_cobro_pago,
       id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
-
-      // Opcionales propagados:
-      cliente:         this.toStrOrNull(this.evento.cliente) ?? null,
+      cliente: this.toStrOrNull(this.evento.cliente) ?? null,
       ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
-      cc:              this.toNumOrNull(this.evento.cc) ?? null
+      cc: this.toNumOrNull(this.evento.cc) ?? null
     };
 
-    this.api.createPolizaFromEvento(body).subscribe({
-      next: () => {
-        // Resetea sólo lo necesario
-        this.nuevaPoliza = { movimientos: [], id_usuario: this.currentUser?.id_usuario };
-        // Mantener datos del motor si quieres capturar varios seguidos:
-        // this.evento = { ...this.evento, monto_base: null, ref_serie_venta: '', cliente: '' };
-        this.cargarPolizas();
-        this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada con el motor.' });
+    this.api.expandEventoEnPoliza(id_poliza, body).subscribe({
+      next: (r) => {
+        this.showToast({ type: 'success', title: 'Agregado', message: `Se agregaron ${r?.count ?? ''} movimientos a la póliza ${id_poliza}.` });
       },
-      error: err => {
-        const msg = err?.error?.message || err?.message || 'Error al crear póliza con el motor';
-        console.error('Guardar póliza (motor):', err);
+      error: (err) => {
+        const msg = err?.error?.message || err?.message || 'Error al agregar evento';
+        console.error('expand-evento:', err);
         this.showToast({ type: 'error', title: 'Error', message: msg });
       }
     });
   }
-}
 
-agregarEventoAPolizaExistente(id_poliza: number): void {
-  const okMotor =
-    this.evento.monto_base != null && this.evento.monto_base > 0 &&
-    !!this.evento.fecha_operacion &&
-    !!this.evento.id_empresa &&
-    !!this.evento.id_cuenta_contrapartida;
-
-  if (!okMotor) {
-    this.showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa los datos del evento.' });
-    return;
-  }
-
-  const body = {
-    tipo_operacion: this.evento.tipo_operacion,
-    monto_base: Number(this.evento.monto_base),
-    fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
-    id_empresa: Number(this.evento.id_empresa),
-    medio_cobro_pago: this.evento.medio_cobro_pago,
-    id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
-    cliente: this.toStrOrNull(this.evento.cliente) ?? null,
-    ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
-    cc: this.toNumOrNull(this.evento.cc) ?? null
-  };
-
-  this.api.expandEventoEnPoliza(id_poliza, body).subscribe({
-    next: (r) => {
-      this.showToast({ type: 'success', title: 'Agregado', message: `Se agregaron ${r?.count ?? ''} movimientos a la póliza ${id_poliza}.` });
-      // Si la vista muestra la póliza actual, refresca:
-      // this.getPolizaConMovimientos(id_poliza).subscribe(...);
-    },
-    error: (err) => {
-      const msg = err?.error?.message || err?.message || 'Error al agregar evento';
-      console.error('expand-evento:', err);
-      this.showToast({ type: 'error', title: 'Error', message: msg });
-    }
-  });
-}
-
-  //  XML 
+  // XML
   triggerXmlPicker(input: HTMLInputElement) {
     this.uploadXmlError = '';
-    input.value = ''; // permite re-seleccionar el mismo archivo
+    input.value = '';
     input.click();
   }
 
@@ -1009,7 +1056,7 @@ agregarEventoAPolizaExistente(id_poliza: number): void {
     });
   }
 
-  //  UUID compartido 
+  // UUID compartido
   onUuidChange(uuid?: string) {
     this.uuidSeleccionado = uuid || undefined;
   }
@@ -1020,7 +1067,7 @@ agregarEventoAPolizaExistente(id_poliza: number): void {
     if (movs[index]) movs[index].uuid = this.uuidSeleccionado;
   }
 
-  //  Totales 
+  // Totales
   getTotal(p: Poliza | { movimientos?: Movimiento[] }, tipo: '0'|'1'): number {
     const movs = Array.isArray(p?.movimientos) ? p.movimientos : [];
     return movs

@@ -1,6 +1,6 @@
 // src/app/services/polizas.service.ts
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface Movimiento {
@@ -12,9 +12,8 @@ export interface Movimiento {
   fecha?: string;               // 'YYYY-MM-DD'
   cc?: number | null;
   uuid?: null | string;
-    id_poliza?: number;   
-        includeMovimientos?: boolean;
-
+  id_poliza?: number;
+  includeMovimientos?: boolean;
 }
 
 export interface Poliza {
@@ -32,32 +31,51 @@ export interface CfdiRow {
   folio?: string | null;
   fecha?: string | null;
   total?: number | string | null;
-  
 }
 
 @Injectable({ providedIn: 'root' })
 export class PolizasService {
   private http = inject(HttpClient);
-  
+
   private api = 'http://localhost:3000/api/v1';
+  private basePoliza = `${this.api}/poliza`;           // ← base unificada (singular)
   private cfdiImportUrl = `${this.api}/cfdi/import`;
+
+  // Si usas JWT en Authorization: Bearer <token>
+  private getAuthHeaders(): HttpHeaders {
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('token') ||
+      '';
+    return new HttpHeaders(
+      token ? { Authorization: `Bearer ${token}` } : {}
+    );
+  }
 
   /** GET /api/v1/tipo-poliza */
   getTiposPoliza(): Observable<any> {
-    return this.http.get<any>(`${this.api}/tipo-poliza`);
+    return this.http.get<any>(`${this.api}/tipo-poliza`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** GET /api/v1/periodos */
   getPeriodos(): Observable<any> {
-    return this.http.get<any>(`${this.api}/periodos`);
+    return this.http.get<any>(`${this.api}/periodos`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** GET /api/v1/centros */
   getCentros(): Observable<any> {
-    return this.http.get<any>(`${this.api}/centros`);
+    return this.http.get<any>(`${this.api}/centros`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
-  // Pólizas 
+  // ---------------- PÓLIZAS ----------------
+
   /** GET /api/v1/poliza */
   getPolizas(params?: {
     id_tipopoliza?: number;
@@ -68,70 +86,102 @@ export class PolizasService {
     if (params?.id_tipopoliza != null) p = p.set('id_tipopoliza', String(params.id_tipopoliza));
     if (params?.id_periodo    != null) p = p.set('id_periodo',    String(params.id_periodo));
     if (params?.id_centro     != null) p = p.set('id_centro',     String(params.id_centro));
-   
-    return this.http.get<any>(`${this.api}/poliza`, { params: p });
+
+    return this.http.get<any>(this.basePoliza, {
+      params: p,
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** POST /api/v1/poliza */
   createPoliza(body: any): Observable<any> {
-    return this.http.post<any>(`${this.api}/poliza`, body);
+    return this.http.post<any>(this.basePoliza, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** GET /api/v1/poliza/:id/movimientos */
   getPolizaConMovimientos(id: number): Observable<any> {
-    return this.http.get<any>(`${this.api}/poliza/${id}/movimientos`);
+    return this.http.get<any>(`${this.basePoliza}/${id}/movimientos`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** PUT /api/v1/poliza/:id */
   updatePoliza(id: number, body: any): Observable<any> {
-    return this.http.put<any>(`${this.api}/poliza/${id}`, body);
+    return this.http.put<any>(`${this.basePoliza}/${id}`, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
+
+  /** DELETE /api/v1/poliza/:id */
+  deletePoliza(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.basePoliza}/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // ---------------- MOVIMIENTOS (si tienes estos endpoints separados) ----------------
 
   /** POST /api/v1/movimiento-poliza */
   createMovPoliza(body: any): Observable<any> {
-    return this.http.post<any>(`${this.api}/movimiento-poliza`, body);
+    return this.http.post<any>(`${this.api}/movimiento-poliza`, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** PUT /api/v1/movimiento-poliza/:id */
   updateMovPoliza(id: number, body: any): Observable<any> {
-    return this.http.put<any>(`${this.api}/movimiento-poliza/${id}`, body);
+    return this.http.put<any>(`${this.api}/movimiento-poliza/${id}`, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** DELETE /api/v1/movimiento-poliza/:id */
   deleteMovPoliza(id: number): Observable<any> {
-    return this.http.delete<any>(`${this.api}/movimiento-poliza/${id}`);
+    return this.http.delete<any>(`${this.api}/movimiento-poliza/${id}`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
+  // ---------------- CATÁLOGOS ----------------
 
-  /** DELETE /api/v1/poliza/:ID */
- deletePoliza(id: number): Observable<any> {
-  return this.http.delete<any>(`${this.api}/poliza/${id}`);
-}
-getCuentas() {
-    return this.http.get<any>(`${this.api}/cuentas`);
+  getCuentas() {
+    return this.http.get<any>(`${this.api}/cuentas`, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
-  //  Cargar centros de costo
   getCentrosCosto() {
-return this.http.get<any>(`${this.api}/centros`);  }
+    return this.http.get<any>(`${this.api}/centros`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
 
-  // CFDI 
+  getEjercicios() {
+    return this.http.get<any>(`${this.api}/ejercicios`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // ---------------- CFDI ----------------
+
   /** POST /api/v1/cfdi/import (subir XML) */
   uploadCfdiXml(
     file: File,
     ctx?: { folio?: string; id_periodo?: number; id_centro?: number; id_tipopoliza?: number }
   ): Observable<any> {
     const form = new FormData();
-    // nombre del campo que espera multer 
-    form.append('file', file);
+    form.append('file', file); // nombre del campo que espera multer
 
     if (ctx?.folio)                  form.append('folio', ctx.folio);
     if (ctx?.id_periodo != null)     form.append('id_periodo', String(ctx.id_periodo));
     if (ctx?.id_centro  != null)     form.append('id_centro',  String(ctx.id_centro));
     if (ctx?.id_tipopoliza != null)  form.append('id_tipopoliza', String(ctx.id_tipopoliza));
 
-    // Angular setea el boundary automáticamente con FormData
-    return this.http.post<any>(this.cfdiImportUrl, form);
+    return this.http.post<any>(this.cfdiImportUrl, form, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
   /** Vincular UUID a movimientos */
@@ -139,29 +189,43 @@ return this.http.get<any>(`${this.api}/centros`);  }
     return this.http.post<any>(`${this.api}/cfdi/polizas/${polizaId}/movimientos/link-uuid`, {
       uuid,
       movimiento_ids: movimientoIds,
+    }, {
+      headers: this.getAuthHeaders(),
     });
   }
-getEjercicios() {
-  return this.http.get<any>(`${this.api}/ejercicios`);
-}
 
   /** GET /api/v1/cfdi */
   listCfdi(params?: { limit?: number; q?: string }): Observable<CfdiRow[] | any> {
     let httpParams = new HttpParams();
     if (params?.limit != null) httpParams = httpParams.set('limit', String(params.limit));
     if (params?.q)             httpParams = httpParams.set('q', params.q);
-    return this.http.get<any>(`${this.api}/cfdi`, { params: httpParams });
+    return this.http.get<any>(`${this.api}/cfdi`, {
+      params: httpParams,
+      headers: this.getAuthHeaders(),
+    });
   }
-  // en polizas.service.ts 
-getMe() {
-  return this.http.get<any>('/api/me'); 
-}
-// polizas.service.ts
-changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Aprobada' | 'Contabilizada') {
-  return this.http.patch<any>(`${this.api}/poliza/${id_poliza}`, { estado });
-}
 
-/** POST /api/v1/polizas/from-evento  (crea póliza con el motor) */
+  // ---------------- USUARIO ----------------
+
+  // Corrige a /api/v1/me (antes apuntaba a /api/me)
+  getMe() {
+    return this.http.get<any>(`${this.api}/me`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // ---------------- ESTADO PÓLIZA ----------------
+
+  // Usa el endpoint correcto del router: PATCH /poliza/:id/estado
+  changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Aprobada' | 'Contabilizada') {
+    return this.http.patch<any>(`${this.basePoliza}/${id_poliza}/estado`, { estado }, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  // ---------------- MOTOR (EVENTO → MOVIMIENTOS) ----------------
+
+  /** POST /api/v1/poliza/from-evento  (crea póliza con el motor) */
   createPolizaFromEvento(body: {
     id_tipopoliza: number;
     id_periodo: number;
@@ -181,10 +245,12 @@ changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Aprobada' | 'Cont
     ref_serie_venta?: string | null;
     cc?: number | null;
   }): Observable<any> {
-    return this.http.post<any>(`${this.api}/poliza/from-evento`, body);
+    return this.http.post<any>(`${this.basePoliza}/from-evento`, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
-  /** POST /api/v1/polizas/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
+  /** POST /api/v1/poliza/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
   expandEventoEnPoliza(polizaId: number, body: {
     tipo_operacion: 'ingreso'|'egreso';
     monto_base: number;
@@ -197,7 +263,16 @@ changeEstadoPoliza(id_poliza: number, estado: 'Por revisar' | 'Aprobada' | 'Cont
     ref_serie_venta?: string | null;
     cc?: number | null;
   }): Observable<any> {
-    return this.http.post<any>(`${this.api}/poliza/${polizaId}/expand-evento`, body);
+    return this.http.post<any>(`${this.basePoliza}/${polizaId}/expand-evento`, body, {
+      headers: this.getAuthHeaders(),
+    });
   }
 
+  // ---------------- EJERCICIO ----------------
+
+  selectEjercicio(id_ejercicio: number) {
+    return this.http.put(`${this.api}/ejercicios/${id_ejercicio}/select`, {}, {
+      headers: this.getAuthHeaders(),
+    });
+  }
 }

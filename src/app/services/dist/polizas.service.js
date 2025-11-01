@@ -14,21 +14,36 @@ var PolizasService = /** @class */ (function () {
     function PolizasService() {
         this.http = core_1.inject(http_1.HttpClient);
         this.api = 'http://localhost:3000/api/v1';
+        this.basePoliza = this.api + "/poliza"; // ← base unificada (singular)
         this.cfdiImportUrl = this.api + "/cfdi/import";
     }
+    // Si usas JWT en Authorization: Bearer <token>
+    PolizasService.prototype.getAuthHeaders = function () {
+        var token = localStorage.getItem('token') ||
+            localStorage.getItem('access_token') ||
+            sessionStorage.getItem('token') ||
+            '';
+        return new http_1.HttpHeaders(token ? { Authorization: "Bearer " + token } : {});
+    };
     /** GET /api/v1/tipo-poliza */
     PolizasService.prototype.getTiposPoliza = function () {
-        return this.http.get(this.api + "/tipo-poliza");
+        return this.http.get(this.api + "/tipo-poliza", {
+            headers: this.getAuthHeaders()
+        });
     };
     /** GET /api/v1/periodos */
     PolizasService.prototype.getPeriodos = function () {
-        return this.http.get(this.api + "/periodos");
+        return this.http.get(this.api + "/periodos", {
+            headers: this.getAuthHeaders()
+        });
     };
     /** GET /api/v1/centros */
     PolizasService.prototype.getCentros = function () {
-        return this.http.get(this.api + "/centros");
+        return this.http.get(this.api + "/centros", {
+            headers: this.getAuthHeaders()
+        });
     };
-    // Pólizas 
+    // ---------------- PÓLIZAS ----------------
     /** GET /api/v1/poliza */
     PolizasService.prototype.getPolizas = function (params) {
         var p = new http_1.HttpParams();
@@ -38,49 +53,75 @@ var PolizasService = /** @class */ (function () {
             p = p.set('id_periodo', String(params.id_periodo));
         if ((params === null || params === void 0 ? void 0 : params.id_centro) != null)
             p = p.set('id_centro', String(params.id_centro));
-        return this.http.get(this.api + "/poliza", { params: p });
+        return this.http.get(this.basePoliza, {
+            params: p,
+            headers: this.getAuthHeaders()
+        });
     };
     /** POST /api/v1/poliza */
     PolizasService.prototype.createPoliza = function (body) {
-        return this.http.post(this.api + "/poliza", body);
+        return this.http.post(this.basePoliza, body, {
+            headers: this.getAuthHeaders()
+        });
     };
     /** GET /api/v1/poliza/:id/movimientos */
     PolizasService.prototype.getPolizaConMovimientos = function (id) {
-        return this.http.get(this.api + "/poliza/" + id + "/movimientos");
+        return this.http.get(this.basePoliza + "/" + id + "/movimientos", {
+            headers: this.getAuthHeaders()
+        });
     };
     /** PUT /api/v1/poliza/:id */
     PolizasService.prototype.updatePoliza = function (id, body) {
-        return this.http.put(this.api + "/poliza/" + id, body);
+        return this.http.put(this.basePoliza + "/" + id, body, {
+            headers: this.getAuthHeaders()
+        });
     };
+    /** DELETE /api/v1/poliza/:id */
+    PolizasService.prototype.deletePoliza = function (id) {
+        return this.http["delete"](this.basePoliza + "/" + id, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    // ---------------- MOVIMIENTOS (si tienes estos endpoints separados) ----------------
     /** POST /api/v1/movimiento-poliza */
     PolizasService.prototype.createMovPoliza = function (body) {
-        return this.http.post(this.api + "/movimiento-poliza", body);
+        return this.http.post(this.api + "/movimiento-poliza", body, {
+            headers: this.getAuthHeaders()
+        });
     };
     /** PUT /api/v1/movimiento-poliza/:id */
     PolizasService.prototype.updateMovPoliza = function (id, body) {
-        return this.http.put(this.api + "/movimiento-poliza/" + id, body);
+        return this.http.put(this.api + "/movimiento-poliza/" + id, body, {
+            headers: this.getAuthHeaders()
+        });
     };
     /** DELETE /api/v1/movimiento-poliza/:id */
     PolizasService.prototype.deleteMovPoliza = function (id) {
-        return this.http["delete"](this.api + "/movimiento-poliza/" + id);
+        return this.http["delete"](this.api + "/movimiento-poliza/" + id, {
+            headers: this.getAuthHeaders()
+        });
     };
-    /** DELETE /api/v1/poliza/:ID */
-    PolizasService.prototype.deletePoliza = function (id) {
-        return this.http["delete"](this.api + "/poliza/" + id);
-    };
+    // ---------------- CATÁLOGOS ----------------
     PolizasService.prototype.getCuentas = function () {
-        return this.http.get(this.api + "/cuentas");
+        return this.http.get(this.api + "/cuentas", {
+            headers: this.getAuthHeaders()
+        });
     };
-    //  Cargar centros de costo
     PolizasService.prototype.getCentrosCosto = function () {
-        return this.http.get(this.api + "/centros");
+        return this.http.get(this.api + "/centros", {
+            headers: this.getAuthHeaders()
+        });
     };
-    // CFDI 
+    PolizasService.prototype.getEjercicios = function () {
+        return this.http.get(this.api + "/ejercicios", {
+            headers: this.getAuthHeaders()
+        });
+    };
+    // ---------------- CFDI ----------------
     /** POST /api/v1/cfdi/import (subir XML) */
     PolizasService.prototype.uploadCfdiXml = function (file, ctx) {
         var form = new FormData();
-        // nombre del campo que espera multer 
-        form.append('file', file);
+        form.append('file', file); // nombre del campo que espera multer
         if (ctx === null || ctx === void 0 ? void 0 : ctx.folio)
             form.append('folio', ctx.folio);
         if ((ctx === null || ctx === void 0 ? void 0 : ctx.id_periodo) != null)
@@ -89,18 +130,18 @@ var PolizasService = /** @class */ (function () {
             form.append('id_centro', String(ctx.id_centro));
         if ((ctx === null || ctx === void 0 ? void 0 : ctx.id_tipopoliza) != null)
             form.append('id_tipopoliza', String(ctx.id_tipopoliza));
-        // Angular setea el boundary automáticamente con FormData
-        return this.http.post(this.cfdiImportUrl, form);
+        return this.http.post(this.cfdiImportUrl, form, {
+            headers: this.getAuthHeaders()
+        });
     };
     /** Vincular UUID a movimientos */
     PolizasService.prototype.linkUuidToMovimientos = function (polizaId, uuid, movimientoIds) {
         return this.http.post(this.api + "/cfdi/polizas/" + polizaId + "/movimientos/link-uuid", {
             uuid: uuid,
             movimiento_ids: movimientoIds
+        }, {
+            headers: this.getAuthHeaders()
         });
-    };
-    PolizasService.prototype.getEjercicios = function () {
-        return this.http.get(this.api + "/ejercicios");
     };
     /** GET /api/v1/cfdi */
     PolizasService.prototype.listCfdi = function (params) {
@@ -109,23 +150,43 @@ var PolizasService = /** @class */ (function () {
             httpParams = httpParams.set('limit', String(params.limit));
         if (params === null || params === void 0 ? void 0 : params.q)
             httpParams = httpParams.set('q', params.q);
-        return this.http.get(this.api + "/cfdi", { params: httpParams });
+        return this.http.get(this.api + "/cfdi", {
+            params: httpParams,
+            headers: this.getAuthHeaders()
+        });
     };
-    // en polizas.service.ts 
+    // ---------------- USUARIO ----------------
+    // Corrige a /api/v1/me (antes apuntaba a /api/me)
     PolizasService.prototype.getMe = function () {
-        return this.http.get('/api/me');
+        return this.http.get(this.api + "/me", {
+            headers: this.getAuthHeaders()
+        });
     };
-    // polizas.service.ts
+    // ---------------- ESTADO PÓLIZA ----------------
+    // Usa el endpoint correcto del router: PATCH /poliza/:id/estado
     PolizasService.prototype.changeEstadoPoliza = function (id_poliza, estado) {
-        return this.http.patch(this.api + "/poliza/" + id_poliza, { estado: estado });
+        return this.http.patch(this.basePoliza + "/" + id_poliza + "/estado", { estado: estado }, {
+            headers: this.getAuthHeaders()
+        });
     };
-    /** POST /api/v1/polizas/from-evento  (crea póliza con el motor) */
+    // ---------------- MOTOR (EVENTO → MOVIMIENTOS) ----------------
+    /** POST /api/v1/poliza/from-evento  (crea póliza con el motor) */
     PolizasService.prototype.createPolizaFromEvento = function (body) {
-        return this.http.post(this.api + "/poliza/from-evento", body);
+        return this.http.post(this.basePoliza + "/from-evento", body, {
+            headers: this.getAuthHeaders()
+        });
     };
-    /** POST /api/v1/polizas/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
+    /** POST /api/v1/poliza/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
     PolizasService.prototype.expandEventoEnPoliza = function (polizaId, body) {
-        return this.http.post(this.api + "/poliza/" + polizaId + "/expand-evento", body);
+        return this.http.post(this.basePoliza + "/" + polizaId + "/expand-evento", body, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    // ---------------- EJERCICIO ----------------
+    PolizasService.prototype.selectEjercicio = function (id_ejercicio) {
+        return this.http.put(this.api + "/ejercicios/" + id_ejercicio + "/select", {}, {
+            headers: this.getAuthHeaders()
+        });
     };
     PolizasService = __decorate([
         core_1.Injectable({ providedIn: 'root' })

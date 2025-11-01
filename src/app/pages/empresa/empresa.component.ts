@@ -14,6 +14,7 @@ import { PeriodoContableService, PeriodoContableDto, PeriodoTipo } from '@app/se
 
 
 import { EjercicioContableService, EjercicioContableDto } from '@app/services/ejercicio-contable.service';
+import { PolizasService } from '@app/services/polizas.service';
 
 type UiEmpresa = {
   id?: number;
@@ -49,7 +50,8 @@ export class EmpresaComponent implements OnInit {
     private periodosService: PeriodoContableService,
     private auth: AuthService,
     public toast: ToastService,
-    private ejerciciosService: EjercicioContableService
+    private ejerciciosService: EjercicioContableService,
+    private polizasService: PolizasService
   ) { }
 
   // }Layout
@@ -571,10 +573,23 @@ export class EmpresaComponent implements OnInit {
   }
 
   setEjercicioSeleccionado(ej: EjercicioContableDto | null) {
-    this.ejercicioSeleccionado = ej;
-    this.saveEjercicioSeleccionado(ej);
-    this.loadPeriodos();
+  this.ejercicioSeleccionado = ej;
+  this.saveEjercicioSeleccionado(ej);
+  this.loadPeriodos();
+
+  if (ej?.id_ejercicio) {
+    this.polizasService.selectEjercicio(ej.id_ejercicio).subscribe({
+      next: () => {
+        console.log('✅ Ejercicio seleccionado reflejado en base de datos');
+      },
+      error: (err: any) => {
+        console.error('❌ Error al actualizar el ejercicio en la base de datos:', err);
+      }
+    });
   }
+}
+
+
 
   // Guardar ejercicio desde modal
   confirmEjercicioModal() {
