@@ -71,32 +71,18 @@
 
   <span *ngIf="!ejercicios?.length" style="margin-left:.5rem;">—</span>
 </div>
-
-  
       <div class="form-grid">
-        <label>
-          Folio:
-          <input class="field" [(ngModel)]="nuevaPoliza.folio" name="folio" required />
-        </label>
 
         <label>
           Tipo póliza:
-          <select class="field select" [(ngModel)]="nuevaPoliza.id_tipopoliza" name="id_tipopoliza" required>
+          <select
+            class="field select"
+            [(ngModel)]="nuevaPoliza.id_tipopoliza"
+            name="id_tipopoliza"
+            required
+            (ngModelChange)="onTipoPolizaChange($event)">
             <option [ngValue]="undefined" disabled>Seleccione…</option>
             <option *ngFor="let t of tiposPoliza" [ngValue]="t.id_tipopoliza">{{ t.nombre }}</option>
-          </select>
-        </label>
-
-        <label>
-          Concepto:
-          <input class="field" [(ngModel)]="nuevaPoliza.concepto" name="concepto" required />
-        </label>
-
-        <label>
-          Periodo:
-          <select class="field select" [(ngModel)]="nuevaPoliza.id_periodo" name="id_periodo" required>
-            <option [ngValue]="undefined" disabled>Seleccione…</option>
-            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
           </select>
         </label>
 
@@ -107,14 +93,44 @@
             [(ngModel)]="nuevaPoliza.id_centro"
             name="id_centro"
             required
-            (change)="onCentroSeleccionado()">
+            (change)="onCentroSeleccionado(); onCentroCambiadoPropagarSerie()">
             <option [ngValue]="undefined" disabled>Seleccione…</option>
             <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
           </select>
         </label>
-      </div>
+        
+        <label>
+          Folio:
+          <input class="field" [(ngModel)]="nuevaPoliza.folio" name="folio" required />
+        </label>
 
-      
+        <label>
+          Concepto:
+          <input class="field"
+                [(ngModel)]="nuevaPoliza.concepto"
+                name="concepto"
+                required
+                (input)="conceptoFueEditadoPorUsuario = true" />
+
+          <small *ngIf="conceptoSugerido && (!nuevaPoliza.concepto || !conceptoFueEditadoPorUsuario)"
+                style="display:block;margin-top:.25rem;color:#6b7280">
+            Sugerencia: <em>{{ conceptoSugerido }}</em>
+            <button type="button" class="btn small"
+                    style="margin-left:.5rem"
+                    (click)="aplicarConceptoSugerido()">
+              Usar
+            </button>
+          </small>
+        </label>
+
+        <label>
+          Periodo:
+          <select class="field select" [(ngModel)]="nuevaPoliza.id_periodo" name="id_periodo" required>
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
+          </select>
+        </label>
+      </div>
 
       <!-- Panel del motor -->
       <div *ngIf="modoCaptura==='motor'" class="motor-panel">
@@ -233,7 +249,11 @@
                 <td><input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" /></td>
 
                 <td>
-                  <select class="cell-input select" [(ngModel)]="mov.cc" name="cc{{i}}">
+                  <select
+                    class="cell-input select"
+                    [(ngModel)]="mov.cc"
+                    name="cc{{i}}"
+                    (ngModelChange)="onMovimientoCcChange(i, $event)">
                     <option [ngValue]="null">— Selecciona CC —</option>
                     <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
                       {{ cc.nombre }}

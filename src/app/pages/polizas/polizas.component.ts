@@ -15,7 +15,7 @@ type CfdiOption = {
   total?: number | string | null;
 };
 
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
 type Ejercicio = {
   id_ejercicio: number;
   nombre?: string | null;
@@ -87,6 +87,82 @@ export class PolizasComponent implements OnInit {
   cfdiOptions: CfdiOption[] = [];
   uuidSeleccionado?: string;
 
+  // --- Concepto sugerido ---
+  conceptoSugerido = '';
+  conceptoFueEditadoPorUsuario = false;
+
+  // Obtiene etiqueta legible del tipo de póliza y del centro
+  private getTipoPolizaLabelById(id?: number): string {
+    const t = this.tiposPoliza.find(x => Number(x.id_tipopoliza) === Number(id));
+    return (t?.nombre ?? '').toString().trim();
+  }
+
+  private getCentroLabelById(id?: number): string {
+    const c = this.centros.find(x => Number(x.id_centro) === Number(id));
+    return (c?.nombre ?? '').toString().trim();
+  }
+
+  // Serie de venta por Centro de Costo (desde centrosCostoMap)
+  private getSerieVentaByCcId(ccId?: number | null): string | null {
+    if (ccId == null) return null;
+    const cc = this.centrosCostoMap.get(Number(ccId)) as (CentroCostoItem | undefined);
+    const serie = (cc as any)?.serie_venta ?? null;
+    return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
+  }
+
+  private recomputarConceptoSugerido(): void {
+    const tipoNombre = this.getTipoPolizaLabelById(this.nuevaPoliza.id_tipopoliza);
+    const centroLbl = this.getCentroLabelById(this.nuevaPoliza.id_centro);
+    if (!tipoNombre || !centroLbl) {
+      this.conceptoSugerido = '';
+      return;
+    }
+    const k = tipoNombre.trim().toLowerCase();
+    const hoy = this.todayISO();
+    const año = this.todayISO().slice(0, 4);
+
+    let base = '';
+    if (k.includes('apertura')) base = `APERTURA EJERCICIO ${año}`;
+    else if (k.includes('cierre')) base = `CIERRE EJERCICIO ${centroLbl} — ${hoy}`;
+    else if (k.includes('ventas')) base = `Póliza de ventas ${centroLbl} — ${hoy}`;
+    else if (k.includes('compras')) base = `Póliza de compras ${centroLbl} — ${hoy}`;
+    else if (k.includes('diario')) base = `Póliza de diario ${centroLbl} — ${hoy}`;
+    else base = `${tipoNombre} — ${centroLbl} — ${hoy}`;
+
+    this.conceptoSugerido = base;
+
+    if (!this.nuevaPoliza.concepto || !this.conceptoFueEditadoPorUsuario) {
+      this.nuevaPoliza.concepto = base;
+    }
+  }
+
+  aplicarConceptoSugerido(): void {
+    if (this.conceptoSugerido) {
+      this.nuevaPoliza.concepto = this.conceptoSugerido;
+      this.conceptoFueEditadoPorUsuario = true;
+    }
+  }
+
+  onTipoPolizaChange(_id: any) {
+    this.conceptoFueEditadoPorUsuario = !!(this.nuevaPoliza.concepto && this.nuevaPoliza.concepto.trim());
+    this.recomputarConceptoSugerido();
+  }
+
+  onCentroCambiadoPropagarSerie(): void {
+    this.conceptoFueEditadoPorUsuario = !!(this.nuevaPoliza.concepto && this.nuevaPoliza.concepto.trim());
+    this.recomputarConceptoSugerido();
+
+    const ccId = this.toNumOrNull(this.nuevaPoliza.id_centro);
+    const serie = this.getSerieVentaByCcId(ccId);
+    if (!serie) return;
+    (this.nuevaPoliza.movimientos ?? []).forEach(mov => {
+      if (!mov.ref_serie_venta || !String(mov.ref_serie_venta).trim()) {
+        mov.ref_serie_venta = serie;
+      }
+    });
+  }
+
+
   // Toast
   toast = {
     open: false,
@@ -98,7 +174,7 @@ export class PolizasComponent implements OnInit {
     showClose: true
   };
 
-  constructor(private api: PolizasService) {}
+  constructor(private api: PolizasService) { }
 
   ngOnInit(): void {
     this.cargarEjercicioActivo();
@@ -167,7 +243,7 @@ export class PolizasComponent implements OnInit {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const d = new Date(s);
     if (isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${this.pad2(d.getMonth()+1)}-${this.pad2(d.getDate())}`;
+    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
   };
   private N(v: any): number | undefined {
     if (v === '' || v === null || v === undefined) return undefined;
@@ -195,7 +271,7 @@ export class PolizasComponent implements OnInit {
       for (const c of candidatos) {
         if (!c) continue;
         const obj = typeof c === 'string' ? JSON.parse(c) : c;
-        const id  = Number(obj?.id_usuario ?? obj?.id ?? obj?.sub ?? obj?.uid);
+        const id = Number(obj?.id_usuario ?? obj?.id ?? obj?.sub ?? obj?.uid);
         if (Number.isFinite(id)) {
           return {
             id_usuario: id,
@@ -205,7 +281,7 @@ export class PolizasComponent implements OnInit {
           } as UsuarioLigero;
         }
       }
-    } catch {}
+    } catch { }
     return null;
   }
 
@@ -311,12 +387,12 @@ export class PolizasComponent implements OnInit {
         }
 
         let elegido = items.find((e: any) => e?.is_selected) ??
-                      items.find((e: any) => {
-                        const hoy = new Date().toISOString().slice(0, 10);
-                        const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
-                        const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
-                        return fi <= hoy && hoy <= ff;
-                      }) ?? items[0];
+          items.find((e: any) => {
+            const hoy = new Date().toISOString().slice(0, 10);
+            const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
+            const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
+            return fi <= hoy && hoy <= ff;
+          }) ?? items[0];
 
         if (!elegido) {
           console.warn('⚠ No se encontró ejercicio activo.');
@@ -421,16 +497,16 @@ export class PolizasComponent implements OnInit {
     ref_serie_venta: string;
     cc: number | null;
   } = {
-    tipo_operacion: 'ingreso',
-    monto_base: null,
-    fecha_operacion: '',
-    id_empresa: 1,
-    medio_cobro_pago: 'bancos',
-    id_cuenta_contrapartida: null,
-    cliente: '',
-    ref_serie_venta: '',
-    cc: null
-  };
+      tipo_operacion: 'ingreso',
+      monto_base: null,
+      fecha_operacion: '',
+      id_empresa: 1,
+      medio_cobro_pago: 'bancos',
+      id_cuenta_contrapartida: null,
+      cliente: '',
+      ref_serie_venta: '',
+      cc: null
+    };
 
   // Helper: fecha hoy en ISO (YYYY-MM-DD)
   private todayISO(): string {
@@ -464,7 +540,7 @@ export class PolizasComponent implements OnInit {
           id_periodo: Number(p.id_periodo ?? p.id ?? p.ID),
           id_ejercicio: Number(p.id_ejercicio ?? p.ejercicio_id ?? p.ejercicio ?? p.idEjercicio ?? p.ID_EJERCICIO ?? NaN),
           fecha_inicio: this.fmtDate(p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini),
-          fecha_fin:    this.fmtDate(p.fecha_fin    ?? p.fechaFin    ?? p.fin    ?? p.end_date   ?? p.fecha_fin),
+          fecha_fin: this.fmtDate(p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin),
           _raw: p
         }));
         this.applyPeriodoFilter();
@@ -480,10 +556,19 @@ export class PolizasComponent implements OnInit {
       next: (r: any) => {
         const items = this.normalizeList(r);
         this.centros = items.map((c: any) => {
-          const id     = Number(c.id_centro ?? c.id ?? c.ID);
-          const serie  = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
-          const nombre = String(c.nombre_centro ?? c.descripcion ?? '').trim();
-          const etiqueta = serie && nombre ? `${serie} — ${nombre}` : (serie || nombre || `Centro ${id}`);
+          const id = Number(c.id_centro ?? c.id ?? c.ID);
+          const serie = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
+          // ⬇️ Fallbacks más amplios: nombre, nombre_centro, descripcion, NOMBRE...
+          const nombre = String(
+            c.nombre ??
+            c.nombre_centro ??
+            c.descripcion ??
+            c.NOMBRE ??
+            ''
+          ).trim();
+          const etiqueta = serie && nombre
+            ? `${serie} — ${nombre}`
+            : (serie || nombre || `Centro ${id}`);
           return { id_centro: id, nombre: etiqueta };
         });
       },
@@ -492,6 +577,7 @@ export class PolizasComponent implements OnInit {
         this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los centros.' });
       }
     });
+
   }
 
   // NUEVO: filtrar periodos según ejercicio actual
@@ -534,8 +620,8 @@ export class PolizasComponent implements OnInit {
   private getCentros(): void {
     const svc: any = this.api as any;
     const fn =
-      svc.getCentrosCosto   || svc.listCentrosCosto ||
-      svc.getCentroCostos   || svc.listCentroCostos ||
+      svc.getCentrosCosto || svc.listCentrosCosto ||
+      svc.getCentroCostos || svc.listCentroCostos ||
       svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
       svc.getCentros;
 
@@ -552,12 +638,12 @@ export class PolizasComponent implements OnInit {
 
         this.centrosCosto = (items || [])
           .map((x: any) => {
-            const id   = Number(x.id_centro ?? x.id_centro ?? x.id ?? x.ID);
+            const id = Number(x.id_centro ?? x.id_centro ?? x.id ?? x.ID);
             const serie = String(x.serie_venta ?? x.serie ?? x.codigo ?? '').trim();
-            const nom   = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`).trim();
+            const nom = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`).trim();
             const clave = String(x.clave ?? x.codigo ?? '').trim();
             const etiqueta = serie ? `${serie} — ${nom}` : (clave ? `${clave} — ${nom}` : nom);
-            return { id_centrocosto: id, nombre: etiqueta } as CentroCostoItem;
+            return { id_centrocosto: id, nombre: etiqueta, clave, serie_venta: serie } as CentroCostoItem;
           })
           .filter((cc: CentroCostoItem) => Number.isFinite(cc.id_centrocosto));
 
@@ -576,9 +662,9 @@ export class PolizasComponent implements OnInit {
   private cargarCuentas(): void {
     const svc: any = this.api as any;
     const fn =
-      svc.getCuentas           || svc.listCuentas ||
-      svc.getCatalogoCuentas   || svc.listCatalogoCuentas ||
-      svc.getPlanCuentas       || svc.listPlanCuentas;
+      svc.getCuentas || svc.listCuentas ||
+      svc.getCatalogoCuentas || svc.listCatalogoCuentas ||
+      svc.getPlanCuentas || svc.listPlanCuentas;
 
     if (typeof fn !== 'function') {
       console.warn('No existe método de API para Cuentas; usando vacío.');
@@ -615,8 +701,8 @@ export class PolizasComponent implements OnInit {
   cargarPolizas(): void {
     this.api.getPolizas({
       id_tipopoliza: this.filtroTipo,
-      id_periodo:    this.filtroPeriodo,
-      id_centro:     this.filtroCentro
+      id_periodo: this.filtroPeriodo,
+      id_centro: this.filtroCentro
     }).subscribe({
       next: (r: any) => {
         const list = this.normalizeList(r) ?? (r?.polizas ?? []);
@@ -632,6 +718,16 @@ export class PolizasComponent implements OnInit {
     });
   }
 
+  onMovimientoCcChange(index: number, ccId: any): void {
+    const serie = this.getSerieVentaByCcId(this.toNumOrNull(ccId));
+    if (!this.nuevaPoliza.movimientos?.[index]) return;
+
+    if (serie && (!this.nuevaPoliza.movimientos[index].ref_serie_venta ||
+      !String(this.nuevaPoliza.movimientos[index].ref_serie_venta).trim())) {
+      this.nuevaPoliza.movimientos[index].ref_serie_venta = serie;
+    }
+  }
+
   // CFDI
   cargarCfdiRecientes(): void {
     this.api.listCfdi({ limit: 100 }).subscribe({
@@ -639,7 +735,7 @@ export class PolizasComponent implements OnInit {
         const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
         this.cfdiOptions = arr
           .map((x: any): CfdiOption => ({
-            uuid:  String(x.uuid ?? x.UUID ?? '').trim(),
+            uuid: String(x.uuid ?? x.UUID ?? '').trim(),
             folio: x.folio ?? x.Folio ?? null,
             fecha: x.fecha ?? x.Fecha ?? null,
             total: x.total ?? x.Total ?? null,
@@ -738,10 +834,12 @@ export class PolizasComponent implements OnInit {
 
   agregarMovimiento(): void {
     const defaultCuenta = this.cuentas.length ? this.cuentas[0].id_cuenta : null;
+    const ccId = this.nuevaPoliza.id_centro ?? null;
+    const serie = this.getSerieVentaByCcId(this.toNumOrNull(ccId));
 
     const nuevo: Movimiento & { _cuentaQuery?: string } = {
       id_cuenta: null,
-      ref_serie_venta: '',
+      ref_serie_venta: serie ?? '',
       operacion: '',          // "0" cargo | "1" abono (string)
       monto: null,
       cliente: '',
@@ -766,9 +864,9 @@ export class PolizasComponent implements OnInit {
       !!(p.folio && String(p.folio).trim()) &&
       !!(p.concepto && String(p.concepto).trim()) &&
       this.N(p.id_tipopoliza) !== undefined &&
-      this.N(p.id_periodo)    !== undefined &&
-      this.N(p.id_centro)     !== undefined &&
-      this.N(p.id_usuario)    !== undefined;
+      this.N(p.id_periodo) !== undefined &&
+      this.N(p.id_centro) !== undefined &&
+      this.N(p.id_usuario) !== undefined;
 
     if (!okHeader) return false;
 
@@ -785,7 +883,7 @@ export class PolizasComponent implements OnInit {
 
     for (const m of movs) {
       const idCuenta = this.toNumOrNull(m.id_cuenta);
-      const idCc     = this.toNumOrNull(m.cc);
+      const idCc = this.toNumOrNull(m.cc);
       if (idCuenta == null || !this.cuentasMap.has(idCuenta)) return false;
       if (idCc != null && !this.centrosCostoMap.has(idCc)) return false;
     }
@@ -801,12 +899,12 @@ export class PolizasComponent implements OnInit {
     }
 
     const faltantes: string[] = [];
-    if (!p.folio)       faltantes.push('Folio');
-    if (!p.concepto)    faltantes.push('Concepto');
+    if (!p.folio) faltantes.push('Folio');
+    if (!p.concepto) faltantes.push('Concepto');
     if (!p.id_tipopoliza) faltantes.push('Tipo de póliza');
-    if (!p.id_periodo)    faltantes.push('Periodo');
-    if (!p.id_centro)     faltantes.push('Centro');
-    if (!p.id_usuario)    faltantes.push('Usuario');
+    if (!p.id_periodo) faltantes.push('Periodo');
+    if (!p.id_centro) faltantes.push('Centro');
+    if (!p.id_usuario) faltantes.push('Usuario');
 
     if (faltantes.length) {
       this.showToast({ type: 'warning', title: 'Faltan datos', message: `Completa: ${faltantes.join(', ')}.` });
@@ -870,20 +968,20 @@ export class PolizasComponent implements OnInit {
       const p = this.nuevaPoliza;
       const payload = {
         id_tipopoliza: this.toNumOrNull(p?.id_tipopoliza)!,
-        id_periodo:    this.toNumOrNull(p?.id_periodo)!,
-        id_usuario:    this.toNumOrNull(p?.id_usuario)!,
-        id_centro:     this.toNumOrNull(p?.id_centro)!,
-        folio:         this.toStrOrNull(p?.folio)!,
-        concepto:      this.toStrOrNull(p?.concepto)!,
-        movimientos:  (p?.movimientos ?? []).map(m => ({
-          id_cuenta:       this.toNumOrNull(m.id_cuenta),
+        id_periodo: this.toNumOrNull(p?.id_periodo)!,
+        id_usuario: this.toNumOrNull(p?.id_usuario)!,
+        id_centro: this.toNumOrNull(p?.id_centro)!,
+        folio: this.toStrOrNull(p?.folio)!,
+        concepto: this.toStrOrNull(p?.concepto)!,
+        movimientos: (p?.movimientos ?? []).map(m => ({
+          id_cuenta: this.toNumOrNull(m.id_cuenta),
           ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
-          operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
-          monto:           this.toNumOrNull(m.monto),
-          cliente:         this.toStrOrNull(m.cliente),
-          fecha:           this.toDateOrNull(m.fecha),
-          cc:              this.toNumOrNull(m.cc),
-          uuid:            this.toStrOrNull(m.uuid),
+          operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+          monto: this.toNumOrNull(m.monto),
+          cliente: this.toStrOrNull(m.cliente),
+          fecha: this.toDateOrNull(m.fecha),
+          cc: this.toNumOrNull(m.cc),
+          uuid: this.toStrOrNull(m.uuid),
         }))
       };
 
@@ -926,22 +1024,22 @@ export class PolizasComponent implements OnInit {
 
       const body = {
         id_tipopoliza: this.toNumOrNull(this.nuevaPoliza.id_tipopoliza)!,
-        id_periodo:    this.toNumOrNull(this.nuevaPoliza.id_periodo)!,
-        id_usuario:    this.toNumOrNull(this.nuevaPoliza.id_usuario)!,
-        id_centro:     this.toNumOrNull(this.nuevaPoliza.id_centro)!,
-        folio:         this.toStrOrNull(this.nuevaPoliza.folio)!,
-        concepto:      this.toStrOrNull(this.nuevaPoliza.concepto)!,
+        id_periodo: this.toNumOrNull(this.nuevaPoliza.id_periodo)!,
+        id_usuario: this.toNumOrNull(this.nuevaPoliza.id_usuario)!,
+        id_centro: this.toNumOrNull(this.nuevaPoliza.id_centro)!,
+        folio: this.toStrOrNull(this.nuevaPoliza.folio)!,
+        concepto: this.toStrOrNull(this.nuevaPoliza.concepto)!,
 
         tipo_operacion: this.evento.tipo_operacion,
-        monto_base:     Number(this.evento.monto_base),
-        fecha_operacion:this.toDateOrNull(this.evento.fecha_operacion)!,
-        id_empresa:     Number(this.evento.id_empresa),
+        monto_base: Number(this.evento.monto_base),
+        fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
+        id_empresa: Number(this.evento.id_empresa),
         medio_cobro_pago: this.evento.medio_cobro_pago,
         id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
 
-        cliente:         this.toStrOrNull(this.evento.cliente) ?? null,
+        cliente: this.toStrOrNull(this.evento.cliente) ?? null,
         ref_serie_venta: this.toStrOrNull(this.evento.ref_serie_venta) ?? null,
-        cc:              this.toNumOrNull(this.evento.cc) ?? null
+        cc: this.toNumOrNull(this.evento.cc) ?? null
       };
 
       this.api.createPolizaFromEvento(body).subscribe({
@@ -1036,7 +1134,7 @@ export class PolizasComponent implements OnInit {
     this.api.uploadCfdiXml(file, ctx).subscribe({
       next: (res) => {
         const opt: CfdiOption = {
-          uuid:  res?.uuid || res?.UUID || '',
+          uuid: res?.uuid || res?.UUID || '',
           folio: res?.folio ?? res?.Folio ?? null,
           fecha: res?.fecha ?? res?.Fecha ?? null,
           total: res?.total ?? res?.Total ?? null
@@ -1068,7 +1166,7 @@ export class PolizasComponent implements OnInit {
   }
 
   // Totales
-  getTotal(p: Poliza | { movimientos?: Movimiento[] }, tipo: '0'|'1'): number {
+  getTotal(p: Poliza | { movimientos?: Movimiento[] }, tipo: '0' | '1'): number {
     const movs = Array.isArray(p?.movimientos) ? p.movimientos : [];
     return movs
       .filter(m => String(m.operacion) === tipo)
