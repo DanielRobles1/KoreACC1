@@ -12,7 +12,8 @@
   </a>
 
   <!-- Toolbar superior (no usa movs-toolbar para evitar sangrado) -->
-  
+
+ 
 
   <div class="polizas-container">
     <hr />
@@ -39,38 +40,88 @@
       #polizaForm="ngForm"
       autocomplete="off"
       novalidate>
-<h4 class="section-title">Cabecera de póliza</h4>
+
+      <h4 class="section-title">Cabecera de póliza</h4>
+
       <!-- Encabezado -->
-    <div style="
-      margin-left:auto;
-      background:rgba(255,255,255,0.08);
-      border-radius:8px;
-      padding:0.35rem 0.75rem;
-      font-size:0.9rem;
-      color:#565656;
-      display:flex;
-      align-items:center;
-      gap:.4rem;">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-    <path d="M3 4h18v2H3zM8 10h13v2H8zM8 16h13v2H8zM3 10h2v2H3zM3 16h2v2H3z"></path>
+      <div
+  style="
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    color: #565656;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* más separación entre bloques */
+  "
+>
+  <!-- Ejercicio -->
+  <div style="display: flex; align-items: center; gap: 0.4rem;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+      <path d="M3 4h18v2H3zM8 10h13v2H8zM8 16h13v2H8zM3 10h2v2H3zM3 16h2v2H3z"></path>
+    </svg>
+    <strong>Ejercicio:</strong>
+    <select
+      [(ngModel)]="ejercicioActualId"
+      (ngModelChange)="onEjercicioSeleccionado($event)"
+      name="ejercicioSeleccionado"
+      style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
+    >
+      <option *ngFor="let e of ejercicios" [value]="e.id_ejercicio">
+        {{ e.nombre }} ({{ e.fecha_inicio || '—' }} — {{ e.fecha_fin || '—' }})
+      </option>
+    </select>
+    <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
+  </div>
+
+  <!-- Separador visual -->
+  <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
+
+  <!-- Usuario -->
+  <div style="display: flex; align-items: center; gap: 0.4rem;">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+    <span class="user-name">{{ currentUserLabel || 'Usuario' }}</span>
+  </div>
+
+  <!-- Separador visual -->
+  <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
+
+ <div class="status-chip por-revisar">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="black"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <circle cx="12" cy="16" r="1"></circle>
   </svg>
-  <strong>Ejercicio:</strong>
-
-<select
-  [(ngModel)]="ejercicioActualId"
-  (ngModelChange)="onEjercicioSeleccionado($event)"
-  name="ejercicioSeleccionado"
-  style="margin-left:.5rem; background:transparent; border:none; color:#565656;">
-  <option *ngFor="let e of ejercicios" [value]="e.id_ejercicio">
-    {{ e.nombre  }} ({{ e.fecha_inicio || '—' }} — {{ e.fecha_fin || '—' }})
-  </option>
-</select>
-
-
-
-
-  <span *ngIf="!ejercicios?.length" style="margin-left:.5rem;">—</span>
+  <span>Por revisar</span>
 </div>
+
+</div>
+
+
       <div class="form-grid">
 
         <label>
@@ -98,7 +149,7 @@
             <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
           </select>
         </label>
-        
+
         <label>
           Folio:
           <input class="field" [(ngModel)]="nuevaPoliza.folio" name="folio" required />
@@ -107,13 +158,13 @@
         <label>
           Concepto:
           <input class="field"
-                [(ngModel)]="nuevaPoliza.concepto"
-                name="concepto"
-                required
-                (input)="conceptoFueEditadoPorUsuario = true" />
+                 [(ngModel)]="nuevaPoliza.concepto"
+                 name="concepto"
+                 required
+                 (input)="conceptoFueEditadoPorUsuario = true" />
 
           <small *ngIf="conceptoSugerido && (!nuevaPoliza.concepto || !conceptoFueEditadoPorUsuario)"
-                style="display:block;margin-top:.25rem;color:#6b7280">
+                 style="display:block;margin-top:.25rem;color:#6b7280">
             Sugerencia: <em>{{ conceptoSugerido }}</em>
             <button type="button" class="btn small"
                     style="margin-left:.5rem"
@@ -228,11 +279,10 @@
             <tbody>
               <tr *ngFor="let mov of (nuevaPoliza.movimientos ?? []); let i = index">
                 <td class="cell-cuenta">
-  <button type="button" class="btn small" (click)="abrirModalCuentas(i)">
-    {{ labelCuenta(mov.id_cuenta) || 'Seleccionar cuenta…' }}
-  </button>
-</td>
-
+                  <button type="button" class="btn small" (click)="abrirModalCuentas(i)">
+                    {{ labelCuenta(mov.id_cuenta) || 'Seleccionar cuenta…' }}
+                  </button>
+                </td>
 
                 <td><input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" /></td>
 
@@ -261,32 +311,31 @@
                   </select>
                 </td>
 
-               <td class="uuid-cell">
-  <div class="uuid-wrapper" [class.has-uuid]="!!mov.uuid">
-    <button
-      type="button"
-      class="btn-xml"
-      [ngClass]="{ ok: !!mov.uuid }"
-      [title]="mov.uuid ? 'XML asociado' : 'Cargar XML'"
-      (click)="triggerXmlPickerForMovimiento(xmlInputMov, i)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 5v14m-7-7h14"/>
-      </svg>
-    </button>
+                <td class="uuid-cell">
+                  <div class="uuid-wrapper" [class.has-uuid]="!!mov.uuid">
+                    <button
+                      type="button"
+                      class="btn-xml"
+                      [ngClass]="{ ok: !!mov.uuid }"
+                      [title]="mov.uuid ? 'XML asociado' : 'Cargar XML'"
+                      (click)="triggerXmlPickerForMovimiento(xmlInputMov, i)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                           width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14m-7-7h14"/>
+                      </svg>
+                    </button>
 
-    <input
-      #xmlInputMov
-      type="file"
-      accept=".xml,text/xml,application/xml"
-      hidden
-      (change)="onXmlPickedForMovimiento($event, i)" />
+                    <input
+                      #xmlInputMov
+                      type="file"
+                      accept=".xml,text/xml,application/xml"
+                      hidden
+                      (change)="onXmlPickedForMovimiento($event, i)" />
 
-    <!-- Badge opcional con el UUID recortado -->
-    <small class="uuid-badge" *ngIf="mov.uuid">{{ mov.uuid | slice:0:8 }}…</small>
-  </div>
-</td>
-
+                    <!-- Badge opcional con el UUID recortado -->
+                    <small class="uuid-badge" *ngIf="mov.uuid">{{ mov.uuid | slice:0:8 }}…</small>
+                  </div>
+                </td>
 
                 <td class="actions-cell">
                   <button type="button" class="icon-btn danger" (click)="eliminarMovimiento(i)" title="Eliminar movimiento" aria-label="Eliminar movimiento">
@@ -356,6 +405,7 @@
     </form>
   </div>
 </app-polizas-layout>
+
 <app-modal-seleccion-cuenta
   [open]="modalCuentasAbierto"
   [cuentas]="cuentas"

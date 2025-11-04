@@ -64,11 +64,12 @@
 }
 .btn.sm { padding: .4rem .65rem; font-weight: 600; }
 .btn.lg { padding: .7rem 1.1rem; font-size: 1.05rem; }
- .btn.primary {
-  background: linear-gradient(90deg, #233645);
-  color: white;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
-  border-radius: 15px;
+
+.btn.primary {
+  --btn-bg: var(--primary);
+  --btn-fg: #000000;
+  --btn-br: var(--primary);
+  --btn-bg-hover: var(--primary-600);
 }
 
 .btn.ghost {
@@ -107,6 +108,38 @@
   &:focus-visible { outline: none; box-shadow: var(--ring); }
   &.danger { color: var(--danger); border-color: #f1d5d5; background: #fff; }
 }
+/* ----- CENTRAR TÍTULO PRINCIPAL ----- */
+/* 🎯 TITULO PRINCIPAL SUPER CENTRADO Y DESTACADO */
+[page-title] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #1e293b;
+
+  margin: 1.5rem auto 2rem auto;
+  position: relative;
+  width: 100%;
+}
+
+/* 💠 Línea decorativa debajo del título */
+[page-title]::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2px 6px rgba(37,99,235,0.4);
+}
+
 
 /* =======================
    Contenedor principal
@@ -370,6 +403,79 @@
     .text { font-size: 14px; }
   }
 }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  line-height: 1;
+  border: 1px solid transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+/* 🟡 Por revisar */
+.status-badge.warn {
+  background: #fff8e1;      /* amarillo muy suave */
+  color: #a87900;           /* texto dorado suave */
+  border-color: #ffe69b;    /* borde tenue */
+}
+
+/* 🟢 Aprobada */
+.status-badge.ok {
+  background: #e6f4ea;      /* verde muy claro */
+  color: #0a7a3b;           /* verde texto */
+  border-color: #b8e0c5;    /* borde verde claro */
+}
+
+.status-badge svg {
+  display: block;
+}
+.cuenta-cell { position: relative; }
+.combo { position: relative; }
+
+.combo-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(520px, 92vw);
+  max-height: 280px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  box-shadow: 0 8px 24px rgba(2,6,23,.12);
+  z-index: 10;
+}
+
+.combo-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .6rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: .9rem;
+
+  &:hover { background: #f8fafc; }
+  .code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700;
+    min-width: 82px;
+  }
+  .name { color: var(--muted); }
+}
+
+.cuenta-id {
+  margin-top: .25rem;
+  font-size: .75rem;
+  color: var(--muted);
+}
 
 /* Opcional: que no se pegue a la tabla */
 .tabla-wrapper + .totales-panel { margin-top: 16px; }
@@ -620,3 +726,316 @@ h3, h4 { margin: .5rem 0 .75rem; color: var(--text); }
 }
 
 
+/* ===================================================
+   🧾 FORMULARIO DE PÓLIZA - ESTILO COMPLETO ACTUALIZADO
+   =================================================== */
+
+/* ----- CONTENEDOR PRINCIPAL ----- */
+.form-poliza {
+  background: #fdfdfd;
+  border: 1px solid var(--line-soft);
+  border-radius: 1rem;
+  padding: 1rem 1.5rem 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* ----- GRID DE CAMPOS DE PÓLIZA ----- */
+.form-grid {
+  display: flex;
+  flex-wrap: wrap; /* puedes usar nowrap si quieres una sola línea fija */
+  gap: 1rem;
+  background: #f9fafb;
+  border: 1px solid var(--line-soft);
+  border-radius: .75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 180px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.form-grid .field,
+.form-grid .select.field {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  height: 34px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.form-grid .field:focus,
+.form-grid .select.field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+  outline: none;
+}
+
+/* ----- TÍTULO Y MODO ----- */
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.5rem;
+}
+
+.mode-switch {
+  background: #f1f5f9;
+  padding: .6rem 1rem;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.03);
+}
+
+/* ----- TOOLBAR MOVIMIENTOS ----- */
+.movs-toolbar {
+  background: #f8fafc;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.movs-toolbar input.field {
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .45rem .75rem;
+  flex: 1;
+  transition: border-color .2s ease;
+}
+.movs-toolbar input.field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.25);
+}
+
+/* ----- PANEL MOTOR ----- */
+.motor-panel {
+  background: #f9fafb;
+  border-radius: .75rem;
+  border: 1px solid var(--line-soft);
+  padding: 1rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+.motor-panel h4 {
+  font-size: 1rem;
+  margin-bottom: .75rem;
+  color: #0f172a;
+}
+
+/* ----- TABLA DE MOVIMIENTOS ----- */
+.table-wrapper {
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-radius: .75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+table thead {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+table th, table td {
+  padding: .65rem .75rem;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+}
+
+table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* ----- BOTONES DE ACCIÓN ----- */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.actions .btn {
+  border: none;
+  border-radius: .75rem;
+  padding: .6rem 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.actions .btn.primary {
+  border-radius: 15px;
+  background: linear-gradient(90deg, #233645, #233645);
+  color: white;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.actions .btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.35);
+}
+
+.actions .btn.primary:disabled {
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ----- CAMPOS DE FORMULARIO SECUNDARIOS ----- */
+input.field, select.field, textarea.field {
+  font-family: inherit;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .35rem .6rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ----- VARIABLES GLOBALES (POR SI NO EXISTEN) ----- */
+:root {
+  --primary: #2563eb;
+  --line: #cbd5e1;
+  --line-soft: #e2e8f0;
+  --text: #1e293b;
+}
+.th-with-filter {
+  position: relative;
+  padding: .5rem .6rem; /* ajusta según necesites */
+}
+
+.th-with-filter .th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+.tabla-movimientos {
+  min-width: 100%; /* fuerza a que el thead y tbody tengan mismo ancho */
+}
+/* Evita que inputs/selects descuadren el ancho fijo */
+.tabla-movimientos td > * { width: 100%; min-width: 0; }
+.tabla-movimientos th, .tabla-movimientos td { box-sizing: border-box; }
+.uuid-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+
+  &.has-uuid .uuid-badge {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-xml {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;         /* gris oscuro por defecto */
+  transition: all .2s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+  }
+
+  /* Estado con XML asociado */
+  &.ok {
+    color: #16a34a;       /* verde */
+    border-color: #16a34a33;
+    background: #16a34a0d;
+    box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+  }
+}
+
+.uuid-badge {
+  font-size: .75rem;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: .15rem .4rem;
+  border-radius: 9999px;
+  letter-spacing: .02em;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: all .2s ease;
+}
+/* ===== Header ===== */
+.poliza-header{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:.75rem; margin-bottom:.75rem;
+}
+.back-btn{ background:none; border:none; cursor:pointer; padding:0; color:var(--text); }
+.back-btn:focus-visible{ outline:none; box-shadow: var(--ring); border-radius:.5rem; }
+
+.poliza-title{
+  font-size:1rem; line-height:1.25rem; margin:0 0 .35rem; font-weight:800; color:var(--text);
+}
+.meta-grid{
+  display:flex; flex-wrap:wrap; align-items:center; gap:.5rem;
+}
+.meta-chip{
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:.22rem .5rem; border-radius:9999px; font-size:.78rem; font-weight:700;
+  border:1px solid var(--line); background:#f8fafc; color:var(--text);
+  &.muted{ color:#64748b; border-color: var(--line); background:#fff; }
+}
+
+/* Chip de estado (amarillo “Por revisar”) */
+.status-badge{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.28rem .6rem; border-radius:9999px; font-weight:800; font-size:.8rem; line-height:1;
+  border:1px solid transparent;
+  &.warn{ background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-br); }
+}
+.status-badge svg{ display:block; }
+
+/* Acciones del header */
+.header-actions{ display:flex; gap:.5rem; align-items:center; }
+
+/* ===== Barra “Cabecera de póliza” ===== */
+.subsection-bar{
+  display:flex; align-items:center; gap:.5rem;
+  margin:.35rem 0 .65rem;
+  padding:.5rem .75rem;
+  background:#f3f6fb;
+  border:1px solid var(--line);
+  border-radius:.6rem;
+  color:#1f2937;
+  font-weight:800;
+}
+.subsection-bar svg{ stroke:#1f2937; }
+
+/* (Opcional) Ajuste fino de tabla/encabezados ya estilo captura */
+.tabla-movimientos thead th{
+  background:#113960; color:#fff; font-weight:700;
+}

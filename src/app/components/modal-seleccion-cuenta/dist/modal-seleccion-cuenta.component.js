@@ -15,6 +15,8 @@ var ModalSeleccionCuentaComponent = /** @class */ (function () {
         this.open = false;
         this.cuentas = [];
         this.cuentaSeleccionada = null;
+        this.noPosteablesComoTitulo = false;
+        this.permitirSeleccionNoPosteables = true;
         this.cuentaConfirmada = new core_1.EventEmitter();
         this.cerrado = new core_1.EventEmitter();
         this.filtro = '';
@@ -69,6 +71,12 @@ var ModalSeleccionCuentaComponent = /** @class */ (function () {
     __decorate([
         core_1.Input()
     ], ModalSeleccionCuentaComponent.prototype, "cuentaSeleccionada");
+    __decorate([
+        core_1.Input()
+    ], ModalSeleccionCuentaComponent.prototype, "noPosteablesComoTitulo");
+    __decorate([
+        core_1.Input()
+    ], ModalSeleccionCuentaComponent.prototype, "permitirSeleccionNoPosteables");
     __decorate([
         core_1.Output()
     ], ModalSeleccionCuentaComponent.prototype, "cuentaConfirmada");

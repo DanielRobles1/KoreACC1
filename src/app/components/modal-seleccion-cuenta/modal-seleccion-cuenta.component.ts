@@ -6,7 +6,7 @@ export type CuentaLigera = {
   id_cuenta: number;
   codigo: string;
   nombre: string;
-  posteable?: boolean | 0 | 1 | '0' | '1' | null; // backend puede mandar varios tipos
+  posteable?: boolean | 0 | 1 | '0' | '1' | null; 
 };
 
 @Component({
@@ -20,6 +20,8 @@ export class ModalSeleccionCuentaComponent {
   @Input() open = false;
   @Input() cuentas: CuentaLigera[] = [];
   @Input() cuentaSeleccionada: CuentaLigera | null = null;
+@Input() noPosteablesComoTitulo = false;
+@Input() permitirSeleccionNoPosteables = true;
 
   @Output() cuentaConfirmada = new EventEmitter<CuentaLigera>();
   @Output() cerrado = new EventEmitter<void>();

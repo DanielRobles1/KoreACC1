@@ -36,12 +36,12 @@ export interface CfdiRow {
 @Injectable({ providedIn: 'root' })
 export class PolizasService {
   private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
   private api = 'http://localhost:3000/api/v1';
-  private basePoliza = `${this.api}/poliza`;           // ← base unificada (singular)
+  private basePoliza = `${this.api}/poliza`;           
   private cfdiImportUrl = `${this.api}/cfdi/import`;
 
-  // Si usas JWT en Authorization: Bearer <token>
   private getAuthHeaders(): HttpHeaders {
     const token =
       localStorage.getItem('token') ||
@@ -121,7 +121,7 @@ export class PolizasService {
     });
   }
 
-  // ---------------- MOVIMIENTOS (si tienes estos endpoints separados) ----------------
+  // ---------------- MOVIMIENTOS ----------------
 
   /** POST /api/v1/movimiento-poliza */
   createMovPoliza(body: any): Observable<any> {
@@ -206,12 +206,17 @@ export class PolizasService {
   }
 
   // ---------------- USUARIO ----------------
-
-  // Corrige a /api/v1/me (antes apuntaba a /api/me)
-  getMe() {
+ getMeq() {
     return this.http.get<any>(`${this.api}/me`, {
       headers: this.getAuthHeaders(),
     });
+    
+  }
+  getMe() {
+    return this.http.get<any>(`${this.apiUrl}/me`, {
+      headers: this.getAuthHeaders(),
+    });
+    
   }
 
   // ---------------- ESTADO PÓLIZA ----------------

@@ -66,7 +66,7 @@
     <th class="th-with-filter">
       <div class="th-content">
         Folio
-        <span class="filter-icon" (click)="toggleFilter('folio')">▼</span>
+        <span class="filter-icon" (click)="toggleFilter('folio')"></span>
       </div>
       <div class="filter-dropdown" *ngIf="showFilter['folio']">
         <input type="text" [(ngModel)]="filtros.folio" (input)="aplicarFiltros()" placeholder="Filtrar folio" />
@@ -77,7 +77,7 @@
     <th class="th-with-filter">
       <div class="th-content">
         Concepto
-        <span class="filter-icon" (click)="toggleFilter('concepto')">▼</span>
+        <span class="filter-icon" (click)="toggleFilter('concepto')"></span>
       </div>
       <div class="filter-dropdown" *ngIf="showFilter['concepto']">
         <input type="text" [(ngModel)]="filtros.concepto" (input)="aplicarFiltros()" placeholder="Filtrar concepto" />

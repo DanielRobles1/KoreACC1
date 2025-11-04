@@ -15,7 +15,7 @@ type CfdiOption = {
   total?: number | string | null;
 };
 
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
 type Ejercicio = {
   id_ejercicio: number;
   nombre?: string | null;
@@ -48,7 +48,6 @@ export class PolizasComponent implements OnInit {
   ejercicioActualId!: number; // id del ejercicio seleccionado
 
   sidebarOpen = true;
-  // --- Manejo de XML por movimiento ---
   xmlMovimientoIndex: number | null = null;
   uploadingXml = false;
   selectedXmlName = '';
@@ -68,7 +67,7 @@ export class PolizasComponent implements OnInit {
 
   tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
   periodos: Array<{ id_periodo: number; nombre: string }> = [];
-  private allPeriodos: any[] = []; // <- NUEVO: todos los periodos sin filtrar
+  private allPeriodos: any[] = []; 
   centros: Array<{ id_centro: number; nombre: string }> = [];
 
   // Catálogo de cuentas (para movimientos)
@@ -87,7 +86,6 @@ export class PolizasComponent implements OnInit {
   cfdiOptions: CfdiOption[] = [];
   uuidSeleccionado?: string;
 
-  // --- Concepto sugerido ---
   conceptoSugerido = '';
   conceptoFueEditadoPorUsuario = false;
 
@@ -102,7 +100,6 @@ export class PolizasComponent implements OnInit {
     return (c?.nombre ?? '').toString().trim();
   }
 
-  // Serie de venta por Centro de Costo (desde centrosCostoMap)
   private getSerieVentaByCcId(ccId?: number | null): string | null {
     if (ccId == null) return null;
     const cc = this.centrosCostoMap.get(Number(ccId)) as (CentroCostoItem | undefined);
@@ -162,7 +159,6 @@ export class PolizasComponent implements OnInit {
     });
   }
 
-
   // Toast
   toast = {
     open: false,
@@ -178,7 +174,7 @@ export class PolizasComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarEjercicioActivo();
-    this.initUsuarioActual();     // setea id_usuario
+    this.initUsuarioActual();     // setea id_usuario y nombre forzado
     this.cargarCatalogos();       // tipos/periodos/centros
     this.getCentros();            // centros de costo para tabla
     this.cargarCuentas();         // catálogo de cuentas para select
@@ -240,7 +236,7 @@ export class PolizasComponent implements OnInit {
   private toDateOrNull = (v: any): string | null => {
     if (!v) return null;
     const s = String(v);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (/^\d{4}-\d{2}-\d2$/.test(s)) return s;
     const d = new Date(s);
     if (isNaN(d.getTime())) return null;
     return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
@@ -251,13 +247,44 @@ export class PolizasComponent implements OnInit {
     return Number.isFinite(n) ? n : undefined;
   }
 
-  private initUsuarioActual() {
-    const usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
-    if (usr && Number.isFinite(usr.id_usuario)) {
-      this.currentUser = usr;
-      if (!this.nuevaPoliza.id_usuario) this.nuevaPoliza.id_usuario = usr.id_usuario;
-    }
+  // ===== FIX: forzar nombre utilizable =====
+ private initUsuarioActual() {
+  const usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
+  if (!usr) return;
+
+  const resolved = this.resolveNombre(usr);
+  const email = this.resolveEmail(usr);
+  const fromEmail = (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') || undefined;
+  const fallback = usr.id_usuario != null ? `Usuario ${usr.id_usuario}` : 'Usuario';
+  const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
+
+  this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
+
+  const idNum = Number(usr.id_usuario);
+  if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
+    this.nuevaPoliza.id_usuario = idNum;
   }
+}
+
+private getNombreForzado(src: any): string {
+  const nombre =
+    src?.nombre ?? src?.name ?? src?.nombres ?? src?.displayName ?? src?.full_name ?? src?.fullName ??
+    src?.first_name ?? src?.given_name ?? src?.preferred_username ?? src?.usuario ?? src?.username ?? src?.userName ?? '';
+
+  const apP = src?.apellido_p ?? src?.apellidoP ?? src?.apellido ?? src?.apellidos ?? src?.last_name ?? src?.family_name ?? '';
+  const apM = src?.apellido_m ?? src?.apellidoM ?? '';
+
+  const base = [nombre, apP, apM].map(v => (v ?? '').toString().trim()).filter(Boolean).join(' ');
+  if (base) return base;
+
+  const email = this.resolveEmail(src);
+  if (email) {
+    const alias = String(email).split('@')[0].replace(/[._-]+/g, ' ').trim();
+    if (alias) return alias;
+  }
+
+  return src?.id_usuario != null ? `Usuario ${src.id_usuario}` : 'Usuario';
+}
 
   private leerUsuarioDescompuesto(): UsuarioLigero | null {
     try {
@@ -268,43 +295,48 @@ export class PolizasComponent implements OnInit {
         localStorage.getItem('user'),
         sessionStorage.getItem('usuario')
       ];
+
       for (const c of candidatos) {
         if (!c) continue;
         const obj = typeof c === 'string' ? JSON.parse(c) : c;
+
         const id = Number(obj?.id_usuario ?? obj?.id ?? obj?.sub ?? obj?.uid);
-        if (Number.isFinite(id)) {
-          return {
-            id_usuario: id,
-            nombre: obj?.nombre ?? obj?.name ?? obj?.username ?? null,
-            email: obj?.email ?? obj?.correo ?? null,
-            ...obj
-          } as UsuarioLigero;
-        }
+        if (!Number.isFinite(id)) continue;
+
+        return {
+          id_usuario: id,
+          nombre: this.resolveNombre(obj) ?? undefined,
+          email: this.resolveEmail(obj) ?? undefined,
+          ...obj
+        } as UsuarioLigero;
       }
-    } catch { }
+    } catch {}
     return null;
   }
 
-  private leerUsuarioDesdeJwt(): UsuarioLigero | null {
-    const token =
-      localStorage.getItem('token') ||
-      localStorage.getItem('access_token') ||
-      sessionStorage.getItem('token');
-    if (!token) return null;
+ private leerUsuarioDesdeJwt(): UsuarioLigero | null {
+  const token =
+    localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('token');
+  if (!token) return null;
 
-    const payload = this.decodeJwt(token);
-    if (!payload) return null;
+  const payload = this.decodeJwt(token);
+  if (!payload) return null;
 
-    const id = Number(payload?.id_usuario ?? payload?.sub ?? payload?.uid);
-    if (!Number.isFinite(id)) return null;
+  // toma el id crudo (puede ser UUID)
+  const rawId = payload?.id_usuario ?? payload?.sub ?? payload?.uid ?? null;
+  const maybeNum = Number(rawId);
+  const idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
 
-    return {
-      id_usuario: id,
-      nombre: payload?.nombre ?? payload?.name ?? payload?.username ?? null,
-      email: payload?.email ?? payload?.correo ?? null,
-      ...payload
-    } as UsuarioLigero;
-  }
+  return {
+    id_usuario: (idNum as any) ?? rawId, 
+    nombre: this.resolveNombre(payload) ?? undefined,
+    email: this.resolveEmail(payload) ?? undefined,
+    ...payload
+  } as UsuarioLigero;
+}
+
 
   private decodeJwt(token: string): any | null {
     try {
@@ -414,9 +446,8 @@ export class PolizasComponent implements OnInit {
           activo: Boolean(elegido.activo ?? elegido.esta_abierto)
         };
 
-        console.log('✅ Ejercicio elegido:', this.ejercicioActual);
+        console.log(' Ejercicio elegido:', this.ejercicioActual);
 
-        // NUEVO: filtrar periodos según el ejercicio elegido
         this.applyPeriodoFilter();
       },
       error: (err: any) => {
@@ -439,7 +470,6 @@ export class PolizasComponent implements OnInit {
       this.ejercicioActual = seleccionado;
       this.ejercicioActualId = ejercicioId;
       this.guardarEjercicioSeleccionado(ejercicioId);
-      // NUEVO: actualizar periodos mostrados
       this.applyPeriodoFilter();
     }
   }
@@ -457,7 +487,7 @@ export class PolizasComponent implements OnInit {
 
     this.api.selectEjercicio(id_ejercicio).subscribe({
       next: () => {
-        console.log('✅ Ejercicio seleccionado guardado en BD:', id_ejercicio);
+        console.log('Ejercicio seleccionado guardado en BD:', id_ejercicio);
         this.showToast({
           type: 'success',
           title: 'Ejercicio actualizado',
@@ -475,7 +505,6 @@ export class PolizasComponent implements OnInit {
     });
   }
 
-  // Etiqueta legible para UI
   get ejercicioLabel(): string {
     const e = this.ejercicioActual;
     if (!e) return '—';
@@ -483,7 +512,6 @@ export class PolizasComponent implements OnInit {
     return nombre || '—';
   }
 
-  // --- defaults de modo y evento ---
   modoCaptura: 'manual' | 'motor' = 'manual';
 
   evento: {
@@ -508,7 +536,6 @@ export class PolizasComponent implements OnInit {
       cc: null
     };
 
-  // Helper: fecha hoy en ISO (YYYY-MM-DD)
   private todayISO(): string {
     const d = new Date();
     const mm = this.pad2(d.getMonth() + 1);
@@ -532,7 +559,6 @@ export class PolizasComponent implements OnInit {
       }
     });
 
-    // Periodos (NUEVO: guardamos todos y filtramos aparte)
     this.api.getPeriodos().subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r) ?? [];
@@ -558,7 +584,6 @@ export class PolizasComponent implements OnInit {
         this.centros = items.map((c: any) => {
           const id = Number(c.id_centro ?? c.id ?? c.ID);
           const serie = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
-          // ⬇️ Fallbacks más amplios: nombre, nombre_centro, descripcion, NOMBRE...
           const nombre = String(
             c.nombre ??
             c.nombre_centro ??
@@ -580,11 +605,11 @@ export class PolizasComponent implements OnInit {
 
   }
 
-  // NUEVO: filtrar periodos según ejercicio actual
   private applyPeriodoFilter(): void {
     if (!Array.isArray(this.allPeriodos) || this.allPeriodos.length === 0) {
       this.periodos = [];
       return;
+ 
     }
 
     const ej = this.ejercicioActual;
@@ -891,6 +916,32 @@ export class PolizasComponent implements OnInit {
     return true;
   }
 
+private resolveNombre(src: any): string | null {
+  if (!src) return null;
+  const cand = [
+    src.nombre, src.name, src.full_name, src.fullName,
+    src.username, src.userName, src.nombres, src.displayName,
+    src.first_name, src.given_name, src.preferred_username,
+    src.usuario, src.nombre_usuario, src.nombreCompleto
+  ].map(v => (v ?? '').toString().trim()).filter(Boolean);
+
+  const ap = (src.apellido_p ?? src.apellido ?? src.apellidos ?? src.last_name ?? src.family_name ?? '').toString().trim();
+  const apm = (src.apellido_m ?? '').toString().trim();
+
+  if (cand.length && (ap || apm)) return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
+  return cand[0] || null;
+}
+
+
+
+  private resolveEmail(src: any): string | null {
+    if (!src) return null;
+    const cand = [src.email, src.correo, src.mail, src.Email, src.EMAIL]
+      .map((v: any) => (v ?? '').toString().trim())
+      .filter(Boolean);
+    return cand[0] || null;
+  }
+
   private validarYExplicarErrores(): boolean {
     const p = this.nuevaPoliza;
     if (!p) {
@@ -1163,6 +1214,10 @@ export class PolizasComponent implements OnInit {
     if (!this.uuidSeleccionado) return;
     const movs = this.nuevaPoliza.movimientos ?? [];
     if (movs[index]) movs[index].uuid = this.uuidSeleccionado;
+  }
+
+  get currentUserLabel(): string {
+    return (this.currentUser?.nombre || '').toString().trim();
   }
 
   // Totales

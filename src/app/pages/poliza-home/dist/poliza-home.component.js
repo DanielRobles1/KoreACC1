@@ -104,19 +104,14 @@ var PolizaHomeComponent = /** @class */ (function () {
         this.confirmModal.onConfirm = onConfirm;
         this.confirmModal.open = true;
     };
-    PolizaHomeComponent.prototype.cerrarConfirmModal = function () {
-        this.confirmModal.open = false;
-        this.confirmModal.onConfirm = function () { };
-    };
-    PolizaHomeComponent.prototype.confirmarConfirmModal = function () {
-        var _a, _b;
-        try {
-            (_b = (_a = this.confirmModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
-        }
-        finally {
-            this.cerrarConfirmModal();
-        }
-    };
+    PolizaHomeComponent.prototype.cerrarConfirmModal = function () { this.confirmModal.open = false; this.confirmModal.onConfirm = function () { }; };
+    PolizaHomeComponent.prototype.confirmarConfirmModal = function () { var _a, _b; try {
+        (_b = (_a = this.confirmModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
+    }
+    finally {
+        this.cerrarConfirmModal();
+    } };
+    /** Abrir modal de aprobar , pero primero checa si esta cuadrada la poliza */
     PolizaHomeComponent.prototype.abrirApproveModal = function (p) {
         var _this = this;
         var id = this.getIdPoliza(p);
@@ -124,45 +119,31 @@ var PolizaHomeComponent = /** @class */ (function () {
             this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede aprobar: falta id_poliza.' });
             return;
         }
-        this.approveModal.title = 'Confirmar aprobación';
-        this.approveModal.message = "Vas a marcar la p\u00F3liza " + id + " como Aprobada. \u00BFContinuar?";
-        this.approveModal.onConfirm = function () {
-            // Marcamos loading para ese id mientras cambia el estado
-            _this.loadingId = id;
-            _this.api.changeEstadoPoliza(id, 'Aprobada').subscribe({
-                next: function (res) {
-                    var _a;
-                    p.estado = (_a = res === null || res === void 0 ? void 0 : res.estado) !== null && _a !== void 0 ? _a : 'Aprobada';
-                    _this.showToast({
-                        type: 'success',
-                        title: 'Estado actualizado',
-                        message: "La p\u00F3liza " + id + " ahora est\u00E1: " + p.estado + "."
-                    });
-                },
-                error: function (err) {
-                    var _a;
-                    console.error('changeEstadoPoliza (Aprobada):', err);
-                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo cambiar el estado a Aprobada.';
-                    _this.showToast({ type: 'error', title: 'Error', message: msg });
-                },
-                complete: function () { return (_this.loadingId = null); }
-            });
-        };
-        this.approveModal.open = true;
+        this.verificarCuadrada(p, function (ok) {
+            if (!ok) {
+                _this.showToast({
+                    type: 'warning',
+                    title: 'No cuadrada',
+                    message: 'La póliza no está cuadrada. No se puede marcar como Aprobada.'
+                });
+                return;
+            }
+            _this.approveModal.title = 'Confirmar aprobación';
+            _this.approveModal.message = "Vas a marcar la p\u00F3liza " + id + " como Aprobada. \u00BFContinuar?";
+            _this.approveModal.onConfirm = function () {
+                _this.loadingId = id;
+                _this._hacerCambioEstado(id, p, 'Aprobada');
+            };
+            _this.approveModal.open = true;
+        });
     };
-    PolizaHomeComponent.prototype.cerrarApproveModal = function () {
-        this.approveModal.open = false;
-        this.approveModal.onConfirm = function () { };
-    };
-    PolizaHomeComponent.prototype.confirmarApproveModal = function () {
-        var _a, _b;
-        try {
-            (_b = (_a = this.approveModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
-        }
-        finally {
-            this.cerrarApproveModal();
-        }
-    };
+    PolizaHomeComponent.prototype.cerrarApproveModal = function () { this.approveModal.open = false; this.approveModal.onConfirm = function () { }; };
+    PolizaHomeComponent.prototype.confirmarApproveModal = function () { var _a, _b; try {
+        (_b = (_a = this.approveModal).onConfirm) === null || _b === void 0 ? void 0 : _b.call(_a);
+    }
+    finally {
+        this.cerrarApproveModal();
+    } };
     PolizaHomeComponent.prototype.onModalConfirmed = function () { this.confirmarConfirmModal(); };
     PolizaHomeComponent.prototype.onModalCanceled = function () { this.cerrarConfirmModal(); };
     PolizaHomeComponent.prototype.onModalClosed = function () { this.cerrarConfirmModal(); };
@@ -197,12 +178,12 @@ var PolizaHomeComponent = /** @class */ (function () {
         var _this = this;
         this.api.getTiposPoliza().subscribe({
             next: function (r) {
-                _this.tiposPoliza = _this.normalizeList(r).map(function (t) {
+                var items = _this.normalizeList(r);
+                _this.tiposPoliza = items.map(function (t) {
                     var _a, _b, _c, _d, _e;
-                    return ({
-                        id_tipopoliza: Number((_b = (_a = t.id_tipopoliza) !== null && _a !== void 0 ? _a : t.id) !== null && _b !== void 0 ? _b : t.ID),
-                        nombre: String((_e = (_d = (_c = t.nombre) !== null && _c !== void 0 ? _c : t.descripcion) !== null && _d !== void 0 ? _d : t.NOMBRE) !== null && _e !== void 0 ? _e : 'Tipo')
-                    });
+                    var id_tipopoliza = Number((_b = (_a = t.id_tipopoliza) !== null && _a !== void 0 ? _a : t.id) !== null && _b !== void 0 ? _b : t.ID);
+                    var nombre = String((_e = (_d = (_c = t.nombre) !== null && _c !== void 0 ? _c : t.descripcion) !== null && _d !== void 0 ? _d : t.NOMBRE) !== null && _e !== void 0 ? _e : 'Tipo');
+                    return { id_tipopoliza: id_tipopoliza, nombre: nombre };
                 });
                 _this.mapTipos.clear();
                 for (var _i = 0, _a = _this.tiposPoliza; _i < _a.length; _i++) {
@@ -299,6 +280,39 @@ var PolizaHomeComponent = /** @class */ (function () {
         var _a, _b, _c;
         var id = (_b = (_a = p) === null || _a === void 0 ? void 0 : _a.id_poliza) !== null && _b !== void 0 ? _b : (_c = p) === null || _c === void 0 ? void 0 : _c.id;
         return (id == null ? null : Number(id));
+    };
+    /** true si (cargos - abonos) ≈ 0 " */
+    PolizaHomeComponent.prototype.isPolizaCuadrada = function (p) {
+        var estado = (this.getEstado(p) || '').toLowerCase();
+        if (estado.includes('cuadra') || estado.includes('aprob'))
+            return true;
+        var movs = Array.isArray(p.movimientos) ? p.movimientos : [];
+        if (!movs.length)
+            return false; // sólo podemos concluir cuadrada si hay datos
+        var cargos = movs.filter(function (m) { return String(m.operacion) === '0'; }).reduce(function (s, m) { return s + (Number(m.monto) || 0); }, 0);
+        var abonos = movs.filter(function (m) { return String(m.operacion) === '1'; }).reduce(function (s, m) { return s + (Number(m.monto) || 0); }, 0);
+        return Math.abs(cargos - abonos) < 0.0001;
+    };
+    /** Si no hay movimientos cargados, los trae y evalúa si está cuadrada */
+    PolizaHomeComponent.prototype.verificarCuadrada = function (p, done) {
+        var _this = this;
+        var id = this.getIdPoliza(p);
+        if (!id)
+            return done(false);
+        if (Array.isArray(p.movimientos) && p.movimientos.length > 0) {
+            return done(this.isPolizaCuadrada(p));
+        }
+        this.api.getPolizaConMovimientos(id).subscribe({
+            next: function (res) {
+                var _a;
+                p.movimientos = (_a = res === null || res === void 0 ? void 0 : res.movimientos) !== null && _a !== void 0 ? _a : [];
+                done(_this.isPolizaCuadrada(p));
+            },
+            error: function () { return done(false); }
+        });
+    };
+    PolizaHomeComponent.prototype.canAprobar = function (p) {
+        return this.canMarcarRevisada(p);
     };
     PolizaHomeComponent.prototype.toggleVerMas = function (p) {
         var _this = this;
@@ -399,6 +413,8 @@ var PolizaHomeComponent = /** @class */ (function () {
             return 'estado ok';
         if (e.includes('activa'))
             return 'estado ok';
+        if (e.includes('aprob'))
+            return 'estado ok';
         if (e.includes('pend'))
             return 'estado warn';
         if (e.includes('borr'))
@@ -443,12 +459,10 @@ var PolizaHomeComponent = /** @class */ (function () {
         });
     };
     PolizaHomeComponent.prototype.toggleFilter = function (col) {
-        // Cierra los demás filtros si quieres
         for (var key in this.showFilter) {
             if (key !== col)
                 this.showFilter[key] = false;
         }
-        // Abre/cierra el filtro de esta columna
         this.showFilter[col] = !this.showFilter[col];
     };
     PolizaHomeComponent.prototype.eliminarPoliza = function (id_poliza) {
@@ -473,21 +487,26 @@ var PolizaHomeComponent = /** @class */ (function () {
         });
     };
     PolizaHomeComponent.prototype.irANueva = function () { this.router.navigate(['/polizas', 'nueva']); };
-    PolizaHomeComponent.prototype.isAllowedEstado = function (e) {
-        return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
+    PolizaHomeComponent.prototype.isAllowedEstadoUI = function (e) {
+        return e === 'Por revisar' || e === 'Revisada' || e === 'Aprobada' || e === 'Contabilizada';
     };
+    /** Habilitar botón "Revisada/Aprobada" solo si cuadra */
     PolizaHomeComponent.prototype.canMarcarRevisada = function (p) {
         var e = (this.getEstado(p) || '').toLowerCase();
-        return !e.includes('cance') && !e.includes('cerr') && !e.includes('contab');
+        // Estados que sí bloquean el botón
+        if (e.includes('aprob') || e.includes('contab') || e.includes('cance') || e.includes('cerr'))
+            return false;
+        var tieneMovs = Array.isArray(p.movimientos) && p.movimientos.length > 0;
+        return tieneMovs ? this.isPolizaCuadrada(p) : true;
     };
     PolizaHomeComponent.prototype.canMarcarContabilizada = function (p) {
         var e = (this.getEstado(p) || '').toLowerCase();
-        return e.includes('revis') || e.includes('cuadra');
+        return e.includes('aprob') || e.includes('revis') || e.includes('cuadra');
     };
     PolizaHomeComponent.prototype.cambiarEstadoPoliza = function (p, nuevo) {
         var _this = this;
-        if (!this.isAllowedEstado(nuevo)) {
-            this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Aprobada, Contabilizada.' });
+        if (!this.isAllowedEstadoUI(nuevo)) {
+            this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Aprobada, Contabilizada.' });
             return;
         }
         var id = this.getIdPoliza(p);
@@ -495,7 +514,30 @@ var PolizaHomeComponent = /** @class */ (function () {
             this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede cambiar el estado: falta id_poliza.' });
             return;
         }
+        // Si es Aprobada o Revisada, exigir cuadrada
+        if (nuevo === 'Aprobada' || nuevo === 'Revisada') {
+            this.verificarCuadrada(p, function (ok) {
+                if (!ok) {
+                    _this.showToast({
+                        type: 'warning',
+                        title: 'No cuadrada',
+                        message: 'La póliza no está cuadrada. No se puede marcar como Aprobada/Revisada.'
+                    });
+                    return;
+                }
+                var destinoApi = (nuevo === 'Revisada') ? 'Aprobada' : 'Aprobada';
+                _this.loadingId = id;
+                _this._hacerCambioEstado(id, p, destinoApi);
+            });
+            return;
+        }
+        // Otros estados sin restricción de cuadrada
         this.loadingId = id;
+        var destinoApi = nuevo; // aquí 'nuevo' no es 'Revisada'
+        this._hacerCambioEstado(id, p, destinoApi);
+    };
+    PolizaHomeComponent.prototype._hacerCambioEstado = function (id, p, nuevo) {
+        var _this = this;
         this.api.changeEstadoPoliza(id, nuevo).subscribe({
             next: function (res) {
                 var _a;
@@ -515,7 +557,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             complete: function () { return (_this.loadingId = null); }
         });
     };
-    // ===== XML =====
+    //  XML 
     PolizaHomeComponent.prototype.triggerXmlPicker = function (input) {
         this.uploadXmlError = '';
         input.value = '';

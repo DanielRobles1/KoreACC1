@@ -42,7 +42,7 @@ export class PolizaHomeComponent {
     private location: Location,
     private router: Router,
     private api: PolizasService
-  ) { }
+  ) {}
 
   ngOnInit() {
     this.cargarCatalogos();
@@ -57,14 +57,14 @@ export class PolizaHomeComponent {
     open: false,
     title: 'Confirmar eliminación',
     message: '¿Deseas eliminar esta póliza?',
-    onConfirm: (() => { }) as () => void,
+    onConfirm: (() => {}) as () => void,
   };
 
   approveModal = {
     open: false,
     title: 'Confirmar aprobación',
     message: '¿Deseas marcar esta póliza como Aprobada?',
-    onConfirm: (() => { }) as () => void,
+    onConfirm: (() => {}) as () => void,
   };
 
   abrirConfirmModal(message: string, onConfirm: () => void, title = 'Confirmar eliminación') {
@@ -73,63 +73,37 @@ export class PolizaHomeComponent {
     this.confirmModal.onConfirm = onConfirm;
     this.confirmModal.open = true;
   }
+  cerrarConfirmModal() { this.confirmModal.open = false; this.confirmModal.onConfirm = () => {}; }
+  confirmarConfirmModal() { try { this.confirmModal.onConfirm?.(); } finally { this.cerrarConfirmModal(); } }
 
-  cerrarConfirmModal() {
-    this.confirmModal.open = false;
-    this.confirmModal.onConfirm = () => { };
-  }
-
-  confirmarConfirmModal() {
-    try {
-      this.confirmModal.onConfirm?.();
-    } finally {
-      this.cerrarConfirmModal();
-    }
-  }
-
+  /** Abrir modal de aprobar , pero primero checa si esta cuadrada la poliza */
   abrirApproveModal(p: PolizaRow) {
     const id = this.getIdPoliza(p);
     if (!id) {
       this.showToast({ type: 'warning', title: 'Sin ID', message: 'No se puede aprobar: falta id_poliza.' });
       return;
     }
-    this.approveModal.title = 'Confirmar aprobación';
-    this.approveModal.message = `Vas a marcar la póliza ${id} como Aprobada. ¿Continuar?`;
-    this.approveModal.onConfirm = () => {
-      // Marcamos loading para ese id mientras cambia el estado
-      this.loadingId = id;
-      this.api.changeEstadoPoliza(id, 'Aprobada').subscribe({
-        next: (res: any) => {
-          (p as any).estado = res?.estado ?? 'Aprobada';
-          this.showToast({
-            type: 'success',
-            title: 'Estado actualizado',
-            message: `La póliza ${id} ahora está: ${(p as any).estado}.`
-          });
-        },
-        error: (err) => {
-          console.error('changeEstadoPoliza (Aprobada):', err);
-          const msg = err?.error?.message || 'No se pudo cambiar el estado a Aprobada.';
-          this.showToast({ type: 'error', title: 'Error', message: msg });
-        },
-        complete: () => (this.loadingId = null),
-      });
-    };
-    this.approveModal.open = true;
-  }
 
-  cerrarApproveModal() {
-    this.approveModal.open = false;
-    this.approveModal.onConfirm = () => { };
+    this.verificarCuadrada(p, (ok) => {
+      if (!ok) {
+        this.showToast({
+          type: 'warning',
+          title: 'No cuadrada',
+          message: 'La póliza no está cuadrada. No se puede marcar como Aprobada.'
+        });
+        return;
+      }
+      this.approveModal.title = 'Confirmar aprobación';
+      this.approveModal.message = `Vas a marcar la póliza ${id} como Aprobada. ¿Continuar?`;
+      this.approveModal.onConfirm = () => {
+        this.loadingId = id;
+        this._hacerCambioEstado(id, p, 'Aprobada');
+      };
+      this.approveModal.open = true;
+    });
   }
-
-  confirmarApproveModal() {
-    try {
-      this.approveModal.onConfirm?.();
-    } finally {
-      this.cerrarApproveModal();
-    }
-  }
+  cerrarApproveModal() { this.approveModal.open = false; this.approveModal.onConfirm = () => {}; }
+  confirmarApproveModal() { try { this.approveModal.onConfirm?.(); } finally { this.cerrarApproveModal(); } }
 
   onModalConfirmed() { this.confirmarConfirmModal(); }
   onModalCanceled() { this.cerrarConfirmModal(); }
@@ -199,10 +173,12 @@ export class PolizaHomeComponent {
   cargarCatalogos(): void {
     this.api.getTiposPoliza().subscribe({
       next: (r: any) => {
-        this.tiposPoliza = this.normalizeList(r).map((t: any) => ({
-          id_tipopoliza: Number(t.id_tipopoliza ?? t.id ?? t.ID),
-          nombre: String(t.nombre ?? t.descripcion ?? t.NOMBRE ?? 'Tipo'),
-        }));
+        const items = this.normalizeList(r);
+        this.tiposPoliza = items.map((t: any) => {
+          const id_tipopoliza: number = Number(t.id_tipopoliza ?? t.id ?? t.ID);
+          const nombre: string = String(t.nombre ?? t.descripcion ?? t.NOMBRE ?? 'Tipo');
+          return { id_tipopoliza, nombre };
+        });
         this.mapTipos.clear();
         for (const t of this.tiposPoliza) this.mapTipos.set(t.id_tipopoliza, t.nombre);
       },
@@ -287,6 +263,40 @@ export class PolizaHomeComponent {
     return (id == null ? null : Number(id));
   }
 
+  /** true si (cargos - abonos) ≈ 0 " */
+ private isPolizaCuadrada(p: PolizaRow): boolean {
+  const estado = (this.getEstado(p) || '').toLowerCase();
+  if (estado.includes('cuadra') || estado.includes('aprob')) return true;
+
+  const movs: Movimiento[] = Array.isArray((p as any).movimientos) ? (p as any).movimientos : [];
+  if (!movs.length) return false; // sólo podemos concluir cuadrada si hay datos
+
+  const cargos = movs.filter(m => String(m.operacion) === '0').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+  const abonos = movs.filter(m => String(m.operacion) === '1').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+  return Math.abs(cargos - abonos) < 0.0001;
+}
+
+  /** Si no hay movimientos cargados, los trae y evalúa si está cuadrada */
+private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
+  const id = this.getIdPoliza(p);
+  if (!id) return done(false);
+
+  if (Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0) {
+    return done(this.isPolizaCuadrada(p));
+  }
+  this.api.getPolizaConMovimientos(id).subscribe({
+    next: (res: any) => {
+      (p as any).movimientos = res?.movimientos ?? [];
+      done(this.isPolizaCuadrada(p));
+    },
+    error: () => done(false)
+  });
+}
+
+ canAprobar(p: PolizaRow): boolean {
+  return this.canMarcarRevisada(p);
+}
+
   toggleVerMas(p: PolizaRow) {
     const id = this.getIdPoliza(p);
     if (!id) return;
@@ -360,11 +370,12 @@ export class PolizaHomeComponent {
       });
 
       return folio.includes(term) || concepto.includes(term) || centro.includes(term) ||
-        tipo.includes(term) || periodo.includes(term) || movMatch;
+             tipo.includes(term) || periodo.includes(term) || movMatch;
     });
   }
 
-  getEstado(p: any): 'Cuadrada' | 'Descuadrada' | 'Pendiente' | 'Cerrada' | 'Cancelada' | 'Borrador' | 'Activa' | string {
+  getEstado(p: any):
+    'Cuadrada' | 'Descuadrada' | 'Pendiente' | 'Cerrada' | 'Cancelada' | 'Borrador' | 'Activa' | 'Aprobada' | string {
     const raw = (p.estado ?? p.estatus ?? p.status ?? p.state ?? '').toString().trim();
     if (raw) return raw;
 
@@ -380,6 +391,7 @@ export class PolizaHomeComponent {
     if (e.includes('cuadra')) return 'estado ok';
     if (e.includes('cerr')) return 'estado ok';
     if (e.includes('activa')) return 'estado ok';
+    if (e.includes('aprob')) return 'estado ok';
     if (e.includes('pend')) return 'estado warn';
     if (e.includes('borr')) return 'estado warn';
     if (e.includes('canc')) return 'estado bad';
@@ -405,51 +417,51 @@ export class PolizaHomeComponent {
     if (!id) { this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' }); return; }
     this.eliminarPoliza(id);
   }
-filtros = {
-  folio: '',
-  concepto: '',
-  centro: '',
-  tipo: '',
-  periodo: '',
-  estado: ''
-};
 
-aplicarFiltros() {
-  this.polizasFiltradas = this.polizas.filter(p => {
-    const folio = (p.folio || '').toString().toLowerCase();
-    const concepto = (p.concepto || '').toLowerCase();
-    const centro = this.nombreCentro(p.id_centro).toLowerCase();
-    const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
-    const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
-    const estado = this.getEstado(p).toLowerCase();
+  filtros = {
+    folio: '',
+    concepto: '',
+    centro: '',
+    tipo: '',
+    periodo: '',
+    estado: ''
+  };
 
-    return (
-      folio.includes(this.filtros.folio.toLowerCase()) &&
-      concepto.includes(this.filtros.concepto.toLowerCase()) &&
-      centro.includes(this.filtros.centro.toLowerCase()) &&
-      tipo.includes(this.filtros.tipo.toLowerCase()) &&
-      periodo.includes(this.filtros.periodo.toLowerCase()) &&
-      estado.includes(this.filtros.estado.toLowerCase())
-    );
-  });
-}
-showFilter: Record<string, boolean> = {
-  folio: false,
-  concepto: false,
-  centro: false,
-  tipo: false,
-  periodo: false,
-  estado: false
-};
+  aplicarFiltros() {
+    this.polizasFiltradas = this.polizas.filter(p => {
+      const folio = (p.folio || '').toString().toLowerCase();
+      const concepto = (p.concepto || '').toLowerCase();
+      const centro = this.nombreCentro(p.id_centro).toLowerCase();
+      const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
+      const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
+      const estado = this.getEstado(p).toLowerCase();
 
-toggleFilter(col: string) {
-  // Cierra los demás filtros si quieres
-  for (const key in this.showFilter) {
-    if (key !== col) this.showFilter[key] = false;
+      return (
+        folio.includes(this.filtros.folio.toLowerCase()) &&
+        concepto.includes(this.filtros.concepto.toLowerCase()) &&
+        centro.includes(this.filtros.centro.toLowerCase()) &&
+        tipo.includes(this.filtros.tipo.toLowerCase()) &&
+        periodo.includes(this.filtros.periodo.toLowerCase()) &&
+        estado.includes(this.filtros.estado.toLowerCase())
+      );
+    });
   }
-  // Abre/cierra el filtro de esta columna
-  this.showFilter[col] = !this.showFilter[col];
-}
+
+  showFilter: Record<string, boolean> = {
+    folio: false,
+    concepto: false,
+    centro: false,
+    tipo: false,
+    periodo: false,
+    estado: false
+  };
+
+  toggleFilter(col: string) {
+    for (const key in this.showFilter) {
+      if (key !== col) this.showFilter[key] = false;
+    }
+    this.showFilter[col] = !this.showFilter[col];
+  }
 
   eliminarPoliza(id_poliza?: number): void {
     if (id_poliza == null) {
@@ -474,21 +486,27 @@ toggleFilter(col: string) {
 
   irANueva() { this.router.navigate(['/polizas', 'nueva']); }
 
-  private isAllowedEstado(e: any): e is 'Por revisar' | 'Revisada' | 'Contabilizada' {
-    return e === 'Por revisar' || e === 'Revisada' || e === 'Contabilizada';
-  }
-  canMarcarRevisada(p: PolizaRow): boolean {
-    const e = (this.getEstado(p) || '').toLowerCase();
-    return !e.includes('cance') && !e.includes('cerr') && !e.includes('contab');
-  }
-  canMarcarContabilizada(p: PolizaRow): boolean {
-    const e = (this.getEstado(p) || '').toLowerCase();
-    return e.includes('revis') || e.includes('cuadra');
+  private isAllowedEstadoUI(e: any): e is 'Por revisar' | 'Revisada' | 'Aprobada' | 'Contabilizada' {
+    return e === 'Por revisar' || e === 'Revisada' || e === 'Aprobada' || e === 'Contabilizada';
   }
 
-  cambiarEstadoPoliza(p: PolizaRow, nuevo: 'Por revisar' | 'Aprobada' | 'Contabilizada') {
-    if (!this.isAllowedEstado(nuevo)) {
-      this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Aprobada, Contabilizada.' });
+  /** Habilitar botón "Revisada/Aprobada" solo si cuadra */
+ canMarcarRevisada(p: PolizaRow): boolean {
+  const e = (this.getEstado(p) || '').toLowerCase();
+  // Estados que sí bloquean el botón
+  if (e.includes('aprob') || e.includes('contab') || e.includes('cance') || e.includes('cerr')) return false;
+
+  const tieneMovs = Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0;
+  return tieneMovs ? this.isPolizaCuadrada(p) : true;
+}
+  canMarcarContabilizada(p: PolizaRow): boolean {
+    const e = (this.getEstado(p) || '').toLowerCase();
+    return e.includes('aprob') || e.includes('revis') || e.includes('cuadra');
+  }
+
+  cambiarEstadoPoliza(p: PolizaRow, nuevo: 'Por revisar' | 'Revisada' | 'Aprobada' | 'Contabilizada') {
+    if (!this.isAllowedEstadoUI(nuevo)) {
+      this.showToast({ type: 'warning', title: 'Estado inválido', message: 'Solo: Por revisar, Revisada, Aprobada, Contabilizada.' });
       return;
     }
     const id = this.getIdPoliza(p);
@@ -497,7 +515,36 @@ toggleFilter(col: string) {
       return;
     }
 
+    // Si es Aprobada o Revisada, exigir cuadrada
+    if (nuevo === 'Aprobada' || nuevo === 'Revisada') {
+      this.verificarCuadrada(p, (ok) => {
+        if (!ok) {
+          this.showToast({
+            type: 'warning',
+            title: 'No cuadrada',
+            message: 'La póliza no está cuadrada. No se puede marcar como Aprobada/Revisada.'
+          });
+          return;
+        }
+        const destinoApi: 'Por revisar' | 'Aprobada' | 'Contabilizada' =
+          (nuevo === 'Revisada') ? 'Aprobada' : 'Aprobada';
+        this.loadingId = id;
+        this._hacerCambioEstado(id, p, destinoApi);
+      });
+      return;
+    }
+
+    // Otros estados sin restricción de cuadrada
     this.loadingId = id;
+    const destinoApi: 'Por revisar' | 'Aprobada' | 'Contabilizada' = nuevo; // aquí 'nuevo' no es 'Revisada'
+    this._hacerCambioEstado(id, p, destinoApi);
+  }
+
+  private _hacerCambioEstado(
+    id: number,
+    p: PolizaRow,
+    nuevo: 'Por revisar' | 'Aprobada' | 'Contabilizada'
+  ) {
     this.api.changeEstadoPoliza(id, nuevo).subscribe({
       next: (res: any) => {
         (p as any).estado = res?.estado ?? nuevo;
@@ -516,7 +563,7 @@ toggleFilter(col: string) {
     });
   }
 
-  // ===== XML =====
+  //  XML 
   triggerXmlPicker(input: HTMLInputElement) {
     this.uploadXmlError = '';
     input.value = '';

@@ -13,11 +13,11 @@ var http_1 = require("@angular/common/http");
 var PolizasService = /** @class */ (function () {
     function PolizasService() {
         this.http = core_1.inject(http_1.HttpClient);
+        this.apiUrl = 'http://localhost:3000/api/v1/usuarios';
         this.api = 'http://localhost:3000/api/v1';
-        this.basePoliza = this.api + "/poliza"; // ← base unificada (singular)
+        this.basePoliza = this.api + "/poliza";
         this.cfdiImportUrl = this.api + "/cfdi/import";
     }
-    // Si usas JWT en Authorization: Bearer <token>
     PolizasService.prototype.getAuthHeaders = function () {
         var token = localStorage.getItem('token') ||
             localStorage.getItem('access_token') ||
@@ -82,7 +82,7 @@ var PolizasService = /** @class */ (function () {
             headers: this.getAuthHeaders()
         });
     };
-    // ---------------- MOVIMIENTOS (si tienes estos endpoints separados) ----------------
+    // ---------------- MOVIMIENTOS ----------------
     /** POST /api/v1/movimiento-poliza */
     PolizasService.prototype.createMovPoliza = function (body) {
         return this.http.post(this.api + "/movimiento-poliza", body, {
@@ -156,9 +156,13 @@ var PolizasService = /** @class */ (function () {
         });
     };
     // ---------------- USUARIO ----------------
-    // Corrige a /api/v1/me (antes apuntaba a /api/me)
-    PolizasService.prototype.getMe = function () {
+    PolizasService.prototype.getMeq = function () {
         return this.http.get(this.api + "/me", {
+            headers: this.getAuthHeaders()
+        });
+    };
+    PolizasService.prototype.getMe = function () {
+        return this.http.get(this.apiUrl + "/me", {
             headers: this.getAuthHeaders()
         });
     };
