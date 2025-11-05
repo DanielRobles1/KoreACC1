@@ -1,4 +1,7 @@
-/* app-polizas-layout.component.scss */
+:root {
+  --content-max: 1600px
+}
+
 :host, .layout { height: 100vh; display: block; }
 html, body { height: 100%; }
 body { margin: 0; }
@@ -52,7 +55,7 @@ body { margin: 0; }
   box-shadow: 0 6px 20px rgba(16, 24, 40, 0.08);
   border-radius: 16px;
   padding: 16px;
-  max-width: 1240px;
+  max-width: --var(--content-max);
   margin: 0 auto;
 }
 

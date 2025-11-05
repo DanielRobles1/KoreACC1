@@ -15,7 +15,7 @@ type CfdiOption = {
   total?: number | string | null;
 };
 
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
 type Ejercicio = {
   id_ejercicio: number;
   nombre?: string | null;
@@ -67,7 +67,7 @@ export class PolizasComponent implements OnInit {
 
   tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
   periodos: Array<{ id_periodo: number; nombre: string }> = [];
-  private allPeriodos: any[] = []; 
+  private allPeriodos: any[] = [];
   centros: Array<{ id_centro: number; nombre: string }> = [];
 
   // Catálogo de cuentas (para movimientos)
@@ -143,6 +143,7 @@ export class PolizasComponent implements OnInit {
   onTipoPolizaChange(_id: any) {
     this.conceptoFueEditadoPorUsuario = !!(this.nuevaPoliza.concepto && this.nuevaPoliza.concepto.trim());
     this.recomputarConceptoSugerido();
+    this.recomputarFolioSugerido();
   }
 
   onCentroCambiadoPropagarSerie(): void {
@@ -248,43 +249,43 @@ export class PolizasComponent implements OnInit {
   }
 
   // ===== FIX: forzar nombre utilizable =====
- private initUsuarioActual() {
-  const usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
-  if (!usr) return;
+  private initUsuarioActual() {
+    const usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
+    if (!usr) return;
 
-  const resolved = this.resolveNombre(usr);
-  const email = this.resolveEmail(usr);
-  const fromEmail = (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') || undefined;
-  const fallback = usr.id_usuario != null ? `Usuario ${usr.id_usuario}` : 'Usuario';
-  const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
+    const resolved = this.resolveNombre(usr);
+    const email = this.resolveEmail(usr);
+    const fromEmail = (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') || undefined;
+    const fallback = usr.id_usuario != null ? `Usuario ${usr.id_usuario}` : 'Usuario';
+    const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
 
-  this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
+    this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
 
-  const idNum = Number(usr.id_usuario);
-  if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
-    this.nuevaPoliza.id_usuario = idNum;
-  }
-}
-
-private getNombreForzado(src: any): string {
-  const nombre =
-    src?.nombre ?? src?.name ?? src?.nombres ?? src?.displayName ?? src?.full_name ?? src?.fullName ??
-    src?.first_name ?? src?.given_name ?? src?.preferred_username ?? src?.usuario ?? src?.username ?? src?.userName ?? '';
-
-  const apP = src?.apellido_p ?? src?.apellidoP ?? src?.apellido ?? src?.apellidos ?? src?.last_name ?? src?.family_name ?? '';
-  const apM = src?.apellido_m ?? src?.apellidoM ?? '';
-
-  const base = [nombre, apP, apM].map(v => (v ?? '').toString().trim()).filter(Boolean).join(' ');
-  if (base) return base;
-
-  const email = this.resolveEmail(src);
-  if (email) {
-    const alias = String(email).split('@')[0].replace(/[._-]+/g, ' ').trim();
-    if (alias) return alias;
+    const idNum = Number(usr.id_usuario);
+    if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
+      this.nuevaPoliza.id_usuario = idNum;
+    }
   }
 
-  return src?.id_usuario != null ? `Usuario ${src.id_usuario}` : 'Usuario';
-}
+  private getNombreForzado(src: any): string {
+    const nombre =
+      src?.nombre ?? src?.name ?? src?.nombres ?? src?.displayName ?? src?.full_name ?? src?.fullName ??
+      src?.first_name ?? src?.given_name ?? src?.preferred_username ?? src?.usuario ?? src?.username ?? src?.userName ?? '';
+
+    const apP = src?.apellido_p ?? src?.apellidoP ?? src?.apellido ?? src?.apellidos ?? src?.last_name ?? src?.family_name ?? '';
+    const apM = src?.apellido_m ?? src?.apellidoM ?? '';
+
+    const base = [nombre, apP, apM].map(v => (v ?? '').toString().trim()).filter(Boolean).join(' ');
+    if (base) return base;
+
+    const email = this.resolveEmail(src);
+    if (email) {
+      const alias = String(email).split('@')[0].replace(/[._-]+/g, ' ').trim();
+      if (alias) return alias;
+    }
+
+    return src?.id_usuario != null ? `Usuario ${src.id_usuario}` : 'Usuario';
+  }
 
   private leerUsuarioDescompuesto(): UsuarioLigero | null {
     try {
@@ -310,32 +311,32 @@ private getNombreForzado(src: any): string {
           ...obj
         } as UsuarioLigero;
       }
-    } catch {}
+    } catch { }
     return null;
   }
 
- private leerUsuarioDesdeJwt(): UsuarioLigero | null {
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token') ||
-    sessionStorage.getItem('token');
-  if (!token) return null;
+  private leerUsuarioDesdeJwt(): UsuarioLigero | null {
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('token');
+    if (!token) return null;
 
-  const payload = this.decodeJwt(token);
-  if (!payload) return null;
+    const payload = this.decodeJwt(token);
+    if (!payload) return null;
 
-  // toma el id crudo (puede ser UUID)
-  const rawId = payload?.id_usuario ?? payload?.sub ?? payload?.uid ?? null;
-  const maybeNum = Number(rawId);
-  const idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
+    // toma el id crudo (puede ser UUID)
+    const rawId = payload?.id_usuario ?? payload?.sub ?? payload?.uid ?? null;
+    const maybeNum = Number(rawId);
+    const idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
 
-  return {
-    id_usuario: (idNum as any) ?? rawId, 
-    nombre: this.resolveNombre(payload) ?? undefined,
-    email: this.resolveEmail(payload) ?? undefined,
-    ...payload
-  } as UsuarioLigero;
-}
+    return {
+      id_usuario: (idNum as any) ?? rawId,
+      nombre: this.resolveNombre(payload) ?? undefined,
+      email: this.resolveEmail(payload) ?? undefined,
+      ...payload
+    } as UsuarioLigero;
+  }
 
 
   private decodeJwt(token: string): any | null {
@@ -609,7 +610,6 @@ private getNombreForzado(src: any): string {
     if (!Array.isArray(this.allPeriodos) || this.allPeriodos.length === 0) {
       this.periodos = [];
       return;
- 
     }
 
     const ej = this.ejercicioActual;
@@ -916,21 +916,21 @@ private getNombreForzado(src: any): string {
     return true;
   }
 
-private resolveNombre(src: any): string | null {
-  if (!src) return null;
-  const cand = [
-    src.nombre, src.name, src.full_name, src.fullName,
-    src.username, src.userName, src.nombres, src.displayName,
-    src.first_name, src.given_name, src.preferred_username,
-    src.usuario, src.nombre_usuario, src.nombreCompleto
-  ].map(v => (v ?? '').toString().trim()).filter(Boolean);
+  private resolveNombre(src: any): string | null {
+    if (!src) return null;
+    const cand = [
+      src.nombre, src.name, src.full_name, src.fullName,
+      src.username, src.userName, src.nombres, src.displayName,
+      src.first_name, src.given_name, src.preferred_username,
+      src.usuario, src.nombre_usuario, src.nombreCompleto
+    ].map(v => (v ?? '').toString().trim()).filter(Boolean);
 
-  const ap = (src.apellido_p ?? src.apellido ?? src.apellidos ?? src.last_name ?? src.family_name ?? '').toString().trim();
-  const apm = (src.apellido_m ?? '').toString().trim();
+    const ap = (src.apellido_p ?? src.apellido ?? src.apellidos ?? src.last_name ?? src.family_name ?? '').toString().trim();
+    const apm = (src.apellido_m ?? '').toString().trim();
 
-  if (cand.length && (ap || apm)) return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
-  return cand[0] || null;
-}
+    if (cand.length && (ap || apm)) return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
+    return cand[0] || null;
+  }
 
 
 
@@ -1142,6 +1142,42 @@ private resolveNombre(src: any): string | null {
         this.showToast({ type: 'error', title: 'Error', message: msg });
       }
     });
+  }
+
+  folioFueEditadoPorUsuario = false;
+
+  private async recomputarFolioSugerido(): Promise<void> {
+    const id_tipopoliza = this.toNumOrNull(this.nuevaPoliza.id_tipopoliza);
+    const id_periodo = this.toNumOrNull(this.nuevaPoliza.id_periodo);
+    const id_centro = this.toNumOrNull(this.nuevaPoliza.id_centro);
+
+    if (!id_tipopoliza || !id_periodo) return;
+
+    try {
+      const r = await firstValueFrom(this.api.getFolioSiguiente({
+        id_tipopoliza,
+        id_periodo,
+        id_centro: id_centro ?? undefined
+      }));
+
+      if (!this.folioFueEditadoPorUsuario) {
+        this.nuevaPoliza.folio = r?.folio || this.nuevaPoliza.folio;
+      }
+    } catch (e) {
+      console.warn('No se pudo obtener folio sugerido', e);
+    }
+  }
+
+  onPeriodoChange(_id: any) {
+    // si el usuario no ha tecleado manualmente, permitimos autollenar
+    if (!this.nuevaPoliza?.folio) this.folioFueEditadoPorUsuario = false;
+    this.recomputarFolioSugerido();
+  }
+
+  onCentroChange(_id: any) {
+    // id_centro es opcional para el folio; si tu back lo usa por serie, conviene recalcular
+    if (!this.nuevaPoliza?.folio) this.folioFueEditadoPorUsuario = false;
+    this.recomputarFolioSugerido();
   }
 
   // XML

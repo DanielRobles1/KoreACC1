@@ -39,7 +39,7 @@ export class PolizasService {
   private apiUrl = 'http://localhost:3000/api/v1/usuarios';
 
   private api = 'http://localhost:3000/api/v1';
-  private basePoliza = `${this.api}/poliza`;           
+  private basePoliza = `${this.api}/poliza`;
   private cfdiImportUrl = `${this.api}/cfdi/import`;
 
   private getAuthHeaders(): HttpHeaders {
@@ -84,8 +84,8 @@ export class PolizasService {
   }): Observable<any> {
     let p = new HttpParams();
     if (params?.id_tipopoliza != null) p = p.set('id_tipopoliza', String(params.id_tipopoliza));
-    if (params?.id_periodo    != null) p = p.set('id_periodo',    String(params.id_periodo));
-    if (params?.id_centro     != null) p = p.set('id_centro',     String(params.id_centro));
+    if (params?.id_periodo != null) p = p.set('id_periodo', String(params.id_periodo));
+    if (params?.id_centro != null) p = p.set('id_centro', String(params.id_centro));
 
     return this.http.get<any>(this.basePoliza, {
       params: p,
@@ -110,6 +110,19 @@ export class PolizasService {
   /** PUT /api/v1/poliza/:id */
   updatePoliza(id: number, body: any): Observable<any> {
     return this.http.put<any>(`${this.basePoliza}/${id}`, body, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /** GET /api/v1/poliza/folio-siguiente */
+  getFolioSiguiente(params: { id_tipopoliza: number; id_periodo: number; id_centro?: number }) {
+    let p = new HttpParams()
+      .set('id_tipopoliza', String(params.id_tipopoliza))
+      .set('id_periodo', String(params.id_periodo));
+    if (params.id_centro != null) p = p.set('id_centro', String(params.id_centro));
+
+    return this.http.get<any>(`${this.basePoliza}/folio-siguiente`, {
+      params: p,
       headers: this.getAuthHeaders(),
     });
   }
@@ -174,10 +187,10 @@ export class PolizasService {
     const form = new FormData();
     form.append('file', file); // nombre del campo que espera multer
 
-    if (ctx?.folio)                  form.append('folio', ctx.folio);
-    if (ctx?.id_periodo != null)     form.append('id_periodo', String(ctx.id_periodo));
-    if (ctx?.id_centro  != null)     form.append('id_centro',  String(ctx.id_centro));
-    if (ctx?.id_tipopoliza != null)  form.append('id_tipopoliza', String(ctx.id_tipopoliza));
+    if (ctx?.folio) form.append('folio', ctx.folio);
+    if (ctx?.id_periodo != null) form.append('id_periodo', String(ctx.id_periodo));
+    if (ctx?.id_centro != null) form.append('id_centro', String(ctx.id_centro));
+    if (ctx?.id_tipopoliza != null) form.append('id_tipopoliza', String(ctx.id_tipopoliza));
 
     return this.http.post<any>(this.cfdiImportUrl, form, {
       headers: this.getAuthHeaders(),
@@ -198,7 +211,7 @@ export class PolizasService {
   listCfdi(params?: { limit?: number; q?: string }): Observable<CfdiRow[] | any> {
     let httpParams = new HttpParams();
     if (params?.limit != null) httpParams = httpParams.set('limit', String(params.limit));
-    if (params?.q)             httpParams = httpParams.set('q', params.q);
+    if (params?.q) httpParams = httpParams.set('q', params.q);
     return this.http.get<any>(`${this.api}/cfdi`, {
       params: httpParams,
       headers: this.getAuthHeaders(),
@@ -206,17 +219,17 @@ export class PolizasService {
   }
 
   // ---------------- USUARIO ----------------
- getMeq() {
+  getMeq() {
     return this.http.get<any>(`${this.api}/me`, {
       headers: this.getAuthHeaders(),
     });
-    
+
   }
   getMe() {
     return this.http.get<any>(`${this.apiUrl}/me`, {
       headers: this.getAuthHeaders(),
     });
-    
+
   }
 
   // ---------------- ESTADO PÓLIZA ----------------
@@ -239,11 +252,11 @@ export class PolizasService {
     folio: string;
     concepto: string;
     // motor:
-    tipo_operacion: 'ingreso'|'egreso';
+    tipo_operacion: 'ingreso' | 'egreso';
     monto_base: number;
     fecha_operacion: string;   // 'YYYY-MM-DD'
     id_empresa: number;
-    medio_cobro_pago: 'bancos'|'caja'|'clientes'|'proveedores';
+    medio_cobro_pago: 'bancos' | 'caja' | 'clientes' | 'proveedores';
     id_cuenta_contrapartida: number;
     // opcionales:
     cliente?: string | null;
@@ -257,11 +270,11 @@ export class PolizasService {
 
   /** POST /api/v1/poliza/:id/expand-evento  (agrega movimientos generados a una póliza existente) */
   expandEventoEnPoliza(polizaId: number, body: {
-    tipo_operacion: 'ingreso'|'egreso';
+    tipo_operacion: 'ingreso' | 'egreso';
     monto_base: number;
     fecha_operacion: string;   // 'YYYY-MM-DD'
     id_empresa: number;
-    medio_cobro_pago: 'bancos'|'caja'|'clientes'|'proveedores';
+    medio_cobro_pago: 'bancos' | 'caja' | 'clientes' | 'proveedores';
     id_cuenta_contrapartida: number;
     // opcionales:
     cliente?: string | null;

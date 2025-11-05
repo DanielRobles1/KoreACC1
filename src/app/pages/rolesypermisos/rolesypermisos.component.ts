@@ -50,7 +50,7 @@ export class RolesypermisosComponent {
     private router: Router,
     private rolesSvc: RolesService,
     private auth: AuthService
-  ) {}
+  ) { }
 
   title = 'Roles y permisos';
   tabs: CrudTab[] = [
@@ -74,7 +74,7 @@ export class RolesypermisosComponent {
     { id: 'permissions', label: 'Permisos' },
   ];
 
-  
+
   successOpen = false;
   successTitle = 'Éxito';
   successMessage = 'Operación realizada correctamente.';
@@ -181,12 +181,12 @@ export class RolesypermisosComponent {
     this.loadPermisosDisponibles();
 
     this.canCreate = this.auth.hasPermission('crear_rol');
-    this.canEdit   = this.auth.hasPermission('editar_rol');
+    this.canEdit = this.auth.hasPermission('editar_rol');
     this.canDelete = this.auth.hasPermission('eliminar_rol');
     this.actions = [
-      ...(this.canEdit ?   [{ id: 'edit',        tooltip: 'Editar Rol' }] : []),
-      ...(this.canDelete ? [{ id: 'delete',      tooltip: 'Eliminar Rol' }] : []),
-      ...(this.canEdit ?   [{ id: 'permissions', tooltip: 'Editar Permisos' }] : [])
+      ...(this.canEdit ? [{ id: 'edit', tooltip: 'Editar Rol' }] : []),
+      ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Rol' }] : []),
+      ...(this.canEdit ? [{ id: 'permissions', tooltip: 'Editar Permisos' }] : [])
     ];
   }
 
@@ -195,8 +195,7 @@ export class RolesypermisosComponent {
     const id = api.id ?? api.id_rol ?? 0;
     const permissions =
       Array.isArray(api.permisos) ? api.permisos :
-      Array.isArray(api.Permisos) ? api.Permisos.map(p => p.nombre) :
-      [];
+        Array.isArray(api.Permisos) ? api.Permisos.map(p => p.nombre) : [];
     return {
       id,
       nombre: api.nombre,
@@ -220,16 +219,16 @@ export class RolesypermisosComponent {
     });
   }
 
-loadPermisosDisponibles() {
-  this.rolesSvc.getPermisosAll().subscribe({
-    next: (perms: string[]) => {
-      this.availablePermissions = (perms ?? []).filter(Boolean);
-    },
-    error: (err) => this.showError(err, 'No se pudieron cargar los permisos disponibles.')
-  });
-}
+  loadPermisosDisponibles() {
+    this.rolesSvc.getPermisosAll().subscribe({
+      next: (perms: string[]) => {
+        this.availablePermissions = (perms ?? []).filter(Boolean);
+      },
+      error: (err) => this.showError(err, 'No se pudieron cargar los permisos disponibles.')
+    });
+  }
 
- 
+
   onTabChange(tabId: string) {
     this.activeTabId = tabId;
     const selected = this.tabs.find(t => t.id === tabId);
@@ -417,51 +416,71 @@ loadPermisosDisponibles() {
     this.searchTerm = term;
   }
 
-  // AGRUPACIÓN DE PERMISOS (CORREGIDA)
-  private permissionGroupsMap: Record<string, string[]> = {
-    'Usuarios': ['usuario', 'user'],
-    'Pólizas':  ['poliza', 'póliza'],
-    'Reportes': ['reporte', 'report'],
-    'Roles':    ['rol'],
-    'Impuestos': ['impuestos', 'impuesto', 'Impuestos'],
-    'Cat. Contable': ['cat_Contable', 'Cuentas', 'Contable', 'cuentas', 'contable'],
-    'Cat. Centros': ['cat_Centros', 'Centros', 'centros'],
-    'Empresa':  ['empresa', 'company']
-  };
+  // Lista de posibles acciones (verbos) al inicio del permiso
+  private ACTION_TOKENS = new Set([
+    'crear', 'editar', 'eliminar', 'consultar', 'listar', 'ver',
+    'actualizar', 'imprimir', 'exportar', 'importar', 'activar', 'desactivar'
+  ]);
 
-  // Devuelve objeto {categoria: permisos[]}
+  private tokensDeGrupo(permission: string): string[] {
+    const raw = (permission ?? '').toString().trim().toLowerCase();
+    if (!raw) return [];
+    const parts = raw.split('_').filter(Boolean);
+
+    // descarta acciones iniciales
+    let i = 0;
+    while (i < parts.length && this.ACTION_TOKENS.has(parts[i])) i++;
+    const objeto = parts.slice(i);
+    return objeto;
+  }
+
+  /** Convierte ["cat", "contable"] -> "Cat Contable" */
+  private toTitleCase(tokens: string[]): string {
+    const capitalize = (s: string) =>
+      s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    return tokens.map(capitalize).join(' ');
+  }
+
+  /** Pluralización simple en español (una sola palabra) */
+  private pluralizeEs(word: string): string {
+    if (!word) return word;
+    const last = word.slice(-1).toLowerCase();
+    return /[aeiouáéíóú]$/i.test(last) ? word + 's' : word + 'es';
+  }
+
+  private groupLabelFromPermission(permission: string): string {
+    const tokens = this.tokensDeGrupo(permission);
+    if (!tokens.length) return 'Otros';
+
+    if (tokens[0] === 'cat') {
+      const pretty = this.toTitleCase(tokens.slice(1));
+      return pretty ? `Cat ${pretty}` : 'Catálogo';
+    }
+
+    if (tokens.length === 1) {
+      const uno = this.toTitleCase(tokens);
+      return this.pluralizeEs(uno);
+    }
+
+    return this.toTitleCase(tokens);
+  }
   get groupedPermissions(): Record<string, string[]> {
-    const groups: Record<string, string[]> = {
-      'Usuarios': [],
-      'Pólizas':  [],
-      'Reportes': [],
-      'Roles':    [],
-      'Empresa':  [],
-      'Impuestos': [],
-      'Cat. Contable': [],
-      'Cat. Centros': [],
-      'Otros':    [],   
-    };
+    const groups: Record<string, string[]> = {};
 
     for (const raw of this.availablePermissions ?? []) {
       const perm = (raw ?? '').toString();
-      const permLc = perm.toLowerCase();
+      const group = this.groupLabelFromPermission(perm) || 'Otros';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(perm);
+    }
 
-      let added = false;
-      for (const [cat, keywords] of Object.entries(this.permissionGroupsMap)) {
-        if (keywords.some(k => permLc.includes(k.toLowerCase()))) {
-          groups[cat].push(perm);
-          added = true;
-          break;
-        }
-      }
-      if (!added) groups['Otros'].push(perm);
+    for (const k of Object.keys(groups)) {
+      groups[k].sort((a, b) => a.localeCompare(b));
     }
 
     return groups;
   }
 
-  // Buscador de permisos (en modal) 
   permissionSearch = '';
 
   filterPerms(perms: string[] = []): string[] {

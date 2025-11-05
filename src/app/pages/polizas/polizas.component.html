@@ -12,9 +12,6 @@
   </a>
 
   <!-- Toolbar superior (no usa movs-toolbar para evitar sangrado) -->
-
- 
-
   <div class="polizas-container">
     <hr />
 
@@ -137,14 +134,27 @@
           </select>
         </label>
 
+        <!-- Periodo -->
+        <label>
+          Periodo:
+          <select class="field select"
+                  [(ngModel)]="nuevaPoliza.id_periodo"
+                  name="id_periodo"
+                  required
+                  (ngModelChange)="onPeriodoChange($event)">
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
+          </select>
+        </label>
+
+        <!-- Centro -->
         <label>
           Centro de costo:
-          <select
-            class="field select"
-            [(ngModel)]="nuevaPoliza.id_centro"
-            name="id_centro"
-            required
-            (change)="onCentroSeleccionado(); onCentroCambiadoPropagarSerie()">
+          <select class="field select"
+                  [(ngModel)]="nuevaPoliza.id_centro"
+                  name="id_centro"
+                  required
+                  (ngModelChange)="onCentroChange($event); onCentroCambiadoPropagarSerie(); onCentroSeleccionado()">
             <option [ngValue]="undefined" disabled>Seleccione…</option>
             <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
           </select>
@@ -152,7 +162,11 @@
 
         <label>
           Folio:
-          <input class="field" [(ngModel)]="nuevaPoliza.folio" name="folio" required />
+          <input class="field"
+                [(ngModel)]="nuevaPoliza.folio"
+                name="folio"
+                required
+                (input)="folioFueEditadoPorUsuario = true" />
         </label>
 
         <label>
@@ -172,14 +186,6 @@
               Usar
             </button>
           </small>
-        </label>
-
-        <label>
-          Periodo:
-          <select class="field select" [(ngModel)]="nuevaPoliza.id_periodo" name="id_periodo" required>
-            <option [ngValue]="undefined" disabled>Seleccione…</option>
-            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
-          </select>
         </label>
       </div>
 
