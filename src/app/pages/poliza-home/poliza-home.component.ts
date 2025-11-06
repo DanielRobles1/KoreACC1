@@ -42,7 +42,7 @@ export class PolizaHomeComponent {
     private location: Location,
     private router: Router,
     private api: PolizasService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.cargarCatalogos();
@@ -57,14 +57,14 @@ export class PolizaHomeComponent {
     open: false,
     title: 'Confirmar eliminación',
     message: '¿Deseas eliminar esta póliza?',
-    onConfirm: (() => {}) as () => void,
+    onConfirm: (() => { }) as () => void,
   };
 
   approveModal = {
     open: false,
     title: 'Confirmar aprobación',
     message: '¿Deseas marcar esta póliza como Aprobada?',
-    onConfirm: (() => {}) as () => void,
+    onConfirm: (() => { }) as () => void,
   };
 
   abrirConfirmModal(message: string, onConfirm: () => void, title = 'Confirmar eliminación') {
@@ -73,7 +73,7 @@ export class PolizaHomeComponent {
     this.confirmModal.onConfirm = onConfirm;
     this.confirmModal.open = true;
   }
-  cerrarConfirmModal() { this.confirmModal.open = false; this.confirmModal.onConfirm = () => {}; }
+  cerrarConfirmModal() { this.confirmModal.open = false; this.confirmModal.onConfirm = () => { }; }
   confirmarConfirmModal() { try { this.confirmModal.onConfirm?.(); } finally { this.cerrarConfirmModal(); } }
 
   /** Abrir modal de aprobar , pero primero checa si esta cuadrada la poliza */
@@ -102,7 +102,7 @@ export class PolizaHomeComponent {
       this.approveModal.open = true;
     });
   }
-  cerrarApproveModal() { this.approveModal.open = false; this.approveModal.onConfirm = () => {}; }
+  cerrarApproveModal() { this.approveModal.open = false; this.approveModal.onConfirm = () => { }; }
   confirmarApproveModal() { try { this.approveModal.onConfirm?.(); } finally { this.cerrarApproveModal(); } }
 
   onModalConfirmed() { this.confirmarConfirmModal(); }
@@ -264,38 +264,38 @@ export class PolizaHomeComponent {
   }
 
   /** true si (cargos - abonos) ≈ 0 " */
- private isPolizaCuadrada(p: PolizaRow): boolean {
-  const estado = (this.getEstado(p) || '').toLowerCase();
-  if (estado.includes('cuadra') || estado.includes('aprob')) return true;
+  private isPolizaCuadrada(p: PolizaRow): boolean {
+    const estado = (this.getEstado(p) || '').toLowerCase();
+    if (estado.includes('cuadra') || estado.includes('aprob')) return true;
 
-  const movs: Movimiento[] = Array.isArray((p as any).movimientos) ? (p as any).movimientos : [];
-  if (!movs.length) return false; // sólo podemos concluir cuadrada si hay datos
+    const movs: Movimiento[] = Array.isArray((p as any).movimientos) ? (p as any).movimientos : [];
+    if (!movs.length) return false; // sólo podemos concluir cuadrada si hay datos
 
-  const cargos = movs.filter(m => String(m.operacion) === '0').reduce((s, m) => s + (Number(m.monto) || 0), 0);
-  const abonos = movs.filter(m => String(m.operacion) === '1').reduce((s, m) => s + (Number(m.monto) || 0), 0);
-  return Math.abs(cargos - abonos) < 0.0001;
-}
+    const cargos = movs.filter(m => String(m.operacion) === '0').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+    const abonos = movs.filter(m => String(m.operacion) === '1').reduce((s, m) => s + (Number(m.monto) || 0), 0);
+    return Math.abs(cargos - abonos) < 0.0001;
+  }
 
   /** Si no hay movimientos cargados, los trae y evalúa si está cuadrada */
-private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
-  const id = this.getIdPoliza(p);
-  if (!id) return done(false);
+  private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
+    const id = this.getIdPoliza(p);
+    if (!id) return done(false);
 
-  if (Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0) {
-    return done(this.isPolizaCuadrada(p));
+    if (Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0) {
+      return done(this.isPolizaCuadrada(p));
+    }
+    this.api.getPolizaConMovimientos(id).subscribe({
+      next: (res: any) => {
+        (p as any).movimientos = res?.movimientos ?? [];
+        done(this.isPolizaCuadrada(p));
+      },
+      error: () => done(false)
+    });
   }
-  this.api.getPolizaConMovimientos(id).subscribe({
-    next: (res: any) => {
-      (p as any).movimientos = res?.movimientos ?? [];
-      done(this.isPolizaCuadrada(p));
-    },
-    error: () => done(false)
-  });
-}
 
- canAprobar(p: PolizaRow): boolean {
-  return this.canMarcarRevisada(p);
-}
+  canAprobar(p: PolizaRow): boolean {
+    return this.canMarcarRevisada(p);
+  }
 
   toggleVerMas(p: PolizaRow) {
     const id = this.getIdPoliza(p);
@@ -334,6 +334,9 @@ private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
         const list = this.normalizeList(r) ?? (r?.polizas ?? []);
         this.polizas = Array.isArray(list) ? list : [];
         this.aplicarFiltroLocal();
+        for (const p of this.polizas) {
+          this.periodoLabelFromRow(p);
+        }
 
         if (this.polizas.length === 0) {
           this.showToast({ type: 'info', message: 'No se encontraron pólizas para los filtros/búsqueda actuales.' });
@@ -360,7 +363,7 @@ private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
       const concepto = String(p.concepto ?? '').toLowerCase();
       const centro = this.nombreCentro(p.id_centro).toLowerCase();
       const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
-      const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
+      const periodo = this.periodoLabelFromRow(p).toLowerCase();
 
       const movMatch = Array.isArray(p.movimientos) && p.movimientos.some(m => {
         const uuid = String((m as any)?.uuid ?? '').toLowerCase();
@@ -370,8 +373,25 @@ private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
       });
 
       return folio.includes(term) || concepto.includes(term) || centro.includes(term) ||
-             tipo.includes(term) || periodo.includes(term) || movMatch;
+        tipo.includes(term) || periodo.includes(term) || movMatch;
     });
+  }
+
+  periodoLabelFromRow(p: any): string {
+    const id = Number(p?.id_periodo ?? p?.periodo_id);
+    const labelEnMapa = this.mapPeriodos.get(id);
+    if (labelEnMapa) return labelEnMapa;
+
+    const ini = p?.periodo_inicio ?? p?.fecha_inicio ?? p?.inicio;
+    const fin = p?.periodo_fin ?? p?.fecha_fin ?? p?.fin;
+
+    if (ini || fin) {
+      const etiqueta = `${this.fmtDate(ini)} — ${this.fmtDate(fin)}`;
+      if (!Number.isNaN(id)) this.mapPeriodos.set(id, etiqueta); 
+      return etiqueta;
+    }
+
+    return (id != null && !Number.isNaN(id)) ? (this.mapPeriodos.get(id) ?? String(id)) : '—';
   }
 
   getEstado(p: any):
@@ -433,7 +453,7 @@ private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
       const concepto = (p.concepto || '').toLowerCase();
       const centro = this.nombreCentro(p.id_centro).toLowerCase();
       const tipo = this.nombreTipo(p.id_tipopoliza).toLowerCase();
-      const periodo = this.nombrePeriodo(p.id_periodo).toLowerCase();
+      const periodo = this.periodoLabelFromRow(p).toLowerCase();
       const estado = this.getEstado(p).toLowerCase();
 
       return (
@@ -491,14 +511,14 @@ private verificarCuadrada(p: PolizaRow, done: (ok: boolean) => void) {
   }
 
   /** Habilitar botón "Revisada/Aprobada" solo si cuadra */
- canMarcarRevisada(p: PolizaRow): boolean {
-  const e = (this.getEstado(p) || '').toLowerCase();
-  // Estados que sí bloquean el botón
-  if (e.includes('aprob') || e.includes('contab') || e.includes('cance') || e.includes('cerr')) return false;
+  canMarcarRevisada(p: PolizaRow): boolean {
+    const e = (this.getEstado(p) || '').toLowerCase();
+    // Estados que sí bloquean el botón
+    if (e.includes('aprob') || e.includes('contab') || e.includes('cance') || e.includes('cerr')) return false;
 
-  const tieneMovs = Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0;
-  return tieneMovs ? this.isPolizaCuadrada(p) : true;
-}
+    const tieneMovs = Array.isArray((p as any).movimientos) && (p as any).movimientos.length > 0;
+    return tieneMovs ? this.isPolizaCuadrada(p) : true;
+  }
   canMarcarContabilizada(p: PolizaRow): boolean {
     const e = (this.getEstado(p) || '').toLowerCase();
     return e.includes('aprob') || e.includes('revis') || e.includes('cuadra');

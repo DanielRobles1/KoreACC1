@@ -254,9 +254,9 @@ export class EmpresaComponent implements OnInit {
         const one = Array.isArray(data) ? data[0] : data;
         this.rows = one ? [one as UiEmpresa] : [];
         if (this.rows[0]) {
-          this.loadPeriodos();
-          this.loadEjercicios();
           this.restoreEjercicioSeleccionado();
+          this.loadEjercicios();
+          this.loadPeriodos();
         }
       },
       error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),

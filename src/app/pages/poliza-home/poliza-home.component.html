@@ -54,8 +54,12 @@
 
     <!-- Buscador -->
     <input
-     
-      style="min-width:280px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgb(255, 255, 255); background:transparent; color:#ffffff; outline:none; margin-bottom:.75rem; margin-left:1rem;" />
+        type="search"
+        [(ngModel)]="q"
+        (ngModelChange)="onBuscarChange($event)"
+        placeholder="Buscar pólizas por folio, concepto, UUID, cliente…"
+        style="min-width:280px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgb(10, 10, 10, 0.25); background:transparent; color:#0a0a0a; outline:none; margin-bottom:.75rem; margin-left:1rem;" 
+      />
 
     <table class="tabla-polizas">
    <thead>
@@ -121,7 +125,7 @@
       <div class="filter-dropdown" *ngIf="showFilter['periodo']">
         <select [(ngModel)]="filtros.periodo" (change)="aplicarFiltros()">
           <option value="">Todos</option>
-          <option *ngFor="let p of periodos" [value]="p.nombre">{{ p.nombre }}</option>
+          <option *ngFor="let p of periodos" [value]="p.nombre">{{ periodoLabelFromRow(p) }}</option>
         </select>
       </div>
     </th>

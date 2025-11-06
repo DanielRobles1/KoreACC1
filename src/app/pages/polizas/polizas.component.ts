@@ -713,6 +713,7 @@ export class PolizasComponent implements OnInit {
 
         this.cuentas = parsed;
         this.cuentasMap = new Map(parsed.map(c => [c.id_cuenta, { codigo: c.codigo, nombre: c.nombre }]));
+        console.log('Respuesta de cuentas, ', this.cuentasMap)
       },
       error: (err: any) => {
         console.error('Cuentas:', err);
