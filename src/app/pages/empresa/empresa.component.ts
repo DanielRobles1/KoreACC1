@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
+import { TipoPolizaModalComponent } from '@app/components/modal-tipopoliza/modal-tipopoliza.component';
 import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from 'src/app/components/crud-panel/crud-panel.component';
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
@@ -40,7 +40,7 @@ type ConfirmKind =
 @Component({
   selector: 'app-empresa',
   standalone: true,
-  imports: [CommonModule, FormsModule, CrudPanelComponent, SidebarComponent, ModalComponent, ToastMessageComponent],
+  imports: [CommonModule, FormsModule, CrudPanelComponent, SidebarComponent, ModalComponent, ToastMessageComponent, TipoPolizaModalComponent],
   templateUrl: './empresa.component.html',
   styleUrls: ['./empresa.component.scss'],
 })
@@ -62,6 +62,10 @@ export class EmpresaComponent implements OnInit {
   tabs: CrudTab[] = [
     { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
     { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+{
+    id: 'tipo-poliza',
+    label: '+ Tipo póliza',
+    }  
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 
@@ -161,7 +165,7 @@ export class EmpresaComponent implements OnInit {
 
   // Selección actual para periodos
   ejercicioSeleccionado: EjercicioContableDto | null = null;
-
+  tpOpen = false;
   // Modal confirm
   confirmOpen = false;
   confirmTitle = 'Confirmar acción';
@@ -202,6 +206,18 @@ export class EmpresaComponent implements OnInit {
       case 'ANUAL': return { start: this.startOfYear(base), end: this.endOfYear(base) };
     }
     return null;
+  }
+ onTipoPolizaCreado(_nuevo: any) {
+    // Aquí puedes refrescar catálogos si aplica
+    this.vm = {
+      open: true,
+      title: 'Guardado',
+      message: 'Tipo de póliza creado correctamente.',
+      type: 'success',
+      autoCloseMs: 3000
+    };
+    // Si prefieres cerrar el modal desde el padre:
+    // this.closeTipoPolizaModal();
   }
 
   private setDatesByType(type: PeriodoTipo, referenceDate?: Date) {
@@ -264,9 +280,23 @@ export class EmpresaComponent implements OnInit {
   }
 
   onTabChange(id: string) {
-    if (id === 'datos' || id === 'periodos') this.activeTabId = id;
-    if (id === 'periodos') this.loadPeriodos();
+
+  // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
+  if (id === 'tipo-poliza') {
+    this.tpOpen = true;      // abre el modal
+    return;                  // evitar cambiar la pestaña activa
   }
+
+  // ✅ Lógica existente (no se modifica)
+  if (id === 'datos' || id === 'periodos') {
+    this.activeTabId = id;
+  }
+
+  if (id === 'periodos') {
+    this.loadPeriodos();
+  }
+}
+
 
   // Editar empresa
   onPrimary() {

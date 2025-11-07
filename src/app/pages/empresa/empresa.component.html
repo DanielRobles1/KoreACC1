@@ -28,6 +28,11 @@
 
         (edit)="onEdit($event)"
         (action)="onRowAction($event)">
+         <ng-container tabs>
+    <button type="button" class="btn btn-primary" (click)="tpOpen = true" title="Crear tipo de póliza">
+      + Tipo póliza
+    </button>
+  </ng-container>
       </app-crud-panel>
 
       
@@ -331,6 +336,10 @@
   (confirmed)="confirmProceed()">
   <p style="margin:0">{{ confirmMessage }}</p>
 </app-modal>
+<app-modal-tipopoliza
+  [(open)]="tpOpen"
+  (saved)="onTipoPolizaCreado($event)">
+</app-modal-tipopoliza>
 
 
 <app-toast-message

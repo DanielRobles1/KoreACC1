@@ -75,6 +75,7 @@ exports.EmpresaComponent = void 0;
 var core_1 = require("@angular/core");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
+var modal_tipopoliza_component_1 = require("@app/components/modal-tipopoliza/modal-tipopoliza.component");
 var crud_panel_component_1 = require("src/app/components/crud-panel/crud-panel.component");
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
@@ -94,6 +95,10 @@ var EmpresaComponent = /** @class */ (function () {
         this.tabs = [
             { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+            {
+                id: 'tipo-poliza',
+                label: '+ Tipo póliza'
+            }
         ];
         this.activeTabId = 'datos';
         // Empresa
@@ -179,6 +184,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.editEjercicioId = null;
         // Selección actual para periodos
         this.ejercicioSeleccionado = null;
+        this.tpOpen = false;
         // Modal confirm
         this.confirmOpen = false;
         this.confirmTitle = 'Confirmar acción';
@@ -223,6 +229,18 @@ var EmpresaComponent = /** @class */ (function () {
         }
         return null;
     };
+    EmpresaComponent.prototype.onTipoPolizaCreado = function (_nuevo) {
+        // Aquí puedes refrescar catálogos si aplica
+        this.vm = {
+            open: true,
+            title: 'Guardado',
+            message: 'Tipo de póliza creado correctamente.',
+            type: 'success',
+            autoCloseMs: 3000
+        };
+        // Si prefieres cerrar el modal desde el padre:
+        // this.closeTipoPolizaModal();
+    };
     EmpresaComponent.prototype.setDatesByType = function (type, referenceDate) {
         if (type === 'PERSONALIZADO')
             return;
@@ -262,19 +280,27 @@ var EmpresaComponent = /** @class */ (function () {
                 var one = Array.isArray(data) ? data[0] : data;
                 _this.rows = one ? [one] : [];
                 if (_this.rows[0]) {
-                    _this.loadPeriodos();
-                    _this.loadEjercicios();
                     _this.restoreEjercicioSeleccionado();
+                    _this.loadEjercicios();
+                    _this.loadPeriodos();
                 }
             },
             error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
         });
     };
     EmpresaComponent.prototype.onTabChange = function (id) {
-        if (id === 'datos' || id === 'periodos')
+        // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
+        if (id === 'tipo-poliza') {
+            this.tpOpen = true; // abre el modal
+            return; // evitar cambiar la pestaña activa
+        }
+        // ✅ Lógica existente (no se modifica)
+        if (id === 'datos' || id === 'periodos') {
             this.activeTabId = id;
-        if (id === 'periodos')
+        }
+        if (id === 'periodos') {
             this.loadPeriodos();
+        }
     };
     // Editar empresa
     EmpresaComponent.prototype.onPrimary = function () {
@@ -878,7 +904,7 @@ var EmpresaComponent = /** @class */ (function () {
         core_1.Component({
             selector: 'app-empresa',
             standalone: true,
-            imports: [common_1.CommonModule, forms_1.FormsModule, crud_panel_component_1.CrudPanelComponent, sidebar_component_1.SidebarComponent, modal_component_1.ModalComponent, toast_message_component_component_1.ToastMessageComponent],
+            imports: [common_1.CommonModule, forms_1.FormsModule, crud_panel_component_1.CrudPanelComponent, sidebar_component_1.SidebarComponent, modal_component_1.ModalComponent, toast_message_component_component_1.ToastMessageComponent, modal_tipopoliza_component_1.TipoPolizaModalComponent],
             templateUrl: './empresa.component.html',
             styleUrls: ['./empresa.component.scss']
         })

@@ -1,8 +1,7 @@
-// src/app/services/polizas.service.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
+import { map } from 'rxjs/operators';
 export interface Movimiento {
   id_cuenta: number | null;
   ref_serie_venta?: string;
@@ -33,6 +32,22 @@ export interface CfdiRow {
   total?: number | string | null;
 }
 
+/** ===== Tipos para Tipo de Póliza ===== */
+export type NaturalezaTP = 'ingreso' | 'egreso' | 'diario' | 'apertura' | 'cierre';
+
+export interface TipoPolizaCreate {
+  naturaleza: NaturalezaTP;
+  descripcion: string;
+}
+
+export interface TipoPoliza {
+  id_tipopoliza: number;
+  naturaleza: NaturalezaTP;
+  descripcion: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PolizasService {
   private http = inject(HttpClient);
@@ -53,12 +68,47 @@ export class PolizasService {
     );
   }
 
+  /** ---------------- TIPOS DE PÓLIZA (CRUD) ---------------- */
+
   /** GET /api/v1/tipo-poliza */
-  getTiposPoliza(): Observable<any> {
-    return this.http.get<any>(`${this.api}/tipo-poliza`, {
+ 
+
+getTiposPoliza(): Observable<TipoPoliza[]> {
+  return this.http.get<any>(`${this.api}/tipo-poliza`, {
+    headers: this.getAuthHeaders(),
+  }).pipe(
+    map((res): TipoPoliza[] => {
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res?.data)) return res.data;
+      if (Array.isArray(res?.rows)) return res.rows;
+      if (Array.isArray(res?.results)) return res.results;
+      return [];
+    })
+  );
+}
+
+  /** POST /api/v1/tipo-poliza */
+  createTipoPoliza(payload: TipoPolizaCreate): Observable<TipoPoliza> {
+    return this.http.post<TipoPoliza>(`${this.api}/tipo-poliza`, payload, {
       headers: this.getAuthHeaders(),
     });
   }
+
+  /** PUT /api/v1/tipo-poliza/:id */
+  updateTipoPoliza(id_tipopoliza: number, payload: Partial<TipoPolizaCreate>): Observable<TipoPoliza> {
+    return this.http.put<TipoPoliza>(`${this.api}/tipo-poliza/${id_tipopoliza}`, payload, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /** DELETE /api/v1/tipo-poliza/:id */
+  deleteTipoPoliza(id_tipopoliza: number): Observable<{ ok: boolean }> {
+    return this.http.delete<{ ok: boolean }>(`${this.api}/tipo-poliza/${id_tipopoliza}`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  /** ---------------- PERÍODOS / CENTROS (catálogos) ---------------- */
 
   /** GET /api/v1/periodos */
   getPeriodos(): Observable<any> {

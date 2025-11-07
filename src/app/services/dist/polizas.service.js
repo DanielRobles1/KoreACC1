@@ -7,9 +7,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 exports.__esModule = true;
 exports.PolizasService = void 0;
-// src/app/services/polizas.service.ts
 var core_1 = require("@angular/core");
 var http_1 = require("@angular/common/http");
+var operators_1 = require("rxjs/operators");
 var PolizasService = /** @class */ (function () {
     function PolizasService() {
         this.http = core_1.inject(http_1.HttpClient);
@@ -25,12 +25,42 @@ var PolizasService = /** @class */ (function () {
             '';
         return new http_1.HttpHeaders(token ? { Authorization: "Bearer " + token } : {});
     };
+    /** ---------------- TIPOS DE PÓLIZA (CRUD) ---------------- */
     /** GET /api/v1/tipo-poliza */
     PolizasService.prototype.getTiposPoliza = function () {
         return this.http.get(this.api + "/tipo-poliza", {
             headers: this.getAuthHeaders()
+        }).pipe(operators_1.map(function (res) {
+            if (Array.isArray(res))
+                return res;
+            if (Array.isArray(res === null || res === void 0 ? void 0 : res.data))
+                return res.data;
+            if (Array.isArray(res === null || res === void 0 ? void 0 : res.rows))
+                return res.rows;
+            if (Array.isArray(res === null || res === void 0 ? void 0 : res.results))
+                return res.results;
+            return [];
+        }));
+    };
+    /** POST /api/v1/tipo-poliza */
+    PolizasService.prototype.createTipoPoliza = function (payload) {
+        return this.http.post(this.api + "/tipo-poliza", payload, {
+            headers: this.getAuthHeaders()
         });
     };
+    /** PUT /api/v1/tipo-poliza/:id */
+    PolizasService.prototype.updateTipoPoliza = function (id_tipopoliza, payload) {
+        return this.http.put(this.api + "/tipo-poliza/" + id_tipopoliza, payload, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    /** DELETE /api/v1/tipo-poliza/:id */
+    PolizasService.prototype.deleteTipoPoliza = function (id_tipopoliza) {
+        return this.http["delete"](this.api + "/tipo-poliza/" + id_tipopoliza, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    /** ---------------- PERÍODOS / CENTROS (catálogos) ---------------- */
     /** GET /api/v1/periodos */
     PolizasService.prototype.getPeriodos = function () {
         return this.http.get(this.api + "/periodos", {
@@ -73,6 +103,18 @@ var PolizasService = /** @class */ (function () {
     /** PUT /api/v1/poliza/:id */
     PolizasService.prototype.updatePoliza = function (id, body) {
         return this.http.put(this.basePoliza + "/" + id, body, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    /** GET /api/v1/poliza/folio-siguiente */
+    PolizasService.prototype.getFolioSiguiente = function (params) {
+        var p = new http_1.HttpParams()
+            .set('id_tipopoliza', String(params.id_tipopoliza))
+            .set('id_periodo', String(params.id_periodo));
+        if (params.id_centro != null)
+            p = p.set('id_centro', String(params.id_centro));
+        return this.http.get(this.basePoliza + "/folio-siguiente", {
+            params: p,
             headers: this.getAuthHeaders()
         });
     };
