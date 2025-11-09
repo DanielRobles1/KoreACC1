@@ -11,10 +11,11 @@
         <button class="btn-excel" (click)="exportToExcel()">Exportar Excel</button>
         <button class="btn-pdf" (click)="exportToPDF()"> Exportar PDF</button>
 
-        <label class="btn-import">
-          Importar Excel
-          <input type="file" accept=".xlsx, .xls" (change)="onImportExcel($event)" hidden />
-        </label>
+       <label class="btn-import" *ngIf="false">
+  Importar Excel
+  <input type="file" accept=".xlsx, .xls" (change)="onImportExcel($event)" hidden />
+</label>
+
       </div>
     <app-crud-panel
       [title]="title"

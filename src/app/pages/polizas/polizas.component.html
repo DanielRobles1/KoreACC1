@@ -11,13 +11,11 @@
     </button>
   </a>
 
-  <!-- Toolbar superior (no usa movs-toolbar para evitar sangrado) -->
   <div class="polizas-container">
     <hr />
 
     <h3>Nueva póliza</h3>
 
-    <!-- Toggle MANUAL / MOTOR -->
     <div class="mode-switch">
       <label class="mode-switch__check">
         <input
@@ -73,7 +71,6 @@
     <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
   </div>
 
-  <!-- Separador visual -->
   <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
 
   <!-- Usuario -->
@@ -95,7 +92,6 @@
     <span class="user-name">{{ currentUserLabel || 'Usuario' }}</span>
   </div>
 
-  <!-- Separador visual -->
   <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
 
  <div class="status-chip por-revisar">
@@ -189,8 +185,8 @@
         </label>
       </div>
 
-      <!-- Panel del motor -->
       <div *ngIf="modoCaptura==='motor'" class="motor-panel">
+        
         <h4>Evento (motor)</h4>
         <div class="form-grid">
           <label> Tipo de operación:
@@ -217,7 +213,6 @@
             </select>
           </label>
 
-          <!-- Cuenta contrapartida -->
           <label> Cuenta contrapartida:
             <select
               class="field select"
@@ -252,11 +247,12 @@
         </div>
       </div>
 
-      <!-- Tabla de movimientos (solo manual) -->
       <div *ngIf="modoCaptura==='manual'">
         <div class="movs-header">
-          <h4 class="section-title">Movimientos</h4>
-          <button type="button" class="btn pill" (click)="agregarMovimiento()">
+  <h4 class="section-title">Movimientos</h4>
+
+  <div style="display:flex; gap:.5rem; align-items:center;">
+     <button type="button" class="btn pill" (click)="agregarMovimiento()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"
                  stroke-linecap="round" stroke-linejoin="round" class="icon">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -264,6 +260,16 @@
             </svg>
             Agregar movimiento
           </button>
+
+    <!-- Botón Calculadora -->
+    <button type="button" class="btn pill" (click)="abrirModalIva()">
+      🧮 Calculadora IVA
+    </button>
+  </div>
+</div>
+
+        <div class="movs-header">
+         
         </div>
 
         <div class="tabla-wrapper">
@@ -392,7 +398,7 @@
             </span>
           </div>
         </div>
-      </div> <!-- /modo manual -->
+      </div> 
 
       <div class="actions">
         <span *ngIf="!canGuardar()" class="hint error">
@@ -430,3 +436,89 @@
   [showClose]="toast.showClose"
   (closed)="onToastClosed()">
 </app-toast-message>
+<!-- Modal Calculadora IVA -->
+<app-modal
+  [open]="modalIvaOpen"
+  [title]="'Calculadora de IVA'"
+  [size]="'md'"
+  [showClose]="true"
+  (closed)="cerrarModalIva()"
+  (canceled)="cerrarModalIva()"
+  (confirmed)="agregarMovimientosDesdeIVA()">
+
+  <form style="display:grid; gap:12px; padding-top:.25rem;">
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+      <label>
+        Operación
+        <select class="field select" [(ngModel)]="iva.op" name="iva_op">
+          <option [ngValue]="'venta'">Venta</option>
+          <option [ngValue]="'compra'">Compra</option>
+        </select>
+      </label>
+
+      <label>
+        Base
+        <select class="field select" [(ngModel)]="iva.baseTipo" name="iva_base">
+          <option [ngValue]="'sin'">Importe SIN IVA</option>
+          <option [ngValue]="'con'">Precio CON IVA</option>
+        </select>
+      </label>
+
+      <label>
+        Tasa
+        <select class="field select" [(ngModel)]="iva.tasa" name="iva_tasa">
+          <option [ngValue]="0.16">16%</option>
+          <option [ngValue]="0.08">8%</option>
+          <option [ngValue]="0.00">0% (gravado 0)</option>
+          <option [ngValue]="'exento'">Exento</option>
+        </select>
+      </label>
+
+      <label>
+        Monto
+        <input class="field" type="number" min="0" step="0.01"
+               [(ngModel)]="iva.monto" name="iva_monto">
+      </label>
+
+      <label>
+        Medio / contraparte
+        <select class="field select" [(ngModel)]="iva.medio" name="iva_medio">
+          <option [ngValue]="'bancos'">Bancos</option>
+          <option [ngValue]="'caja'">Caja</option>
+          <option [ngValue]="'clientes'">Clientes</option>
+          <option [ngValue]="'proveedores'">Proveedores</option>
+        </select>
+      </label>
+
+      <label>
+        Concepto
+        <input class="field" [(ngModel)]="iva.concepto" name="iva_concepto"
+               placeholder="Ej. Venta mostrador folio 123">
+      </label>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:4px;">
+      <button type="button" class="btn" (click)="recalcularIVA()">Calcular</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+      <div class="tot-card">
+        <div class="tot-label">Subtotal</div>
+        <div class="tot-value">{{ iva.subtotal | number:'1.2-2' }}</div>
+      </div>
+      <div class="tot-card">
+        <div class="tot-label">IVA</div>
+        <div class="tot-value">{{ iva.iva | number:'1.2-2' }}</div>
+      </div>
+      <div class="tot-card">
+        <div class="tot-label">Total</div>
+        <div class="tot-value">{{ iva.total | number:'1.2-2' }}</div>
+      </div>
+    </div>
+
+    <small class="hint" *ngIf="iva.tasa==='exento'">
+      Exento: no se genera IVA por trasladar/acreditar. Solo se registran subtotal y medio.
+    </small>
+  </form>
+
+</app-modal>

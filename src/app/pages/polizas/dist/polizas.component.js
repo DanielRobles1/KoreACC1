@@ -69,10 +69,23 @@ var toast_message_component_component_1 = require("@app/components/modal/toast-m
 var router_1 = require("@angular/router");
 var modal_seleccion_cuenta_component_1 = require("@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component");
 var rxjs_1 = require("rxjs");
+var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var PolizasComponent = /** @class */ (function () {
     function PolizasComponent(api) {
         var _this = this;
         this.api = api;
+        this.modalIvaOpen = false;
+        this.iva = {
+            op: 'venta',
+            baseTipo: 'sin',
+            tasa: 0.16,
+            monto: 0,
+            medio: 'bancos',
+            concepto: '',
+            subtotal: 0,
+            iva: 0,
+            total: 0
+        };
         this.sidebarOpen = true;
         this.xmlMovimientoIndex = null;
         this.uploadingXml = false;
@@ -143,8 +156,11 @@ var PolizasComponent = /** @class */ (function () {
         };
         // Movimientos
         this.normalizaStr = function (s) { var _a, _b; return (_b = (_a = s.normalize) === null || _a === void 0 ? void 0 : _a.call(s, 'NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) !== null && _b !== void 0 ? _b : s.toLowerCase(); };
+        this.folioFueEditadoPorUsuario = false;
         this.trackByFolio = function (_, x) { var _a; return (_a = x === null || x === void 0 ? void 0 : x.folio) !== null && _a !== void 0 ? _a : _; };
     }
+    PolizasComponent.prototype.abrirModalIva = function () { this.modalIvaOpen = true; };
+    PolizasComponent.prototype.cerrarModalIva = function () { this.modalIvaOpen = false; };
     PolizasComponent.prototype.volver = function () { this.router.navigate(['/poliza-home']); };
     // Obtiene etiqueta legible del tipo de póliza y del centro
     PolizasComponent.prototype.getTipoPolizaLabelById = function (id) {
@@ -152,6 +168,246 @@ var PolizasComponent = /** @class */ (function () {
         var t = this.tiposPoliza.find(function (x) { return Number(x.id_tipopoliza) === Number(id); });
         return ((_a = t === null || t === void 0 ? void 0 : t.nombre) !== null && _a !== void 0 ? _a : '').toString().trim();
     };
+    PolizasComponent.prototype.findCuentaIdByCodigo = function (codigo) {
+        var _a, _b;
+        var c = (_a = this.cuentas) === null || _a === void 0 ? void 0 : _a.find(function (x) { var _a; return ((_a = x.codigo) === null || _a === void 0 ? void 0 : _a.toString()) === codigo; });
+        return (_b = c === null || c === void 0 ? void 0 : c.id_cuenta) !== null && _b !== void 0 ? _b : null;
+    };
+    /** Redondeo a 2 decimales tipo contable */
+    PolizasComponent.prototype.r2 = function (n) {
+        return Math.round((n + Number.EPSILON) * 100) / 100;
+    };
+    /** Recalcula subtotal/IVA/total según base y tasa */
+    PolizasComponent.prototype.recalcularIVA = function () {
+        var _a = this.iva, baseTipo = _a.baseTipo, tasa = _a.tasa, monto = _a.monto;
+        if (!monto || monto <= 0) {
+            this.iva.subtotal = this.iva.iva = this.iva.total = 0;
+            return;
+        }
+        if (tasa === 'exento') {
+            // Exento: IVA = 0, subtotal = total según base
+            if (baseTipo === 'sin') {
+                this.iva.subtotal = this.r2(monto);
+                this.iva.iva = 0;
+                this.iva.total = this.r2(monto);
+            }
+            else {
+                this.iva.subtotal = this.r2(monto);
+                this.iva.iva = 0;
+                this.iva.total = this.r2(monto);
+            }
+            return;
+        }
+        var t = tasa;
+        if (baseTipo === 'sin') {
+            var subtotal = monto;
+            var iva = subtotal * t;
+            var total = subtotal + iva;
+            this.iva.subtotal = this.r2(subtotal);
+            this.iva.iva = this.r2(iva);
+            this.iva.total = this.r2(total);
+        }
+        else {
+            // base = precio con IVA
+            var total = monto;
+            var subtotal = total / (1 + t);
+            var iva = total - subtotal;
+            this.iva.subtotal = this.r2(subtotal);
+            this.iva.iva = this.r2(iva);
+            this.iva.total = this.r2(total);
+        }
+    };
+    /** movimientos calculadora de iva */
+    PolizasComponent.prototype.agregarMovimientosDesdeIVA = function () {
+        var _this = this;
+        var _a, _b;
+        this.recalcularIVA();
+        var _c = this.iva, op = _c.op, medio = _c.medio, tasa = _c.tasa, subtotal = _c.subtotal, iva = _c.iva, total = _c.total, concepto = _c.concepto;
+        if (!this.nuevaPoliza.movimientos)
+            this.nuevaPoliza.movimientos = [];
+        var COD = {
+            // Medios
+            BANCOS: '1102010000',
+            CAJA: '1101010001',
+            // Clientes por tasa
+            CLIENTES16: '1103010001',
+            CLIENTES08: '1103010002',
+            CLIENTES0: '1103010003',
+            CLIENTES_EXE: '1103010004',
+            // Proveedores por tasa
+            PROV16: '2101010001',
+            PROV08: '2101010002',
+            PROV0: '2101010003',
+            PROV_EXE: '2101010004',
+            // IVA trasladado (ventas) por tasa
+            IVA_TRAS_16: '2104010001',
+            IVA_TRAS_08: '2104010002',
+            // IVA acreditable (compras) por tasa
+            IVA_ACRED_16: '1107010001',
+            IVA_ACRED_08: '1107010002',
+            // Ventas por tasa
+            VENTAS_16: '4100010000',
+            VENTAS_08: '4100010008',
+            VENTAS_0: '4100010009',
+            VENTAS_EXE: '4100010010',
+            // Compras por tasa
+            COMPRAS_16: '5105010001',
+            COMPRAS_08: '5105010008',
+            COMPRAS_0: '5105010009',
+            COMPRAS_EXE: '5105010010'
+        };
+        // Helper para obtener id_cuenta por código (o null si no existe en catálogo)
+        var id = function (codigo) { return (codigo ? _this.findCuentaIdByCodigo(codigo) : null); };
+        // Normaliza tasa a número o etiqueta
+        var tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
+        var esExento = (tasa === 'exento');
+        var hoyISO = (new Date()).toISOString().slice(0, 10);
+        var refSerie = (_b = (_a = this.evento) === null || _a === void 0 ? void 0 : _a.ref_serie_venta) !== null && _b !== void 0 ? _b : null;
+        // Selección de cuenta por MEDIO (cobro/pago) y por TASA
+        var cuentaMedioVenta = function () {
+            if (medio === 'caja')
+                return id(COD.CAJA);
+            if (medio === 'bancos')
+                return id(COD.BANCOS);
+            // clientes (crédito) por tasa:
+            switch (true) {
+                case esExento: return id(COD.CLIENTES_EXE) || id(COD.CLIENTES16);
+                case tasaNum === 0: return id(COD.CLIENTES0) || id(COD.CLIENTES16);
+                case tasaNum === 0.08: return id(COD.CLIENTES08) || id(COD.CLIENTES16);
+                default: return id(COD.CLIENTES16);
+            }
+        };
+        var cuentaMedioCompra = function () {
+            if (medio === 'caja')
+                return id(COD.CAJA);
+            if (medio === 'bancos')
+                return id(COD.BANCOS);
+            // proveedores (crédito) por tasa:
+            switch (true) {
+                case esExento: return id(COD.PROV_EXE) || id(COD.PROV16);
+                case tasaNum === 0: return id(COD.PROV0) || id(COD.PROV16);
+                case tasaNum === 0.08: return id(COD.PROV08) || id(COD.PROV16);
+                default: return id(COD.PROV16);
+            }
+        };
+        // Selección de cuenta de ventas/compras por tasa
+        var cuentaVentas = function () {
+            if (esExento)
+                return id(COD.VENTAS_EXE) || id(COD.VENTAS_16);
+            if (tasaNum === 0)
+                return id(COD.VENTAS_0) || id(COD.VENTAS_16);
+            if (tasaNum === 0.08)
+                return id(COD.VENTAS_08) || id(COD.VENTAS_16);
+            return id(COD.VENTAS_16);
+        };
+        var cuentaCompras = function () {
+            if (esExento)
+                return id(COD.COMPRAS_EXE) || id(COD.COMPRAS_16);
+            if (tasaNum === 0)
+                return id(COD.COMPRAS_0) || id(COD.COMPRAS_16);
+            if (tasaNum === 0.08)
+                return id(COD.COMPRAS_08) || id(COD.COMPRAS_16);
+            return id(COD.COMPRAS_16);
+        };
+        // IVA por tasa (solo si tasa > 0)
+        var cuentaIVAtras = function () {
+            if (tasaNum === 0.16)
+                return id(COD.IVA_TRAS_16);
+            if (tasaNum === 0.08)
+                return id(COD.IVA_TRAS_08) || id(COD.IVA_TRAS_16);
+            return null;
+        };
+        var cuentaIVAacred = function () {
+            if (tasaNum === 0.16)
+                return id(COD.IVA_ACRED_16);
+            if (tasaNum === 0.08)
+                return id(COD.IVA_ACRED_08) || id(COD.IVA_ACRED_16);
+            return null;
+        };
+        //  Asientos 
+        if (op === 'venta') {
+            var idMedio = cuentaMedioVenta();
+            var idVentas = cuentaVentas();
+            var idIVAtras = cuentaIVAtras();
+            // Cargo por el total (cobrado o por cobrar)
+            this.nuevaPoliza.movimientos.push({
+                id_cuenta: idMedio,
+                operacion: '0',
+                monto: this.r2(total),
+                cliente: concepto || 'Venta',
+                fecha: hoyISO,
+                cc: null,
+                uuid: null,
+                ref_serie_venta: refSerie
+            });
+            // Abono a Ventas por el subtotal
+            this.nuevaPoliza.movimientos.push({
+                id_cuenta: idVentas,
+                operacion: '1',
+                monto: this.r2(subtotal),
+                cliente: concepto || 'Venta',
+                fecha: hoyISO,
+                cc: null,
+                uuid: null,
+                ref_serie_venta: refSerie
+            });
+            // Abono a IVA Trasladado (solo si tasa > 0)
+            if (!esExento && tasaNum > 0) {
+                this.nuevaPoliza.movimientos.push({
+                    id_cuenta: idIVAtras,
+                    operacion: '1',
+                    monto: this.r2(iva),
+                    cliente: concepto || 'IVA Trasladado',
+                    fecha: hoyISO,
+                    cc: null,
+                    uuid: null,
+                    ref_serie_venta: refSerie
+                });
+            }
+        }
+        else {
+            var idMedio = cuentaMedioCompra();
+            var idCompras = cuentaCompras();
+            var idIVAacred = cuentaIVAacred();
+            // Cargo a Compras por el subtotal
+            this.nuevaPoliza.movimientos.push({
+                id_cuenta: idCompras,
+                operacion: '0',
+                monto: this.r2(subtotal),
+                cliente: concepto || 'Compra',
+                fecha: hoyISO,
+                cc: null,
+                uuid: null,
+                ref_serie_venta: ''
+            });
+            // Cargo a IVA Acreditable (solo si tasa > 0)
+            if (!esExento && tasaNum > 0) {
+                this.nuevaPoliza.movimientos.push({
+                    id_cuenta: idIVAacred,
+                    operacion: '0',
+                    monto: this.r2(iva),
+                    cliente: concepto || 'IVA Acreditable',
+                    fecha: hoyISO,
+                    cc: null,
+                    uuid: null,
+                    ref_serie_venta: ''
+                });
+            }
+            // Abono por el total pagado/por pagar
+            this.nuevaPoliza.movimientos.push({
+                id_cuenta: idMedio,
+                operacion: '1',
+                monto: this.r2(total),
+                cliente: concepto || (medio === 'proveedores' ? 'Proveedor' : 'Pago'),
+                fecha: hoyISO,
+                cc: null,
+                uuid: null,
+                ref_serie_venta: ''
+            });
+        }
+    };
+    // recalcula totales/estado visual si tienes funciones para ello
+    // (tu UI ya muestra la diferencia con getDiferencia)
     PolizasComponent.prototype.getCentroLabelById = function (id) {
         var _a;
         var c = this.centros.find(function (x) { return Number(x.id_centro) === Number(id); });
@@ -202,6 +458,7 @@ var PolizasComponent = /** @class */ (function () {
     PolizasComponent.prototype.onTipoPolizaChange = function (_id) {
         this.conceptoFueEditadoPorUsuario = !!(this.nuevaPoliza.concepto && this.nuevaPoliza.concepto.trim());
         this.recomputarConceptoSugerido();
+        this.recomputarFolioSugerido();
     };
     PolizasComponent.prototype.onCentroCambiadoPropagarSerie = function () {
         var _a;
@@ -683,6 +940,7 @@ var PolizasComponent = /** @class */ (function () {
                 parsed.sort(function (a, b) { return a.codigo.localeCompare(b.codigo, undefined, { numeric: true }); });
                 _this.cuentas = parsed;
                 _this.cuentasMap = new Map(parsed.map(function (c) { return [c.id_cuenta, { codigo: c.codigo, nombre: c.nombre }]; }));
+                console.log('Respuesta de cuentas, ', _this.cuentasMap);
             },
             error: function (err) {
                 console.error('Cuentas:', err);
@@ -1121,6 +1379,54 @@ var PolizasComponent = /** @class */ (function () {
             }
         });
     };
+    PolizasComponent.prototype.recomputarFolioSugerido = function () {
+        return __awaiter(this, void 0, Promise, function () {
+            var id_tipopoliza, id_periodo, id_centro, r, e_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        id_tipopoliza = this.toNumOrNull(this.nuevaPoliza.id_tipopoliza);
+                        id_periodo = this.toNumOrNull(this.nuevaPoliza.id_periodo);
+                        id_centro = this.toNumOrNull(this.nuevaPoliza.id_centro);
+                        if (!id_tipopoliza || !id_periodo)
+                            return [2 /*return*/];
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, rxjs_1.firstValueFrom(this.api.getFolioSiguiente({
+                                id_tipopoliza: id_tipopoliza,
+                                id_periodo: id_periodo,
+                                id_centro: id_centro !== null && id_centro !== void 0 ? id_centro : undefined
+                            }))];
+                    case 2:
+                        r = _a.sent();
+                        if (!this.folioFueEditadoPorUsuario) {
+                            this.nuevaPoliza.folio = (r === null || r === void 0 ? void 0 : r.folio) || this.nuevaPoliza.folio;
+                        }
+                        return [3 /*break*/, 4];
+                    case 3:
+                        e_1 = _a.sent();
+                        console.warn('No se pudo obtener folio sugerido', e_1);
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    PolizasComponent.prototype.onPeriodoChange = function (_id) {
+        var _a;
+        // si el usuario no ha tecleado manualmente, permitimos autollenar
+        if (!((_a = this.nuevaPoliza) === null || _a === void 0 ? void 0 : _a.folio))
+            this.folioFueEditadoPorUsuario = false;
+        this.recomputarFolioSugerido();
+    };
+    PolizasComponent.prototype.onCentroChange = function (_id) {
+        var _a;
+        // id_centro es opcional para el folio; si tu back lo usa por serie, conviene recalcular
+        if (!((_a = this.nuevaPoliza) === null || _a === void 0 ? void 0 : _a.folio))
+            this.folioFueEditadoPorUsuario = false;
+        this.recomputarFolioSugerido();
+    };
     // XML
     PolizasComponent.prototype.triggerXmlPicker = function (input) {
         this.uploadXmlError = '';
@@ -1214,7 +1520,7 @@ var PolizasComponent = /** @class */ (function () {
         core_1.Component({
             selector: 'app-polizas',
             standalone: true,
-            imports: [common_1.CommonModule, forms_1.FormsModule, polizas_layout_component_1.PolizasLayoutComponent, toast_message_component_component_1.ToastMessageComponent, router_1.RouterModule, modal_seleccion_cuenta_component_1.ModalSeleccionCuentaComponent],
+            imports: [common_1.CommonModule, forms_1.FormsModule, polizas_layout_component_1.PolizasLayoutComponent, toast_message_component_component_1.ToastMessageComponent, router_1.RouterModule, modal_seleccion_cuenta_component_1.ModalSeleccionCuentaComponent, modal_component_1.ModalComponent],
             templateUrl: './polizas.component.html',
             styleUrls: ['./polizas.component.scss']
         })
