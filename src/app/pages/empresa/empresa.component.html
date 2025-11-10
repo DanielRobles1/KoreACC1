@@ -289,7 +289,8 @@
           name="anio"
           min="1900"
           max="9999"
-          required />
+          required 
+          (ngModelChange)="onEjercicioAnioChange($event)"/>
       </div>
       <div>
         <label class="field-label">Estado</label>
@@ -309,7 +310,9 @@
           [(ngModel)]="formEjercicio.fecha_inicio"
           name="fecha_inicio_ej"
           required
-          [min]="minDate" />
+          [min]="ejFechaMin"
+          [max]="ejFechaMax"
+          (ngModelChange)="onEjercicioFechaInicioChange($event)"/>
       </div>
       <div>
         <label class="field-label required">Fecha fin</label>
@@ -319,7 +322,9 @@
           [(ngModel)]="formEjercicio.fecha_fin"
           name="fecha_fin_ej"
           required
-          [min]="minDate" />
+          [min]="ejFechaMin"
+          [max]="ejFechaMax"
+          (ngModelChange)="onEjercicioFechaFinChange($event)" />
       </div>
     </div>
   </form>

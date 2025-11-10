@@ -12,6 +12,7 @@ import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-c
 import { PolizasService } from '@app/services/polizas.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
+import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
 import { catchError, of, switchMap, throwError, firstValueFrom, finalize, from, concatMap, tap } from 'rxjs';
 
 type Cuenta = {
@@ -33,7 +34,7 @@ type MovimientoUI = Movimiento & {
   _cuentaQuery?: string;
   id_movimiento?: number;
   orden?: number;
-  _arrival?: number; 
+  _arrival?: number;
 };
 
 type PolizaUI = Omit<Poliza, 'movimientos'> & {
@@ -47,7 +48,7 @@ type CfdiOption = {
 };
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
 
 type CentroCostoItem = {
   id_centrocosto: number;
@@ -67,6 +68,7 @@ type CentroCostoItem = {
     ToastMessageComponent,
     ModalComponent,
     ModalSeleccionCuentaComponent,
+    SavingOverlayComponent
   ],
   templateUrl: './poliza-editar.component.html',
   styleUrls: ['./poliza-editar.component.scss']
@@ -93,6 +95,11 @@ export class PolizaEditarComponent implements OnInit {
     autoCloseMs: 3500,
     showClose: true
   };
+
+  saving = false;
+  saveTotal = 0;
+  saveDone = 0;
+
 
   currentUser: UsuarioLigero | null = null;
 
@@ -138,14 +145,14 @@ export class PolizaEditarComponent implements OnInit {
   cfdiOptions: CfdiOption[] = [];
   uuidSeleccionado?: string;
 
-  private lastOrderMap = new Map<number, number>(); 
+  private lastOrderMap = new Map<number, number>();
 
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
     private apiSvc: PolizasService,
     private cuentasSvc: CuentasService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.cargarCatalogosBase();      // Tipos y Centros
@@ -187,8 +194,8 @@ export class PolizaEditarComponent implements OnInit {
       next: (r) => {
         const arr = this.normalizeList(r);
         this.centros = arr.map((c: any) => {
-          const id     = Number(c.id_centro ?? c.id ?? c.ID);
-          const serie  = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
+          const id = Number(c.id_centro ?? c.id ?? c.ID);
+          const serie = String(c.serie_venta ?? c.serie ?? c.codigo ?? '').trim();
           const nombre = String(c.nombre ?? c.descripcion ?? '').trim();
           const etiqueta = serie && nombre ? `${serie} — ${nombre}` : (serie || nombre || `Centro ${id}`);
           return { id_centro: id, nombre: etiqueta };
@@ -388,104 +395,104 @@ export class PolizaEditarComponent implements OnInit {
   }
 
   // Póliza + movimientos
- cargarPoliza(id: number) {
-  const ORDER_KEY = (pid: number) => `polizaOrder:${pid}`;
+  cargarPoliza(id: number) {
+    const ORDER_KEY = (pid: number) => `polizaOrder:${pid}`;
 
-  const loadSavedOrder = (pid: number): number[] => {
-    try { return JSON.parse(localStorage.getItem(ORDER_KEY(pid)) || '[]'); }
-    catch { return []; }
-  };
+    const loadSavedOrder = (pid: number): number[] => {
+      try { return JSON.parse(localStorage.getItem(ORDER_KEY(pid)) || '[]'); }
+      catch { return []; }
+    };
 
-  const saveOrder = (pid: number, movs: MovimientoUI[]) => {
-    const ids = movs.map(m => Number(m.id_movimiento)).filter(n => Number.isFinite(n));
-    try { localStorage.setItem(ORDER_KEY(pid), JSON.stringify(ids)); } catch {}
-  };
+    const saveOrder = (pid: number, movs: MovimientoUI[]) => {
+      const ids = movs.map(m => Number(m.id_movimiento)).filter(n => Number.isFinite(n));
+      try { localStorage.setItem(ORDER_KEY(pid), JSON.stringify(ids)); } catch { }
+    };
 
-  const getTime = (m: any) => {
-    const s = m?.created_at ?? m?.fecha ?? null;
-    const t = s ? Date.parse(String(s)) : NaN;
-    return Number.isFinite(t) ? t : NaN;
-  };
+    const getTime = (m: any) => {
+      const s = m?.created_at ?? m?.fecha ?? null;
+      const t = s ? Date.parse(String(s)) : NaN;
+      return Number.isFinite(t) ? t : NaN;
+    };
 
-  this.loading = true;
-  this.http.get<any>(`${this.apiBase}/poliza/${id}/movimientos`).subscribe({
-    next: (res) => {
-      const savedOrderIds = loadSavedOrder(Number(res?.id_poliza ?? id));
-      const savedRank = new Map<number, number>(savedOrderIds.map((mid, i) => [Number(mid), i]));
+    this.loading = true;
+    this.http.get<any>(`${this.apiBase}/poliza/${id}/movimientos`).subscribe({
+      next: (res) => {
+        const savedOrderIds = loadSavedOrder(Number(res?.id_poliza ?? id));
+        const savedRank = new Map<number, number>(savedOrderIds.map((mid, i) => [Number(mid), i]));
 
-      const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any, idx: number) => {
-        const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
+        const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any, idx: number) => {
+          const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
 
-        // índice de llegada (para desempate estable)
-        (mm as any)._arrival = idx;
+          // índice de llegada (para desempate estable)
+          (mm as any)._arrival = idx;
 
-        // si backend no trae 'orden', usa el índice capturado
-        mm.orden = (typeof m?.orden === 'number') ? Number(m.orden) : idx;
+          // si backend no trae 'orden', usa el índice capturado
+          mm.orden = (typeof m?.orden === 'number') ? Number(m.orden) : idx;
 
-        // etiqueta de cuenta si ya está en cache
-        const c = this.cuentasMap.get(Number(mm.id_cuenta || 0));
-        (mm as any)._cuentaQuery = c ? `${c.codigo} — ${c.nombre}` : ((mm as any)._cuentaQuery ?? '');
+          // etiqueta de cuenta si ya está en cache
+          const c = this.cuentasMap.get(Number(mm.id_cuenta || 0));
+          (mm as any)._cuentaQuery = c ? `${c.codigo} — ${c.nombre}` : ((mm as any)._cuentaQuery ?? '');
 
-        return mm;
-      });
+          return mm;
+        });
 
-      const rank = (m: MovimientoUI) => {
-        const idm = Number((m as any).id_movimiento);
-        if (Number.isFinite(idm) && savedRank.has(idm)) return { type: 0 as const, v: savedRank.get(idm)! };
-        const t = getTime(m);
-        if (Number.isFinite(t)) return { type: 1 as const, v: t };
-        if (Number.isFinite(idm)) return { type: 2 as const, v: idm };
-        return { type: 3 as const, v: Number((m as any)._arrival) || Number.MAX_SAFE_INTEGER };
-      };
+        const rank = (m: MovimientoUI) => {
+          const idm = Number((m as any).id_movimiento);
+          if (Number.isFinite(idm) && savedRank.has(idm)) return { type: 0 as const, v: savedRank.get(idm)! };
+          const t = getTime(m);
+          if (Number.isFinite(t)) return { type: 1 as const, v: t };
+          if (Number.isFinite(idm)) return { type: 2 as const, v: idm };
+          return { type: 3 as const, v: Number((m as any)._arrival) || Number.MAX_SAFE_INTEGER };
+        };
 
-      movs.sort((a, b) => {
-        const ra = rank(a), rb = rank(b);
-        if (ra.type !== rb.type) return ra.type - rb.type;
-        if (ra.v !== rb.v) return ra.v - rb.v;
-        // último desempate: arrival
-        const aa = Number((a as any)._arrival) || 0;
-        const ab = Number((b as any)._arrival) || 0;
-        return aa - ab;
-      });
+        movs.sort((a, b) => {
+          const ra = rank(a), rb = rank(b);
+          if (ra.type !== rb.type) return ra.type - rb.type;
+          if (ra.v !== rb.v) return ra.v - rb.v;
+          // último desempate: arrival
+          const aa = Number((a as any)._arrival) || 0;
+          const ab = Number((b as any)._arrival) || 0;
+          return aa - ab;
+        });
 
-      // normaliza 'orden' solo si venía vacío/no numérico
-      movs.forEach((m, i) => {
-        if (!Number.isFinite(Number(m.orden))) m.orden = i;
-      });
+        // normaliza 'orden' solo si venía vacío/no numérico
+        movs.forEach((m, i) => {
+          if (!Number.isFinite(Number(m.orden))) m.orden = i;
+        });
 
-      saveOrder(Number(res?.id_poliza ?? id), movs);
+        saveOrder(Number(res?.id_poliza ?? id), movs);
 
-      // Asegura id_periodo numérico
-      const idPeriodoRaw = Number(res?.id_periodo);
-      const idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
+        // Asegura id_periodo numérico
+        const idPeriodoRaw = Number(res?.id_periodo);
+        const idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
 
-      this.poliza = {
-        id_poliza: res?.id_poliza,
-        id_tipopoliza: Number(res?.id_tipopoliza),
-        id_periodo: idPeriodo,
-        id_usuario: Number(res?.id_usuario),
-        id_centro: Number(res?.id_centro),
-        folio: String(res?.folio ?? ''),
-        concepto: String(res?.concepto ?? ''),
-        movimientos: movs,
-        estado: res?.estado,
-        fecha_creacion: res?.fecha_creacion,
-        created_at: res?.created_at,
-        updated_at: res?.updated_at
-      };
+        this.poliza = {
+          id_poliza: res?.id_poliza,
+          id_tipopoliza: Number(res?.id_tipopoliza),
+          id_periodo: idPeriodo,
+          id_usuario: Number(res?.id_usuario),
+          id_centro: Number(res?.id_centro),
+          folio: String(res?.folio ?? ''),
+          concepto: String(res?.concepto ?? ''),
+          movimientos: movs,
+          estado: res?.estado,
+          fecha_creacion: res?.fecha_creacion,
+          created_at: res?.created_at,
+          updated_at: res?.updated_at
+        };
 
-      this.applyPeriodoFilter();
-      this.cuentasFiltradas = new Array(this.poliza.movimientos?.length || 0).fill([]);
-      this.prefillCuentaQueries();
-    },
-    error: (err) => {
-      console.error('Poliza cargar:', err);
-      this.errorMsg = err?.error?.message ?? 'No se pudo cargar la póliza.';
-      this.showToast({ type: 'error', title: 'Error', message: this.errorMsg });
-    },
-    complete: () => (this.loading = false)
-  });
-}
+        this.applyPeriodoFilter();
+        this.cuentasFiltradas = new Array(this.poliza.movimientos?.length || 0).fill([]);
+        this.prefillCuentaQueries();
+      },
+      error: (err) => {
+        console.error('Poliza cargar:', err);
+        this.errorMsg = err?.error?.message ?? 'No se pudo cargar la póliza.';
+        this.showToast({ type: 'error', title: 'Error', message: this.errorMsg });
+      },
+      complete: () => (this.loading = false)
+    });
+  }
 
 
 
@@ -526,6 +533,13 @@ export class PolizaEditarComponent implements OnInit {
     return okHeader && validos.length > 0;
   }
 
+  private lockBodyScroll(on: boolean) {
+    try {
+      document.body.style.overflow = on ? 'hidden' : '';
+    } catch { }
+  }
+
+
   actualizarPoliza(): void {
     if (!this.poliza?.id_poliza) {
       this.showToast({ type: 'warning', title: 'Aviso', message: 'No se encontró el ID de la póliza.' });
@@ -551,11 +565,11 @@ export class PolizaEditarComponent implements OnInit {
 
     const payloadHeader = {
       id_tipopoliza: this.toNumOrNull(p.id_tipopoliza)!,
-      id_periodo:    this.toNumOrNull(p.id_periodo)!,
-      id_usuario:    this.toNumOrNull(p.id_usuario)!,
-      id_centro:     this.toNumOrNull(p.id_centro)!,
-      folio:         this.toStrOrNull(p.folio)!,
-      concepto:      this.toStrOrNull(p.concepto)!,
+      id_periodo: this.toNumOrNull(p.id_periodo)!,
+      id_usuario: this.toNumOrNull(p.id_usuario)!,
+      id_centro: this.toNumOrNull(p.id_centro)!,
+      folio: this.toStrOrNull(p.folio)!,
+      concepto: this.toStrOrNull(p.concepto)!,
     };
     console.log('Periodo seleccionado:', payloadHeader.id_periodo);
 
@@ -579,15 +593,15 @@ export class PolizaEditarComponent implements OnInit {
 
     const updateReqs = toUpdate.map((m, i) =>
       this.apiSvc.updateMovPoliza(m.id_movimiento!, {
-        id_cuenta:       this.toNumOrNull(m.id_cuenta),
+        id_cuenta: this.toNumOrNull(m.id_cuenta),
         ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
-        operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
-        monto:           this.toNumOrNull(m.monto),
-        cliente:         this.toStrOrNull(m.cliente),
-        fecha:           this.toDateOrNull(m.fecha),
-        cc:              this.toNumOrNull(m.cc),
-        uuid:            this.toStrOrNull(m.uuid),
-        orden:           this.toNumOrNull(m.orden), //  enviar orden
+        operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+        monto: this.toNumOrNull(m.monto),
+        cliente: this.toStrOrNull(m.cliente),
+        fecha: this.toDateOrNull(m.fecha),
+        cc: this.toNumOrNull(m.cc),
+        uuid: this.toStrOrNull(m.uuid),
+        orden: this.toNumOrNull(m.orden), //  enviar orden
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: m.id_movimiento
@@ -597,16 +611,16 @@ export class PolizaEditarComponent implements OnInit {
 
     const createReqs = toCreate.map((m, i) =>
       this.apiSvc.createMovPoliza({
-        id_poliza:       this.poliza!.id_poliza,
-        id_cuenta:       this.toNumOrNull(m.id_cuenta),
+        id_poliza: this.poliza!.id_poliza,
+        id_cuenta: this.toNumOrNull(m.id_cuenta),
         ref_serie_venta: this.toStrOrNull(m.ref_serie_venta),
-        operacion:       (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
-        monto:           this.toNumOrNull(m.monto),
-        cliente:         this.toStrOrNull(m.cliente),
-        fecha:           this.toDateOrNull(m.fecha),
-        cc:              this.toNumOrNull(m.cc),
-        uuid:            this.toStrOrNull(m.uuid),
-        orden:           this.toNumOrNull(m.orden), //  enviar orden
+        operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+        monto: this.toNumOrNull(m.monto),
+        cliente: this.toStrOrNull(m.cliente),
+        fecha: this.toDateOrNull(m.fecha),
+        cc: this.toNumOrNull(m.cc),
+        uuid: this.toStrOrNull(m.uuid),
+        orden: this.toNumOrNull(m.orden), //  enviar orden
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: undefined
@@ -614,35 +628,37 @@ export class PolizaEditarComponent implements OnInit {
       )
     );
 
-    this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(
-      //  Toast temprano apenas se registra el encabezado
+    const reqs = [...updateReqs, ...createReqs];
+    this.saving = true;
+    this.saveTotal = reqs.length;
+    this.saveDone = 0;
+    this.lockBodyScroll(true);
+
+    this.apiSvc.updatePoliza(this.poliza.id_poliza!, payloadHeader).pipe(
       switchMap(() => {
-        this.showToast({
-          type: 'success',
-          title: 'Encabezado actualizado',
-          message: 'Guardando movimientos…'
-        });
-        const reqs = [...updateReqs, ...createReqs];
+        this.showToast({ type: 'success', title: 'Encabezado actualizado', message: 'Guardando movimientos…' });
 
         return (reqs.length
           ? from(reqs).pipe(
-              // ejecuta 1 por 1
-              concatMap((obs, idx) => obs.pipe(
-                tap(() => {
-                  this.showToast({
-                    type: 'info',
-                    title: 'Guardando movimientos…',
-                    message: `Procesando ${idx + 1} de ${reqs.length}`,
-                    autoCloseMs: 1200
-                  });
-                })
-              )),
-              finalize(() => {
-                this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
+            concatMap((obs) => obs.pipe(
+              tap({
+                next: () => this.saveDone++,
+                error: () => this.saveDone++ 
               })
-            )
+            )),
+            finalize(() => {
+              this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
+            })
+          )
           : of(null)
         );
+      }),
+      finalize(() => {
+        this.saving = false;
+        this.saveTotal = 0;
+        this.saveDone = 0;
+        this.lockBodyScroll(false);
+        this.updating = false;
       })
     ).subscribe({
       next: () => {
@@ -651,16 +667,14 @@ export class PolizaEditarComponent implements OnInit {
           toUpdate.length ? ` Movs actualizados: ${toUpdate.length}.` : '',
           toCreate.length ? ` Movs creados: ${toCreate.length}.` : ''
         ].join('');
-        // Toast final
         this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
         this.cargarPoliza(this.poliza!.id_poliza!);
       },
       error: (err) => {
-        const msg = err?.error?.message || err?.error?.error || err?.message || 'Error al actualizar póliza/movimientos';
+        const msg = err?.error?.message || err?.message || 'Error al actualizar póliza/movimientos';
         console.error('Actualizar:', err);
         this.showToast({ type: 'error', title: 'Error', message: msg });
-      },
-      complete: () => { this.updating = false; }
+      }
     });
   }
 
@@ -678,7 +692,7 @@ export class PolizaEditarComponent implements OnInit {
         this.nivelById = niveles;
 
         // Map para búsquedas por id (usa todas)
-        this.cuentasMap.clear;
+        this.cuentasMap.clear();
         for (const c of this.cuentas) this.cuentasMap.set(c.id, c);
 
         this.prefillCuentaQueries();
@@ -754,15 +768,15 @@ export class PolizaEditarComponent implements OnInit {
     return movs.reduce((mx, m: any) => Math.max(mx, Number(m?.orden ?? -1)), -1) + 1;
   }
 
-agregarMovimiento(): void {
-  const nuevo: MovimientoUI = {
-    id_cuenta: null, ref_serie_venta: '', operacion: '',
-    monto: null, cliente: '', fecha: '', cc: null, uuid: null,
-    _cuentaQuery: '', orden: this.nextOrden(),
-  };
-  (this.poliza.movimientos ??= []).push(nuevo);
-  this.cuentasFiltradas.push([]);
-}
+  agregarMovimiento(): void {
+    const nuevo: MovimientoUI = {
+      id_cuenta: null, ref_serie_venta: '', operacion: '',
+      monto: null, cliente: '', fecha: '', cc: null, uuid: null,
+      _cuentaQuery: '', orden: this.nextOrden(),
+    };
+    (this.poliza.movimientos ??= []).push(nuevo);
+    this.cuentasFiltradas.push([]);
+  }
 
 
   // madal de confirmacion para eliminar movimiento
@@ -858,7 +872,7 @@ agregarMovimiento(): void {
           const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
           handle(arr);
         },
-        error: () => {  }
+        error: () => { }
       });
     }
   }
@@ -1038,7 +1052,7 @@ agregarMovimiento(): void {
     return msg;
   }
 
-  private annotateError(err: any, ctx: { i: number; uuid?: string|null; id_mov?: number|undefined }) {
+  private annotateError(err: any, ctx: { i: number; uuid?: string | null; id_mov?: number | undefined }) {
     const normalized = new Error(this.extractHttpErrorMessage(err));
     (normalized as any).__ctx = ctx;
     return normalized;
@@ -1289,7 +1303,7 @@ agregarMovimiento(): void {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
       const hoy = new Date();
       doc.text(`Generado: ${new Intl.DateTimeFormat('es-MX', {
-        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
       }).format(hoy)}`, left, top + line);
 
       const headerPairs = this.buildHeaderPairs(this.headerPolizaProfesional());
@@ -1298,7 +1312,7 @@ agregarMovimiento(): void {
         head: [['Campo', 'Valor', 'Campo', 'Valor']],
         body: headerPairs,
         styles: { fontSize: 9, cellPadding: 6, overflow: 'linebreak' },
-        headStyles: { fillColor: [245,245,245], textColor: 20, fontStyle: 'bold' },
+        headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
         theme: 'striped',
         columnStyles: {
           0: { cellWidth: 90 },
@@ -1314,13 +1328,13 @@ agregarMovimiento(): void {
 
       (autoTable as any).default(doc, {
         startY,
-        head: [['#','Cuenta','Operación','Monto','Cliente / Concepto','Fecha','CC','Serie Venta','UUID']],
+        head: [['#', 'Cuenta', 'Operación', 'Monto', 'Cliente / Concepto', 'Fecha', 'CC', 'Serie Venta', 'UUID']],
         body: data.map(r => [
           r['#'], r['Cuenta'], r['Operación'], this.fmtMoney(r['Monto']),
           r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
         ]),
         styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
-        headStyles: { fillColor: [245,245,245], textColor: 20, fontStyle: 'bold' },
+        headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
         theme: 'striped',
         columnStyles: {
           0: { halign: 'right', cellWidth: 22 },
@@ -1374,7 +1388,7 @@ agregarMovimiento(): void {
       }
 
       const movs = this.buildTablaMovimientosPresentacion();
-      const movHeader = ['#','Cuenta','Operación','Monto','Cliente / Concepto','Fecha','CC','Serie Venta','UUID'];
+      const movHeader = ['#', 'Cuenta', 'Operación', 'Monto', 'Cliente / Concepto', 'Fecha', 'CC', 'Serie Venta', 'UUID'];
       const movBody = movs.map(r => [
         r['#'], r['Cuenta'], r['Operación'], Number(r['Monto']),
         r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
@@ -1391,7 +1405,7 @@ agregarMovimiento(): void {
 
       const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-      (ws as any)['!merges'] = [{ s: { r:0, c:0 }, e: { r:0, c:8 } }];
+      (ws as any)['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
 
       (ws as any)['!cols'] = [
         { wch: 4 },  // #
@@ -1432,7 +1446,7 @@ agregarMovimiento(): void {
         ['Diferencia', dif],
       ], { origin: `A${totalsRow}` });
 
-      ['B'+(totalsRow+1), 'B'+(totalsRow+2), 'B'+(totalsRow+3)].forEach(addr => {
+      ['B' + (totalsRow + 1), 'B' + (totalsRow + 2), 'B' + (totalsRow + 3)].forEach(addr => {
         const c = ws[addr]; if (c) c.z = '"$"#,##0.00';
       });
 
@@ -1551,7 +1565,7 @@ agregarMovimiento(): void {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const d = new Date(s);
     if (isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${this.pad2(d.getMonth()+1)}-${this.pad2(d.getDate())}`;
+    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
   }
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? res ?? []);

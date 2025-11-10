@@ -1,0 +1,20 @@
+<div class="overlay" *ngIf="open" role="status" aria-live="polite">
+  <div class="card">
+    <div class="spinner" aria-hidden="true"></div>
+
+    <div class="content">
+      <strong class="title">{{ text }}</strong>
+
+      <div class="subtitle" *ngIf="total > 0">
+        {{ done }} / {{ total }} movimientos
+      </div>
+      <div class="subtitle" *ngIf="total === 0">
+        Procesando encabezado…
+      </div>
+
+      <div class="progress" aria-label="Progreso de guardado" [attr.aria-valuenow]="percent" aria-valuemin="0" aria-valuemax="100" role="progressbar">
+        <div class="bar" [style.width.%]="percent"></div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -62,10 +62,10 @@ export class EmpresaComponent implements OnInit {
   tabs: CrudTab[] = [
     { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
     { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
-{
-    id: 'tipo-poliza',
-    label: '+ Tipo póliza',
-    }  
+    {
+      id: 'tipo-poliza',
+      label: '+ Tipo póliza',
+    }
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
 
@@ -134,7 +134,7 @@ export class EmpresaComponent implements OnInit {
   autoCreate = false;
   autoCreateTipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL';
 
-  
+
   primaryActionLabel3 = 'Nuevo ejercicio';
   columns3: CrudColumn[] = [
     { key: 'id_ejercicio', header: '#', width: '72px' },
@@ -207,7 +207,7 @@ export class EmpresaComponent implements OnInit {
     }
     return null;
   }
- onTipoPolizaCreado(_nuevo: any) {
+  onTipoPolizaCreado(_nuevo: any) {
     // Aquí puedes refrescar catálogos si aplica
     this.vm = {
       open: true,
@@ -281,21 +281,21 @@ export class EmpresaComponent implements OnInit {
 
   onTabChange(id: string) {
 
-  // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
-  if (id === 'tipo-poliza') {
-    this.tpOpen = true;      // abre el modal
-    return;                  // evitar cambiar la pestaña activa
-  }
+    // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
+    if (id === 'tipo-poliza') {
+      this.tpOpen = true;      // abre el modal
+      return;                  // evitar cambiar la pestaña activa
+    }
 
-  // ✅ Lógica existente (no se modifica)
-  if (id === 'datos' || id === 'periodos') {
-    this.activeTabId = id;
-  }
+    // ✅ Lógica existente (no se modifica)
+    if (id === 'datos' || id === 'periodos') {
+      this.activeTabId = id;
+    }
 
-  if (id === 'periodos') {
-    this.loadPeriodos();
+    if (id === 'periodos') {
+      this.loadPeriodos();
+    }
   }
-}
 
 
   // Editar empresa
@@ -330,7 +330,7 @@ export class EmpresaComponent implements OnInit {
 
   loadPeriodos() {
     const idEmp = this.empresaId();
-    if (!idEmp) {  
+    if (!idEmp) {
       this.periodos = [];
       return;
     }
@@ -445,13 +445,13 @@ export class EmpresaComponent implements OnInit {
         break;
 
       case 'cerrar': {
-      const row = evt.row;
-      this.confirmTitle = 'Cerrar período';
-      this.confirmMessage = `¿Seguro que deseas cerrar el período ${row?.fecha_inicio} → ${row?.fecha_fin}?`;
-      this.confirmKind = 'periodo-cerrar';
-      this.confirmPayload = { id_periodo: row.id_periodo };
-      this.confirmOpen = true;
-      break;
+        const row = evt.row;
+        this.confirmTitle = 'Cerrar período';
+        this.confirmMessage = `¿Seguro que deseas cerrar el período ${row?.fecha_inicio} → ${row?.fecha_fin}?`;
+        this.confirmKind = 'periodo-cerrar';
+        this.confirmPayload = { id_periodo: row.id_periodo };
+        this.confirmOpen = true;
+        break;
       }
 
       default:
@@ -552,6 +552,10 @@ export class EmpresaComponent implements OnInit {
       esta_abierto: true,
       id_empresa: this.empresaId()!,
     };
+    const { min, max } = this.yearToBounds(y);
+    this.ejFechaMin = min;
+    this.ejFechaMax = max;
+
     this.modalEjercicioOpen = true;
   }
 
@@ -562,6 +566,16 @@ export class EmpresaComponent implements OnInit {
         this.modalEjercicioTitle = 'Editar ejercicio';
         this.editEjercicioId = evt.row.id_ejercicio ?? null;
         this.formEjercicio = { ...evt.row };
+        if (this.formEjercicio.anio) {
+          const y = Number(this.formEjercicio.anio);
+          const { min, max } = this.yearToBounds(y);
+          this.ejFechaMin = min;
+          this.ejFechaMax = max;
+
+          // Opcional: si las fechas guardadas quedaron fuera del año, encuadra
+          this.formEjercicio.fecha_inicio = this.clampToYear(this.formEjercicio.fecha_inicio!, y);
+          this.formEjercicio.fecha_fin = this.clampToYear(this.formEjercicio.fecha_fin!, y);
+        }
         this.modalEjercicioOpen = true;
         break;
 
@@ -593,8 +607,8 @@ export class EmpresaComponent implements OnInit {
         break;
 
       case 'select':
-        this.setEjercicioSeleccionado(evt.row);
-        this.openSuccess(`Seleccionado ejercicio ${evt.row.anio}.`);
+        const id = Number(evt.row.id_ejercicio);
+        this.persistEjercicioSeleccion(id);
         break;
 
       default:
@@ -603,22 +617,109 @@ export class EmpresaComponent implements OnInit {
   }
 
   setEjercicioSeleccionado(ej: EjercicioContableDto | null) {
-  this.ejercicioSeleccionado = ej;
-  this.saveEjercicioSeleccionado(ej);
-  this.loadPeriodos();
+    this.ejercicioSeleccionado = ej;
+    this.saveEjercicioSeleccionado(ej);
+    this.loadPeriodos();
+  }
 
-  if (ej?.id_ejercicio) {
-    this.polizasService.selectEjercicio(ej.id_ejercicio).subscribe({
-      next: () => {
-        console.log('✅ Ejercicio seleccionado reflejado en base de datos');
+  private updateSelectedEjercicioUI(ej: EjercicioContableDto | null) {
+    this.ejercicioSeleccionado = ej;
+    this.saveEjercicioSeleccionado(ej);
+    this.loadPeriodos();
+  }
+
+  private persistEjercicioSeleccion(id_ejercicio: number) {
+    this.polizasService.selectEjercicio(id_ejercicio).subscribe({
+      next: (res: any) => {
+        // Refleja is_selected en memoria de forma segura
+        this.ejercicios = this.ejercicios.map(e => ({
+          ...e,
+          is_selected: e.id_ejercicio === id_ejercicio
+        }));
+        const nuevoSel = this.ejercicios.find(e => e.id_ejercicio === id_ejercicio) || null;
+        this.updateSelectedEjercicioUI(nuevoSel);
+        this.openSuccess('Ejercicio seleccionado.');
       },
-      error: (err: any) => {
-        console.error('❌ Error al actualizar el ejercicio en la base de datos:', err);
+      error: (err) => {
+        console.error('❌ Error al seleccionar ejercicio en BD:', err);
+        this.openError('No se pudo seleccionar el ejercicio en el servidor.', err);
       }
     });
   }
-}
 
+
+  onSelectEjercicioId = (id: number | string) => {
+    const row = this.ejercicios.find(e => e.id_ejercicio === Number(id));
+    if (!row) return;
+    this.updateSelectedEjercicioUI({ ...row });
+  };
+
+
+  ejFechaMin: string = '';
+  ejFechaMax: string = '';
+
+  private yearToBounds(year: number) {
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31);
+    return { min: this.toISO(start), max: this.toISO(end) };
+  }
+
+  private clampToYear(isoDate: string, year: number): string {
+    if (!isoDate) return isoDate;
+    const { min, max } = this.yearToBounds(year);
+    const d = this.parseISODateLocal(isoDate);
+    const dMin = this.parseISODateLocal(min);
+    const dMax = this.parseISODateLocal(max);
+    if (d < dMin) return min;
+    if (d > dMax) return max;
+    return isoDate;
+  }
+
+  private setEjercicioDatesFromYear(year: number) {
+    // Establece automáticamente el 1/ene y 31/dic del año
+    const { min, max } = this.yearToBounds(year);
+    this.formEjercicio.fecha_inicio = min;
+    this.formEjercicio.fecha_fin = max;
+    this.ejFechaMin = min;
+    this.ejFechaMax = max;
+  }
+
+  onEjercicioAnioChange(year: number) {
+    // Actualiza límites y fechas automáticamente al cambiar el año
+    this.setEjercicioDatesFromYear(Number(year));
+  }
+
+  onEjercicioFechaInicioChange(newStart: string) {
+    const y = Number(this.formEjercicio.anio);
+    if (!y) return;
+
+    // Asegura que la fecha inicio quede dentro del año y no supere fin
+    this.formEjercicio.fecha_inicio = this.clampToYear(newStart, y);
+
+    if (this.formEjercicio.fecha_fin) {
+      const fi = this.parseISODateLocal(this.formEjercicio.fecha_inicio!);
+      const ff = this.parseISODateLocal(this.formEjercicio.fecha_fin);
+      if (ff < fi) {
+        this.formEjercicio.fecha_fin = this.formEjercicio.fecha_inicio;
+      }
+    }
+  }
+
+  onEjercicioFechaFinChange(newEnd: string) {
+    const y = Number(this.formEjercicio.anio);
+    if (!y) return;
+
+    // Asegura que la fecha fin quede dentro del año y no sea < inicio
+    this.formEjercicio.fecha_fin = this.clampToYear(newEnd, y);
+
+    if (this.formEjercicio.fecha_inicio) {
+      const fi = this.parseISODateLocal(this.formEjercicio.fecha_inicio);
+      const ff = this.parseISODateLocal(this.formEjercicio.fecha_fin!);
+      if (ff < fi) {
+        this.formEjercicio.fecha_inicio = this.formEjercicio.fecha_fin!;
+      }
+    }
+  }
 
 
   // Guardar ejercicio desde modal
@@ -648,7 +749,7 @@ export class EmpresaComponent implements OnInit {
   closeEjercicioModal() { this.modalEjercicioOpen = false; }
   cancelEjercicioModal() { this.modalEjercicioOpen = false; }
 
-  
+
   closeConfirm() { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; }
   cancelConfirm() { this.closeConfirm(); }
 
@@ -684,7 +785,7 @@ export class EmpresaComponent implements OnInit {
 
         const payloadPeriodo: PeriodoContableDto = {
           id_empresa: idEmp,
-          
+
           id_ejercicio: ejSel.id_ejercicio!,
           tipo_periodo: this.formPeriodo.tipo_periodo as PeriodoTipo,
           fecha_inicio: this.formPeriodo.fecha_inicio!,
@@ -719,13 +820,12 @@ export class EmpresaComponent implements OnInit {
 
         this.periodosService.cerrar(idp).subscribe({
           next: (res) => {
-            // Actualiza el registro localmente a cerrado
             this.periodos = this.periodos.map(p =>
               p.id_periodo === idp ? { ...p, esta_abierto: false } : p
             );
             this.openSuccess(res?.message || 'Período cerrado correctamente.');
           },
-          error: (err) => this.openError('No se pudo cerrar el período', err),
+          error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
         });
         break;
       }
@@ -744,7 +844,7 @@ export class EmpresaComponent implements OnInit {
         break;
       }
 
-      
+
       case 'ejercicio-save': {
         const idEmp = this.empresaId();
         if (!idEmp) return this.openError('No hay empresa seleccionada.');
@@ -826,8 +926,8 @@ export class EmpresaComponent implements OnInit {
         }
 
         const cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
-        const traspasarACapital  = false;
-        const cuentaCapitalId    = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
+        const traspasarACapital = false;
+        const cuentaCapitalId = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
 
         this.ejerciciosService.cerrar(id, {
           cuentaResultadosId,
@@ -848,14 +948,14 @@ export class EmpresaComponent implements OnInit {
               'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
             );
           },
-          error: (err) => this.openError('No se pudo cerrar el ejercicio', err),
+          error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
         });
         break;
       }
     }
   }
 
-  
+
   onRowAction(evt: { action: string; row: UiEmpresa }) {
     if (evt.action === 'edit') return this.onEdit(evt.row);
     this.openError(`Acción no soportada: ${evt.action}`);
@@ -903,7 +1003,7 @@ export class EmpresaComponent implements OnInit {
 
     this.periodosService.generate(ej.id_ejercicio!, tipo, userId, centroId).subscribe({
       next: (periodosGenerados) => {
-        this.loadPeriodos(); 
+        this.loadPeriodos();
         const n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
         this.openSuccess(
           n != null

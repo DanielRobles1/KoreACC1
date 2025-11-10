@@ -49,20 +49,20 @@ export class PolizasComponent implements OnInit {
   ejercicioActualId!: number; // id del ejercicio seleccionado
   modalIvaOpen = false;
 
-iva = {
-  op: 'venta' as 'venta' | 'compra',
-  baseTipo: 'sin' as 'sin' | 'con',
-  tasa: 0.16 as 0.16 | 0.08 | 0.00 | 'exento',
-  monto: 0 as number,
-  medio: 'bancos' as 'bancos' | 'caja' | 'clientes' | 'proveedores',
-  concepto: '',
-  subtotal: 0,
-  iva: 0,
-  total: 0
-};
+  iva = {
+    op: 'venta' as 'venta' | 'compra',
+    baseTipo: 'sin' as 'sin' | 'con',
+    tasa: 0.16 as 0.16 | 0.08 | 0.00 | 'exento',
+    monto: 0 as number,
+    medio: 'bancos' as 'bancos' | 'caja' | 'clientes' | 'proveedores',
+    concepto: '',
+    subtotal: 0,
+    iva: 0,
+    total: 0
+  };
 
-abrirModalIva() { this.modalIvaOpen = true; }
-cerrarModalIva() { this.modalIvaOpen = false; }
+  abrirModalIva() { this.modalIvaOpen = true; }
+  cerrarModalIva() { this.modalIvaOpen = false; }
   sidebarOpen = true;
   xmlMovimientoIndex: number | null = null;
   uploadingXml = false;
@@ -110,249 +110,249 @@ cerrarModalIva() { this.modalIvaOpen = false; }
     const t = this.tiposPoliza.find(x => Number(x.id_tipopoliza) === Number(id));
     return (t?.nombre ?? '').toString().trim();
   }
-private findCuentaIdByCodigo(codigo: string): number | null {
-  const c = this.cuentas?.find(x => x.codigo?.toString() === codigo);
-  return c?.id_cuenta ?? null;
-}
+  private findCuentaIdByCodigo(codigo: string): number | null {
+    const c = this.cuentas?.find(x => x.codigo?.toString() === codigo);
+    return c?.id_cuenta ?? null;
+  }
 
-/** Redondeo a 2 decimales tipo contable */
-private r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
+  /** Redondeo a 2 decimales tipo contable */
+  private r2(n: number): number {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+  }
 
-/** Recalcula subtotal/IVA/total según base y tasa */
-recalcularIVA(): void {
-  const { baseTipo, tasa, monto } = this.iva;
-  if (!monto || monto <= 0) { this.iva.subtotal = this.iva.iva = this.iva.total = 0; return; }
+  /** Recalcula subtotal/IVA/total según base y tasa */
+  recalcularIVA(): void {
+    const { baseTipo, tasa, monto } = this.iva;
+    if (!monto || monto <= 0) { this.iva.subtotal = this.iva.iva = this.iva.total = 0; return; }
 
-  if (tasa === 'exento') {
-    // Exento: IVA = 0, subtotal = total según base
+    if (tasa === 'exento') {
+      // Exento: IVA = 0, subtotal = total según base
+      if (baseTipo === 'sin') {
+        this.iva.subtotal = this.r2(monto);
+        this.iva.iva = 0;
+        this.iva.total = this.r2(monto);
+      } else {
+        this.iva.subtotal = this.r2(monto);
+        this.iva.iva = 0;
+        this.iva.total = this.r2(monto);
+      }
+      return;
+    }
+
+    const t = tasa as number;
+
     if (baseTipo === 'sin') {
-      this.iva.subtotal = this.r2(monto);
-      this.iva.iva = 0;
-      this.iva.total = this.r2(monto);
+      const subtotal = monto;
+      const iva = subtotal * t;
+      const total = subtotal + iva;
+      this.iva.subtotal = this.r2(subtotal);
+      this.iva.iva = this.r2(iva);
+      this.iva.total = this.r2(total);
     } else {
-      this.iva.subtotal = this.r2(monto);
-      this.iva.iva = 0;
-      this.iva.total = this.r2(monto);
+      // base = precio con IVA
+      const total = monto;
+      const subtotal = total / (1 + t);
+      const iva = total - subtotal;
+      this.iva.subtotal = this.r2(subtotal);
+      this.iva.iva = this.r2(iva);
+      this.iva.total = this.r2(total);
     }
-    return;
   }
 
-  const t = tasa as number;
+  /** movimientos calculadora de iva */
+  agregarMovimientosDesdeIVA(): void {
+    this.recalcularIVA();
+    const { op, medio, tasa, subtotal, iva, total, concepto } = this.iva;
 
-  if (baseTipo === 'sin') {
-    const subtotal = monto;
-    const iva = subtotal * t;
-    const total = subtotal + iva;
-    this.iva.subtotal = this.r2(subtotal);
-    this.iva.iva = this.r2(iva);
-    this.iva.total = this.r2(total);
-  } else {
-    // base = precio con IVA
-    const total = monto;
-    const subtotal = total / (1 + t);
-    const iva = total - subtotal;
-    this.iva.subtotal = this.r2(subtotal);
-    this.iva.iva = this.r2(iva);
-    this.iva.total = this.r2(total);
-  }
-}
+    if (!this.nuevaPoliza.movimientos) this.nuevaPoliza.movimientos = [];
 
-/** movimientos calculadora de iva */
-agregarMovimientosDesdeIVA(): void {
-  this.recalcularIVA();
-  const { op, medio, tasa, subtotal, iva, total, concepto } = this.iva;
+    const COD = {
+      // Medios
+      BANCOS: '1102010000',
+      CAJA: '1101010001',
 
-  if (!this.nuevaPoliza.movimientos) this.nuevaPoliza.movimientos = [];
+      // Clientes por tasa
+      CLIENTES16: '1103010001',
+      CLIENTES08: '1103010002',
+      CLIENTES0: '1103010003',
+      CLIENTES_EXE: '1103010004',
 
-  const COD = {
-    // Medios
-    BANCOS:        '1102010000',
-    CAJA:          '1101010001',
+      // Proveedores por tasa
+      PROV16: '2101010001',
+      PROV08: '2101010002',
+      PROV0: '2101010003',
+      PROV_EXE: '2101010004',
 
-    // Clientes por tasa
-    CLIENTES16:    '1103010001',
-    CLIENTES08:    '1103010002',   
-    CLIENTES0:     '1103010003',   
-    CLIENTES_EXE:  '1103010004',   
+      // IVA trasladado (ventas) por tasa
+      IVA_TRAS_16: '2104010001',
+      IVA_TRAS_08: '2104010002',
 
-    // Proveedores por tasa
-    PROV16:        '2101010001',
-    PROV08:        '2101010002',   
-    PROV0:         '2101010003',   
-    PROV_EXE:      '2101010004',
+      // IVA acreditable (compras) por tasa
+      IVA_ACRED_16: '1107010001',
+      IVA_ACRED_08: '1107010002',
 
-    // IVA trasladado (ventas) por tasa
-    IVA_TRAS_16:   '2104010001',
-    IVA_TRAS_08:   '2104010002',   
+      // Ventas por tasa
+      VENTAS_16: '4100010000',
+      VENTAS_08: '4100010008',
+      VENTAS_0: '4100010009',
+      VENTAS_EXE: '4100010010',
 
-    // IVA acreditable (compras) por tasa
-    IVA_ACRED_16:  '1107010001',
-    IVA_ACRED_08:  '1107010002',   
+      // Compras por tasa
+      COMPRAS_16: '5105010001',
+      COMPRAS_08: '5105010008',
+      COMPRAS_0: '5105010009',
+      COMPRAS_EXE: '5105010010',
+    } as const;
 
-    // Ventas por tasa
-    VENTAS_16:     '4100010000',
-    VENTAS_08:     '4100010008',    
-    VENTAS_0:      '4100010009',   
-    VENTAS_EXE:    '4100010010',   
+    // Helper para obtener id_cuenta por código (o null si no existe en catálogo)
+    const id = (codigo?: string | null) => (codigo ? this.findCuentaIdByCodigo(codigo) : null);
 
-    // Compras por tasa
-    COMPRAS_16:    '5105010001',
-    COMPRAS_08:    '5105010008',   
-    COMPRAS_0:     '5105010009',   
-    COMPRAS_EXE:   '5105010010',   
-  } as const;
+    // Normaliza tasa a número o etiqueta
+    const tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
+    const esExento = (tasa === 'exento');
+    const hoyISO = (new Date()).toISOString().slice(0, 10);
+    const refSerie = this.evento?.ref_serie_venta ?? null;
 
-  // Helper para obtener id_cuenta por código (o null si no existe en catálogo)
-  const id = (codigo?: string | null) => (codigo ? this.findCuentaIdByCodigo(codigo) : null);
+    // Selección de cuenta por MEDIO (cobro/pago) y por TASA
+    const cuentaMedioVenta = (): number | null => {
+      if (medio === 'caja') return id(COD.CAJA);
+      if (medio === 'bancos') return id(COD.BANCOS);
+      // clientes (crédito) por tasa:
+      switch (true) {
+        case esExento: return id(COD.CLIENTES_EXE) || id(COD.CLIENTES16);
+        case tasaNum === 0: return id(COD.CLIENTES0) || id(COD.CLIENTES16);
+        case tasaNum === 0.08: return id(COD.CLIENTES08) || id(COD.CLIENTES16);
+        default: return id(COD.CLIENTES16);
+      }
+    };
 
-  // Normaliza tasa a número o etiqueta
-  const tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
-  const esExento = (tasa === 'exento');
-  const hoyISO = (new Date()).toISOString().slice(0,10);
-  const refSerie = this.evento?.ref_serie_venta ?? null;
+    const cuentaMedioCompra = (): number | null => {
+      if (medio === 'caja') return id(COD.CAJA);
+      if (medio === 'bancos') return id(COD.BANCOS);
+      // proveedores (crédito) por tasa:
+      switch (true) {
+        case esExento: return id(COD.PROV_EXE) || id(COD.PROV16);
+        case tasaNum === 0: return id(COD.PROV0) || id(COD.PROV16);
+        case tasaNum === 0.08: return id(COD.PROV08) || id(COD.PROV16);
+        default: return id(COD.PROV16);
+      }
+    };
 
-  // Selección de cuenta por MEDIO (cobro/pago) y por TASA
-  const cuentaMedioVenta = (): number | null => {
-    if (medio === 'caja')      return id(COD.CAJA);
-    if (medio === 'bancos')    return id(COD.BANCOS);
-    // clientes (crédito) por tasa:
-    switch (true) {
-      case esExento:       return id(COD.CLIENTES_EXE) || id(COD.CLIENTES16);
-      case tasaNum === 0:  return id(COD.CLIENTES0)    || id(COD.CLIENTES16);
-      case tasaNum === 0.08:return id(COD.CLIENTES08)  || id(COD.CLIENTES16);
-      default:             return id(COD.CLIENTES16);
-    }
-  };
+    // Selección de cuenta de ventas/compras por tasa
+    const cuentaVentas = (): number | null => {
+      if (esExento) return id(COD.VENTAS_EXE) || id(COD.VENTAS_16);
+      if (tasaNum === 0) return id(COD.VENTAS_0) || id(COD.VENTAS_16);
+      if (tasaNum === 0.08) return id(COD.VENTAS_08) || id(COD.VENTAS_16);
+      return id(COD.VENTAS_16);
+    };
 
-  const cuentaMedioCompra = (): number | null => {
-    if (medio === 'caja')      return id(COD.CAJA);
-    if (medio === 'bancos')    return id(COD.BANCOS);
-    // proveedores (crédito) por tasa:
-    switch (true) {
-      case esExento:       return id(COD.PROV_EXE) || id(COD.PROV16);
-      case tasaNum === 0:  return id(COD.PROV0)    || id(COD.PROV16);
-      case tasaNum === 0.08:return id(COD.PROV08)  || id(COD.PROV16);
-      default:             return id(COD.PROV16);
-    }
-  };
+    const cuentaCompras = (): number | null => {
+      if (esExento) return id(COD.COMPRAS_EXE) || id(COD.COMPRAS_16);
+      if (tasaNum === 0) return id(COD.COMPRAS_0) || id(COD.COMPRAS_16);
+      if (tasaNum === 0.08) return id(COD.COMPRAS_08) || id(COD.COMPRAS_16);
+      return id(COD.COMPRAS_16);
+    };
 
-  // Selección de cuenta de ventas/compras por tasa
-  const cuentaVentas = (): number | null => {
-    if (esExento)        return id(COD.VENTAS_EXE) || id(COD.VENTAS_16);
-    if (tasaNum === 0)   return id(COD.VENTAS_0)   || id(COD.VENTAS_16);
-    if (tasaNum === 0.08)return id(COD.VENTAS_08)  || id(COD.VENTAS_16);
-    return id(COD.VENTAS_16);
-  };
+    // IVA por tasa (solo si tasa > 0)
+    const cuentaIVAtras = (): number | null => {
+      if (tasaNum === 0.16) return id(COD.IVA_TRAS_16);
+      if (tasaNum === 0.08) return id(COD.IVA_TRAS_08) || id(COD.IVA_TRAS_16);
+      return null;
+    };
+    const cuentaIVAacred = (): number | null => {
+      if (tasaNum === 0.16) return id(COD.IVA_ACRED_16);
+      if (tasaNum === 0.08) return id(COD.IVA_ACRED_08) || id(COD.IVA_ACRED_16);
+      return null;
+    };
 
-  const cuentaCompras = (): number | null => {
-    if (esExento)        return id(COD.COMPRAS_EXE) || id(COD.COMPRAS_16);
-    if (tasaNum === 0)   return id(COD.COMPRAS_0)   || id(COD.COMPRAS_16);
-    if (tasaNum === 0.08)return id(COD.COMPRAS_08)  || id(COD.COMPRAS_16);
-    return id(COD.COMPRAS_16);
-  };
+    //  Asientos 
+    if (op === 'venta') {
+      const idMedio = cuentaMedioVenta();
+      const idVentas = cuentaVentas();
+      const idIVAtras = cuentaIVAtras();
 
-  // IVA por tasa (solo si tasa > 0)
-  const cuentaIVAtras = (): number | null => {
-    if (tasaNum === 0.16) return id(COD.IVA_TRAS_16);
-    if (tasaNum === 0.08) return id(COD.IVA_TRAS_08) || id(COD.IVA_TRAS_16);
-    return null;
-  };
-  const cuentaIVAacred = (): number | null => {
-    if (tasaNum === 0.16) return id(COD.IVA_ACRED_16);
-    if (tasaNum === 0.08) return id(COD.IVA_ACRED_08) || id(COD.IVA_ACRED_16);
-    return null;
-  };
-
-  //  Asientos 
-  if (op === 'venta') {
-    const idMedio = cuentaMedioVenta();
-    const idVentas = cuentaVentas();
-    const idIVAtras = cuentaIVAtras();
-
-    // Cargo por el total (cobrado o por cobrar)
-    this.nuevaPoliza.movimientos.push({
-      id_cuenta: idMedio,
-      operacion: '0',
-      monto: this.r2(total),
-      cliente: concepto || 'Venta',
-      fecha: hoyISO,
-      cc: null,
-      uuid: null,
-      ref_serie_venta: refSerie,
-    });
-
-    // Abono a Ventas por el subtotal
-    this.nuevaPoliza.movimientos.push({
-      id_cuenta: idVentas,
-      operacion: '1',
-      monto: this.r2(subtotal),
-      cliente: concepto || 'Venta',
-      fecha: hoyISO,
-      cc: null,
-      uuid: null,
-      ref_serie_venta: refSerie,
-    });
-
-    // Abono a IVA Trasladado (solo si tasa > 0)
-    if (!esExento && tasaNum > 0) {
+      // Cargo por el total (cobrado o por cobrar)
       this.nuevaPoliza.movimientos.push({
-        id_cuenta: idIVAtras,
-        operacion: '1',
-        monto: this.r2(iva),
-        cliente: concepto || 'IVA Trasladado',
+        id_cuenta: idMedio,
+        operacion: '0',
+        monto: this.r2(total),
+        cliente: concepto || 'Venta',
         fecha: hoyISO,
         cc: null,
         uuid: null,
         ref_serie_venta: refSerie,
       });
-    }
 
-  } else {
-    const idMedio = cuentaMedioCompra();
-    const idCompras = cuentaCompras();
-    const idIVAacred = cuentaIVAacred();
-
-    // Cargo a Compras por el subtotal
-    this.nuevaPoliza.movimientos.push({
-      id_cuenta: idCompras,
-      operacion: '0',
-      monto: this.r2(subtotal),
-      cliente: concepto || 'Compra',
-      fecha: hoyISO,
-      cc: null,
-      uuid: null,
-      ref_serie_venta: '',
-    });
-
-    // Cargo a IVA Acreditable (solo si tasa > 0)
-    if (!esExento && tasaNum > 0) {
+      // Abono a Ventas por el subtotal
       this.nuevaPoliza.movimientos.push({
-        id_cuenta: idIVAacred,
+        id_cuenta: idVentas,
+        operacion: '1',
+        monto: this.r2(subtotal),
+        cliente: concepto || 'Venta',
+        fecha: hoyISO,
+        cc: null,
+        uuid: null,
+        ref_serie_venta: refSerie,
+      });
+
+      // Abono a IVA Trasladado (solo si tasa > 0)
+      if (!esExento && tasaNum > 0) {
+        this.nuevaPoliza.movimientos.push({
+          id_cuenta: idIVAtras,
+          operacion: '1',
+          monto: this.r2(iva),
+          cliente: concepto || 'IVA Trasladado',
+          fecha: hoyISO,
+          cc: null,
+          uuid: null,
+          ref_serie_venta: refSerie,
+        });
+      }
+
+    } else {
+      const idMedio = cuentaMedioCompra();
+      const idCompras = cuentaCompras();
+      const idIVAacred = cuentaIVAacred();
+
+      // Cargo a Compras por el subtotal
+      this.nuevaPoliza.movimientos.push({
+        id_cuenta: idCompras,
         operacion: '0',
-        monto: this.r2(iva),
-        cliente: concepto || 'IVA Acreditable',
+        monto: this.r2(subtotal),
+        cliente: concepto || 'Compra',
+        fecha: hoyISO,
+        cc: null,
+        uuid: null,
+        ref_serie_venta: '',
+      });
+
+      // Cargo a IVA Acreditable (solo si tasa > 0)
+      if (!esExento && tasaNum > 0) {
+        this.nuevaPoliza.movimientos.push({
+          id_cuenta: idIVAacred,
+          operacion: '0',
+          monto: this.r2(iva),
+          cliente: concepto || 'IVA Acreditable',
+          fecha: hoyISO,
+          cc: null,
+          uuid: null,
+          ref_serie_venta: '',
+        });
+      }
+
+      // Abono por el total pagado/por pagar
+      this.nuevaPoliza.movimientos.push({
+        id_cuenta: idMedio,
+        operacion: '1',
+        monto: this.r2(total),
+        cliente: concepto || (medio === 'proveedores' ? 'Proveedor' : 'Pago'),
         fecha: hoyISO,
         cc: null,
         uuid: null,
         ref_serie_venta: '',
       });
     }
-
-    // Abono por el total pagado/por pagar
-    this.nuevaPoliza.movimientos.push({
-      id_cuenta: idMedio,
-      operacion: '1',
-      monto: this.r2(total),
-      cliente: concepto || (medio === 'proveedores' ? 'Proveedor' : 'Pago'),
-      fecha: hoyISO,
-      cc: null,
-      uuid: null,
-      ref_serie_venta: '',
-    });
   }
-}
 
 
 
@@ -726,45 +726,40 @@ agregarMovimientosDesdeIVA(): void {
     });
   }
 
+  trackByEjercicioId = (_: number, e: any) => e?.id_ejercicio;
+  compareById = (a: any, b: any) => Number(a) === Number(b);
+
+
   onEjercicioSeleccionado(id: any) {
     const ejercicioId = Number(id);
-    const seleccionado = this.ejercicios.find(e => Number(e.id_ejercicio) === ejercicioId);
+    if (!Number.isFinite(ejercicioId) || ejercicioId === this.ejercicioActualId) return;
 
-    if (seleccionado) {
-      this.ejercicioActual = seleccionado;
-      this.ejercicioActualId = ejercicioId;
-      this.guardarEjercicioSeleccionado(ejercicioId);
-      this.applyPeriodoFilter();
-    }
+    const seleccionado = this.ejercicios.find(e => Number(e.id_ejercicio) === ejercicioId);
+    if (!seleccionado) return;
+
+    this.ejercicioActual = { ...seleccionado };
+    this.ejercicioActualId = ejercicioId;
+
+    this.guardarEjercicioSeleccionado(ejercicioId);
+    this.applyPeriodoFilter();
   }
+
 
   private guardarEjercicioSeleccionado(id_ejercicio: number) {
     if (!this.api.selectEjercicio) {
       console.warn('⚠ No hay método API para guardar ejercicio seleccionado');
-      this.showToast({
-        type: 'warning',
-        title: 'Aviso',
-        message: 'El servicio no expone selectEjercicio().'
-      });
+      this.showToast({ type: 'warning', title: 'Aviso', message: 'El servicio no expone selectEjercicio().' });
       return;
     }
 
     this.api.selectEjercicio(id_ejercicio).subscribe({
       next: () => {
         console.log('Ejercicio seleccionado guardado en BD:', id_ejercicio);
-        this.showToast({
-          type: 'success',
-          title: 'Ejercicio actualizado',
-          message: `Se guardó el ejercicio ${id_ejercicio} como activo.`
-        });
+        this.showToast({ type: 'success', title: 'Ejercicio actualizado', message: `Se guardó el ejercicio ${id_ejercicio} como activo.` });
       },
       error: (err) => {
         console.error('❌ Error al guardar ejercicio seleccionado:', err);
-        this.showToast({
-          type: 'error',
-          title: 'Error',
-          message: 'No se pudo actualizar el ejercicio seleccionado.'
-        });
+        this.showToast({ type: 'error', title: 'Error', message: 'No se pudo actualizar el ejercicio seleccionado.' });
       }
     });
   }
@@ -1415,7 +1410,7 @@ agregarMovimientosDesdeIVA(): void {
     const id_periodo = this.toNumOrNull(this.nuevaPoliza.id_periodo);
     const id_centro = this.toNumOrNull(this.nuevaPoliza.id_centro);
 
-    if (!id_tipopoliza || !id_periodo) return;
+    if (!id_tipopoliza || !id_periodo || !id_centro) return;
 
     try {
       const r = await firstValueFrom(this.api.getFolioSiguiente({

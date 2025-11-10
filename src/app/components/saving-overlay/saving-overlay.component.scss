@@ -1,0 +1,55 @@
+:host {
+  /* Variantes controladas por HostBinding */
+  &.fullscreen .overlay { position: fixed; inset: 0; }
+  &.inline .overlay     { position: absolute; inset: 0; }
+}
+
+.overlay {
+  background: rgba(0,0,0,0.35);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 18px 20px;
+  min-width: 280px;
+  max-width: 360px;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  align-self: center;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.content { display: grid; gap: 6px; }
+.title { font-size: 1rem; }
+.subtitle { color: #6b7280; font-size: 0.9rem; }
+
+.progress {
+  width: 100%;
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: #3b82f6;
+  width: 0%;
+  transition: width 0.2s ease;
+}

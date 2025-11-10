@@ -18,12 +18,12 @@
 
     <div class="mode-switch">
       <label class="mode-switch__check">
-        <input
+        <!-- <input
           type="checkbox"
           [checked]="modoCaptura === 'motor'"
           (change)="modoCaptura = (modoCaptura==='manual' ? 'motor' : 'manual')"
           aria-label="Usar motor" />
-        <span>Usar motor</span>
+        <span>Usar motor</span> -->
       </label>
       <small *ngIf="modoCaptura==='manual'">Captura manual de movimientos</small>
       <small *ngIf="modoCaptura==='motor'">Generación automática (flujo + contrapartida + impuestos)</small>
@@ -185,7 +185,7 @@
         </label>
       </div>
 
-      <div *ngIf="modoCaptura==='motor'" class="motor-panel">
+      <!-- <div *ngIf="modoCaptura==='motor'" class="motor-panel">
         
         <h4>Evento (motor)</h4>
         <div class="form-grid">
@@ -245,7 +245,7 @@
             </select>
           </label>
         </div>
-      </div>
+      </div> -->
 
       <div *ngIf="modoCaptura==='manual'">
         <div class="movs-header">

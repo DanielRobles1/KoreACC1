@@ -182,7 +182,7 @@
               <th>Ref. Serie Venta</th>
               <th>Operación</th>
               <th>Monto</th>
-              <th>Cliente</th>
+              <th>Concepto</th>
               <th>Fecha</th>
               <th>Centro Costo</th>
               <th>UUID</th>
@@ -369,6 +369,15 @@
       <p class="hint error" *ngIf="errorMsg">{{ errorMsg }}</p>
     </div>
   </ng-template>
+
+<app-saving-overlay
+  [open]="saving"
+  [total]="saveTotal"
+  [done]="saveDone"
+  text="Guardando póliza…"
+  variant="fullscreen">
+</app-saving-overlay>
+
 </app-polizas-layout>
 
 <!-- Modal confirmación -->
