@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
@@ -12,7 +12,7 @@ import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-c
 import { PolizasService } from '@app/services/polizas.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
-import { catchError, forkJoin, of, switchMap, throwError, firstValueFrom } from 'rxjs';
+import { catchError, of, switchMap, throwError, firstValueFrom, finalize, from, concatMap, tap } from 'rxjs';
 
 type Cuenta = {
   id: number;
@@ -20,8 +20,7 @@ type Cuenta = {
   nombre: string;
   ctaMayor: boolean;
   parentId: number | null;
-  posteable?: boolean | number | '1' | '0' | string; 
-
+  posteable?: boolean | number | '1' | '0' | string;
 };
 type Ejercicio = {
   id_ejercicio: number;
@@ -33,7 +32,10 @@ type Ejercicio = {
 type MovimientoUI = Movimiento & {
   _cuentaQuery?: string;
   id_movimiento?: number;
+  orden?: number;
+  _arrival?: number; 
 };
+
 type PolizaUI = Omit<Poliza, 'movimientos'> & {
   movimientos: MovimientoUI[];
 };
@@ -58,7 +60,6 @@ type CentroCostoItem = {
   selector: 'app-poliza-editar',
   standalone: true,
   imports: [
-    
     CommonModule,
     FormsModule,
     RouterModule,
@@ -66,26 +67,23 @@ type CentroCostoItem = {
     ToastMessageComponent,
     ModalComponent,
     ModalSeleccionCuentaComponent,
-    
   ],
   templateUrl: './poliza-editar.component.html',
   styleUrls: ['./poliza-editar.component.scss']
 })
 export class PolizaEditarComponent implements OnInit {
-  // ===== Config/API =====
   private apiBase = 'http://localhost:3000/api/v1';
   private get api(): any { return this.apiSvc as any; }
 
-  // ===== Estado general =====
   sidebarOpen = true;
   loading = true;
   errorMsg = '';
   updating = false;
 
-  // ===== Ruta =====
+  trackByMov = (_: number, m: MovimientoUI) => m.id_movimiento ?? m.orden ?? -1;
+
   id_poliza!: number;
 
-  // ===== UI/Toast =====
   toast = {
     open: false,
     title: '',
@@ -96,10 +94,8 @@ export class PolizaEditarComponent implements OnInit {
     showClose: true
   };
 
-  // ===== Usuario =====
   currentUser: UsuarioLigero | null = null;
 
-  // ===== Ejercicios/Periodos =====
   ejercicioActual: Ejercicio | null = null;
   ejercicioActualId!: number;
   ejercicios: Ejercicio[] = [];
@@ -113,15 +109,12 @@ export class PolizaEditarComponent implements OnInit {
   periodos: Array<{ id_periodo: number; nombre: string }> = [];
   compareById = (a: any, b: any) => a && b && a.id_periodo === b.id_periodo;
 
-  // ===== Catálogos =====
   tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
   centros: Array<{ id_centro: number; nombre: string }> = [];
 
-  // ===== Centros de costo =====
   centrosCosto: CentroCostoItem[] = [];
   private centrosCostoMap = new Map<number, CentroCostoItem>();
 
-  // ===== Póliza =====
   poliza: Partial<PolizaUI> & {
     id_poliza?: number;
     estado?: string;
@@ -130,23 +123,22 @@ export class PolizaEditarComponent implements OnInit {
     updated_at?: string;
   } = { movimientos: [] };
 
-  // ===== Cuentas (typeahead por fila) =====
   cuentas: Cuenta[] = [];
   cuentasMap = new Map<number, Cuenta>();
   cuentasFiltradas: Cuenta[][] = [];
   cuentaOpenIndex: number | null = null;
 
-  // ===== Modal de selección de cuenta =====
   modalCuentasAbierto = false;
   indiceMovimientoSeleccionado: number | null = null;
 
-  // ===== CFDI =====
   xmlMovimientoIndex: number | null = null;
   uploadingXml = false;
   selectedXmlName = '';
   uploadXmlError = '';
   cfdiOptions: CfdiOption[] = [];
   uuidSeleccionado?: string;
+
+  private lastOrderMap = new Map<number, number>(); 
 
   constructor(
     private route: ActivatedRoute,
@@ -155,9 +147,6 @@ export class PolizaEditarComponent implements OnInit {
     private cuentasSvc: CuentasService,
   ) {}
 
-  // =========================================================
-  // Init
-  // =========================================================
   ngOnInit(): void {
     this.cargarCatalogosBase();      // Tipos y Centros
     this.getCentros();               // Centros de costo
@@ -169,7 +158,6 @@ export class PolizaEditarComponent implements OnInit {
       return;
     }
 
-    // Orden recomendado: periodos -> ejercicio -> póliza -> cuentas/usuario -> CFDI
     this.cargarPeriodosAll();
     this.cargarEjercicioActivo();
     this.cargarPoliza(this.id_poliza);
@@ -180,9 +168,7 @@ export class PolizaEditarComponent implements OnInit {
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
-  // =========================================================
   // Catálogos base
-  // =========================================================
   private cargarCatalogosBase() {
     // Tipos de póliza
     this.http.get<any>(`${this.apiBase}/tipo-poliza`).subscribe({
@@ -212,9 +198,7 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // =========================================================
   // Ejercicio / Periodos
-  // =========================================================
   private cargarEjercicioActivo(): void {
     const svc: any = this.api;
     const fn =
@@ -273,13 +257,14 @@ export class PolizaEditarComponent implements OnInit {
       }
     });
   }
-public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
-  const v = c?.posteable;
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v === 1;
-  if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
-  return false;
-}
+
+  public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
+    const v = c?.posteable;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return v === 1;
+    if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
+    return false;
+  }
 
   onEjercicioSeleccionado(id: any) {
     const ejercicioId = Number(id);
@@ -383,7 +368,6 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
       }
     }
 
-    // Garantiza que el periodo de la póliza esté presente en el select
     const selId = Number(this.poliza?.id_periodo);
     if (Number.isFinite(selId) && !filtrados.some(p => Number(p.id_periodo) === selId)) {
       const found = this.allPeriodos.find(p => Number(p.id_periodo) === selId);
@@ -403,56 +387,110 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
     return nombre || '—';
   }
 
-  // =========================================================
   // Póliza + movimientos
-  // =========================================================
-  cargarPoliza(id: number) {
-    this.loading = true;
-    this.http.get<any>(`${this.apiBase}/poliza/${id}/movimientos`).subscribe({
-      next: (res) => {
-        const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any) => {
-          const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
-          const c = this.cuentasMap.get(Number(mm.id_cuenta || 0));
-          mm._cuentaQuery = c ? `${c.codigo} — ${c.nombre}` : (mm._cuentaQuery ?? '');
-          return mm;
-        });
+ cargarPoliza(id: number) {
+  const ORDER_KEY = (pid: number) => `polizaOrder:${pid}`;
 
-        // Asegura id_periodo numérico (para evitar TS2322) y lo reinyecta al select si hiciera falta
-        const idPeriodoRaw = Number(res?.id_periodo);
-        const idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
+  const loadSavedOrder = (pid: number): number[] => {
+    try { return JSON.parse(localStorage.getItem(ORDER_KEY(pid)) || '[]'); }
+    catch { return []; }
+  };
 
-        this.poliza = {
-          id_poliza: res?.id_poliza,
-          id_tipopoliza: Number(res?.id_tipopoliza),
-          id_periodo: idPeriodo,
-          id_usuario: Number(res?.id_usuario),
-          id_centro: Number(res?.id_centro),
-          folio: String(res?.folio ?? ''),
-          concepto: String(res?.concepto ?? ''),
-          movimientos: movs,
-          estado: res?.estado,
-          fecha_creacion: res?.fecha_creacion,
-          created_at: res?.created_at,
-          updated_at: res?.updated_at
-        };
+  const saveOrder = (pid: number, movs: MovimientoUI[]) => {
+    const ids = movs.map(m => Number(m.id_movimiento)).filter(n => Number.isFinite(n));
+    try { localStorage.setItem(ORDER_KEY(pid), JSON.stringify(ids)); } catch {}
+  };
 
-        // Reaplica filtro para reflejar el periodo actual en el select
-        this.applyPeriodoFilter();
+  const getTime = (m: any) => {
+    const s = m?.created_at ?? m?.fecha ?? null;
+    const t = s ? Date.parse(String(s)) : NaN;
+    return Number.isFinite(t) ? t : NaN;
+  };
 
-        this.cuentasFiltradas = new Array(this.poliza.movimientos?.length || 0).fill([]);
-        this.prefillCuentaQueries();
-      },
-      error: (err) => {
-        console.error('Poliza cargar:', err);
-        this.errorMsg = err?.error?.message ?? 'No se pudo cargar la póliza.';
-        this.showToast({ type: 'error', title: 'Error', message: this.errorMsg });
-      },
-      complete: () => (this.loading = false)
-    });
-  }
+  this.loading = true;
+  this.http.get<any>(`${this.apiBase}/poliza/${id}/movimientos`).subscribe({
+    next: (res) => {
+      const savedOrderIds = loadSavedOrder(Number(res?.id_poliza ?? id));
+      const savedRank = new Map<number, number>(savedOrderIds.map((mid, i) => [Number(mid), i]));
 
-  private normalizeMovimiento(m: any): Movimiento {
-    return {
+      const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any, idx: number) => {
+        const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
+
+        // índice de llegada (para desempate estable)
+        (mm as any)._arrival = idx;
+
+        // si backend no trae 'orden', usa el índice capturado
+        mm.orden = (typeof m?.orden === 'number') ? Number(m.orden) : idx;
+
+        // etiqueta de cuenta si ya está en cache
+        const c = this.cuentasMap.get(Number(mm.id_cuenta || 0));
+        (mm as any)._cuentaQuery = c ? `${c.codigo} — ${c.nombre}` : ((mm as any)._cuentaQuery ?? '');
+
+        return mm;
+      });
+
+      const rank = (m: MovimientoUI) => {
+        const idm = Number((m as any).id_movimiento);
+        if (Number.isFinite(idm) && savedRank.has(idm)) return { type: 0 as const, v: savedRank.get(idm)! };
+        const t = getTime(m);
+        if (Number.isFinite(t)) return { type: 1 as const, v: t };
+        if (Number.isFinite(idm)) return { type: 2 as const, v: idm };
+        return { type: 3 as const, v: Number((m as any)._arrival) || Number.MAX_SAFE_INTEGER };
+      };
+
+      movs.sort((a, b) => {
+        const ra = rank(a), rb = rank(b);
+        if (ra.type !== rb.type) return ra.type - rb.type;
+        if (ra.v !== rb.v) return ra.v - rb.v;
+        // último desempate: arrival
+        const aa = Number((a as any)._arrival) || 0;
+        const ab = Number((b as any)._arrival) || 0;
+        return aa - ab;
+      });
+
+      // normaliza 'orden' solo si venía vacío/no numérico
+      movs.forEach((m, i) => {
+        if (!Number.isFinite(Number(m.orden))) m.orden = i;
+      });
+
+      saveOrder(Number(res?.id_poliza ?? id), movs);
+
+      // Asegura id_periodo numérico
+      const idPeriodoRaw = Number(res?.id_periodo);
+      const idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
+
+      this.poliza = {
+        id_poliza: res?.id_poliza,
+        id_tipopoliza: Number(res?.id_tipopoliza),
+        id_periodo: idPeriodo,
+        id_usuario: Number(res?.id_usuario),
+        id_centro: Number(res?.id_centro),
+        folio: String(res?.folio ?? ''),
+        concepto: String(res?.concepto ?? ''),
+        movimientos: movs,
+        estado: res?.estado,
+        fecha_creacion: res?.fecha_creacion,
+        created_at: res?.created_at,
+        updated_at: res?.updated_at
+      };
+
+      this.applyPeriodoFilter();
+      this.cuentasFiltradas = new Array(this.poliza.movimientos?.length || 0).fill([]);
+      this.prefillCuentaQueries();
+    },
+    error: (err) => {
+      console.error('Poliza cargar:', err);
+      this.errorMsg = err?.error?.message ?? 'No se pudo cargar la póliza.';
+      this.showToast({ type: 'error', title: 'Error', message: this.errorMsg });
+    },
+    complete: () => (this.loading = false)
+  });
+}
+
+
+
+  private normalizeMovimiento(m: any): MovimientoUI {
+    const base: MovimientoUI = {
       id_cuenta: this.toNumOrNull(m?.id_cuenta),
       ref_serie_venta: this.toStrOrNull(m?.ref_serie_venta) ?? '',
       operacion: (m?.operacion ?? '').toString(), // "0" | "1"
@@ -460,10 +498,13 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
       cliente: this.toStrOrNull(m?.cliente) ?? '',
       fecha: this.toDateOrNull(m?.fecha) ?? '',
       cc: this.toNumOrNull(m?.cc),
-      uuid: this.toStrOrNull(m?.uuid) ?? null, // <-- CFDI UUID
+      uuid: this.toStrOrNull(m?.uuid) ?? null, //  CFDI UUID
       id_poliza: this.toNumOrNull(m?.id_poliza) ?? undefined,
       ...(m?.id_movimiento != null ? { id_movimiento: Number(m.id_movimiento) } : {})
     } as any;
+
+    if (typeof m?.orden === 'number') base.orden = Number(m.orden);
+    return base;
   }
 
   puedeActualizar(): boolean {
@@ -499,6 +540,15 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
     }
 
     const p = this.poliza;
+
+    (p.movimientos ?? []).forEach((m, idx) => { m.orden = idx; });
+
+    this.lastOrderMap.clear();
+    (p.movimientos ?? []).forEach((m, idx) => {
+      const idMov = Number((m as any)?.id_movimiento);
+      if (Number.isFinite(idMov)) this.lastOrderMap.set(idMov, idx);
+    });
+
     const payloadHeader = {
       id_tipopoliza: this.toNumOrNull(p.id_tipopoliza)!,
       id_periodo:    this.toNumOrNull(p.id_periodo)!,
@@ -536,7 +586,8 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
         cliente:         this.toStrOrNull(m.cliente),
         fecha:           this.toDateOrNull(m.fecha),
         cc:              this.toNumOrNull(m.cc),
-        uuid:            this.toStrOrNull(m.uuid) // <-- CFDI UUID
+        uuid:            this.toStrOrNull(m.uuid),
+        orden:           this.toNumOrNull(m.orden), //  enviar orden
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: m.id_movimiento
@@ -554,7 +605,8 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
         cliente:         this.toStrOrNull(m.cliente),
         fecha:           this.toDateOrNull(m.fecha),
         cc:              this.toNumOrNull(m.cc),
-        uuid:            this.toStrOrNull(m.uuid) // <-- CFDI UUID
+        uuid:            this.toStrOrNull(m.uuid),
+        orden:           this.toNumOrNull(m.orden), //  enviar orden
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: undefined
@@ -563,9 +615,34 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
     );
 
     this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(
+      //  Toast temprano apenas se registra el encabezado
       switchMap(() => {
+        this.showToast({
+          type: 'success',
+          title: 'Encabezado actualizado',
+          message: 'Guardando movimientos…'
+        });
         const reqs = [...updateReqs, ...createReqs];
-        return reqs.length ? forkJoin(reqs) : of(null);
+
+        return (reqs.length
+          ? from(reqs).pipe(
+              // ejecuta 1 por 1
+              concatMap((obs, idx) => obs.pipe(
+                tap(() => {
+                  this.showToast({
+                    type: 'info',
+                    title: 'Guardando movimientos…',
+                    message: `Procesando ${idx + 1} de ${reqs.length}`,
+                    autoCloseMs: 1200
+                  });
+                })
+              )),
+              finalize(() => {
+                this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
+              })
+            )
+          : of(null)
+        );
       })
     ).subscribe({
       next: () => {
@@ -574,6 +651,7 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
           toUpdate.length ? ` Movs actualizados: ${toUpdate.length}.` : '',
           toCreate.length ? ` Movs creados: ${toCreate.length}.` : ''
         ].join('');
+        // Toast final
         this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
         this.cargarPoliza(this.poliza!.id_poliza!);
       },
@@ -586,85 +664,79 @@ public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
     });
   }
 
-  // =========================================================
   // Cuentas
-  // =========================================================
-private cargarCuentas() {
-  this.cuentasSvc.getCuentas().subscribe({
-    next: (arr) => {
-      const todas = Array.isArray(arr) ? arr : [];
+  private cargarCuentas() {
+    this.cuentasSvc.getCuentas().subscribe({
+      next: (arr) => {
+        const todas = Array.isArray(arr) ? arr : [];
 
-      // Mantén TODAS (posteables y no posteables) para que el modal vea la jerarquía completa
-      this.cuentas = todas;
+        this.cuentas = todas;
 
-      // 🔽 Ordenar por jerarquía padre→hijo
-      const { list, niveles } = this.ordenarYNivelarCuentas(this.cuentas);
-      this.cuentasOrdenadas = list;
-      this.nivelById = niveles;
+        //  Ordenar por jerarquía padre→hijo
+        const { list, niveles } = this.ordenarYNivelarCuentas(this.cuentas);
+        this.cuentasOrdenadas = list;
+        this.nivelById = niveles;
 
-      // Map para búsquedas por id (usa todas)
-      this.cuentasMap.clear();
-      for (const c of this.cuentas) this.cuentasMap.set(c.id, c);
+        // Map para búsquedas por id (usa todas)
+        this.cuentasMap.clear;
+        for (const c of this.cuentas) this.cuentasMap.set(c.id, c);
 
-      this.prefillCuentaQueries();
-    },
-    error: (e) => console.error('Cuentas:', e)
-  });
-}
-
-
-private cuentasOrdenadas: Cuenta[] = [];
-private nivelById = new Map<number, number>();
-
-/** Clave de orden: normaliza segmentos numéricos para 1,2,10 => 01,02,10 */
-private keyCodigo(codigo: string | null | undefined): string {
-  const s = (codigo ?? '').toString();
-  return s
-    .split(/(\d+)/g)
-    .map(seg => (/^\d+$/.test(seg) ? seg.padStart(8, '0') : seg.toLowerCase()))
-    .join('');
-}
-
-/** Ordena por jerarquía padre→hijos y devuelve lista aplanada + niveles */
-private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<number, number> } {
-  const byId = new Map<number, Cuenta>();
-  for (const c of todas) byId.set(c.id, c);
-
-  // Agrupar hijos por parentId
-  const children = new Map<number, Cuenta[]>();
-  for (const c of todas) {
-    const pid = c.parentId ?? null;
-    if (pid != null && byId.has(pid)) {
-      const arr = children.get(pid) ?? [];
-      arr.push(c);
-      children.set(pid, arr);
-    }
+        this.prefillCuentaQueries();
+      },
+      error: (e) => console.error('Cuentas:', e)
+    });
   }
 
-  // Raíces: sin parentId o con parentId no encontrado
-  const roots = todas.filter(c => c.parentId == null || !byId.has(c.parentId));
+  private cuentasOrdenadas: Cuenta[] = [];
+  private nivelById = new Map<number, number>();
 
-  // Orden por código amigable
-  const sortFn = (a: Cuenta, b: Cuenta) =>
-    this.keyCodigo(a.codigo).localeCompare(this.keyCodigo(b.codigo));
+  private keyCodigo(codigo: string | null | undefined): string {
+    const s = (codigo ?? '').toString();
+    return s
+      .split(/(\d+)/g)
+      .map(seg => (/^\d+$/.test(seg) ? seg.padStart(8, '0') : seg.toLowerCase()))
+      .join('');
+  }
 
-  roots.sort(sortFn);
-  for (const [pid, arr] of children) arr.sort(sortFn);
+  /** Ordena por jerarquía padre e hijo */
+  private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<number, number> } {
+    const byId = new Map<number, Cuenta>();
+    for (const c of todas) byId.set(c.id, c);
 
-  const out: Cuenta[] = [];
-  const niveles = new Map<number, number>();
+    // Agrupar hijos por parentId
+    const children = new Map<number, Cuenta[]>();
+    for (const c of todas) {
+      const pid = c.parentId ?? null;
+      if (pid != null && byId.has(pid)) {
+        const arr = children.get(pid) ?? [];
+        arr.push(c);
+        children.set(pid, arr);
+      }
+    }
 
-  const dfs = (n: Cuenta, nivel: number) => {
-    out.push(n);
-    niveles.set(n.id, nivel);
-    const kids = children.get(n.id) ?? [];
-    for (const k of kids) dfs(k, nivel + 1);
-  };
+    // Raíces: sin parentId o con parentId no encontrado
+    const roots = todas.filter(c => c.parentId == null || !byId.has(c.parentId));
 
-  for (const r of roots) dfs(r, 0);
-  return { list: out, niveles };
-}
+    // Orden por código amigable
+    const sortFn = (a: Cuenta, b: Cuenta) =>
+      this.keyCodigo(a.codigo).localeCompare(this.keyCodigo(b.codigo));
 
+    roots.sort(sortFn);
+    for (const [, arr] of children) arr.sort(sortFn);
+
+    const out: Cuenta[] = [];
+    const niveles = new Map<number, number>();
+
+    const dfs = (n: Cuenta, nivel: number) => {
+      out.push(n);
+      niveles.set(n.id, nivel);
+      const kids = children.get(n.id) ?? [];
+      for (const k of kids) dfs(k, nivel + 1);
+    };
+
+    for (const r of roots) dfs(r, 0);
+    return { list: out, niveles };
+  }
 
   private prefillCuentaQueries() {
     const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
@@ -677,21 +749,21 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
     });
   }
 
-  agregarMovimiento(): void {
-    const nuevo: MovimientoUI = {
-      id_cuenta: null,
-      ref_serie_venta: '',
-      operacion: '',          // "0" | "1"
-      monto: null,
-      cliente: '',
-      fecha: '',
-      cc: null,
-      uuid: null,             
-      _cuentaQuery: ''
-    };
-    (this.poliza.movimientos ??= []).push(nuevo);
-    this.cuentasFiltradas.push([]);
+  private nextOrden(): number {
+    const movs = this.poliza.movimientos ?? [];
+    return movs.reduce((mx, m: any) => Math.max(mx, Number(m?.orden ?? -1)), -1) + 1;
   }
+
+agregarMovimiento(): void {
+  const nuevo: MovimientoUI = {
+    id_cuenta: null, ref_serie_venta: '', operacion: '',
+    monto: null, cliente: '', fecha: '', cc: null, uuid: null,
+    _cuentaQuery: '', orden: this.nextOrden(),
+  };
+  (this.poliza.movimientos ??= []).push(nuevo);
+  this.cuentasFiltradas.push([]);
+}
+
 
   // madal de confirmacion para eliminar movimiento
   confirmOpen = false;
@@ -729,6 +801,8 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
       (this.poliza.movimientos ??= []).splice(i, 1);
       this.cuentasFiltradas.splice(i, 1);
       this.deletingIndexSet.delete(i);
+      // Re-normaliza el 'orden' tras eliminar
+      (this.poliza.movimientos ?? []).forEach((m, idx) => { (m as MovimientoUI).orden = idx; });
     };
 
     if (!idMov) {
@@ -750,7 +824,7 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
     });
   }
 
-  //cfdi recientesm
+  //cfdi recientes
   private cargarCfdiRecientes(): void {
     const svc: any = this.apiSvc as any;
     const fn =
@@ -779,13 +853,12 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
         }
       });
     } else {
-      // FIX: quitar el guion accidental y consultar al endpoint correcto
       this.http.get<any>(`${this.apiBase}/cfdis?limit=100`).subscribe({
         next: (r) => {
           const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
           handle(arr);
         },
-        error: () => { /* opcional: silencio */ }
+        error: () => {  }
       });
     }
   }
@@ -798,12 +871,10 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
     input.click();
   }
 
-  // Usa tu servicio: uploadCfdiXml(file, { folio, id_periodo, id_centro, id_tipopoliza })
   async onXmlPickedForMovimiento(event: any, index: number): Promise<void> {
     const file: File = event?.target?.files?.[0];
     if (!file) return;
 
-    // Validaciones básicas del archivo (opcional: déjalas si quieres UX temprano)
     const isXml = file.type === 'text/xml' || file.type === 'application/xml' || /\.xml$/i.test(file.name);
     if (!isXml) {
       this.uploadXmlError = 'El archivo debe ser .xml';
@@ -822,7 +893,6 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
     this.selectedXmlName = file.name;
 
     try {
-      // Contexto que espera tu backend
       const ctx = {
         folio: this.poliza?.folio,
         id_periodo: Number(this.poliza?.id_periodo),
@@ -830,7 +900,6 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
         id_tipopoliza: Number(this.poliza?.id_tipopoliza),
       };
 
-      // 👇 Aquí usamos tu servicio tal cual lo definiste
       const response = await firstValueFrom(this.apiSvc.uploadCfdiXml(file, ctx));
       const uuid = response?.uuid || response?.UUID || null;
 
@@ -839,11 +908,10 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
       } else {
         const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
         if (!movs[index]) {
-          (this.poliza.movimientos ??= [])[index] = { } as any;
+          (this.poliza.movimientos ??= [])[index] = {} as any;
         }
         movs[index].uuid = uuid;
 
-        // Mantén catálogo de recientes en UI
         if (!this.cfdiOptions.some(x => x.uuid === uuid)) {
           this.cfdiOptions = [{ uuid }, ...this.cfdiOptions].slice(0, 100);
         }
@@ -863,48 +931,45 @@ private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<
   onUuidChange(uuid?: string) {
     this.uuidSeleccionado = uuid || undefined;
   }
- aplicarUuidAlMovimiento(index: number) {
-  if (!this.uuidSeleccionado) return;
 
-  const movs = (this.poliza?.movimientos as any[]) || [];
-  const mov = movs[index];
-  if (!mov) return;
+  aplicarUuidAlMovimiento(index: number) {
+    if (!this.uuidSeleccionado) return;
 
-  const uuid = this.uuidSeleccionado;
-  mov.uuid = uuid;
+    const movs = (this.poliza?.movimientos as any[]) || [];
+    const mov = movs[index];
+    if (!mov) return;
 
-  // Si ya está persistido, vincula en servidor
-  const idMov = Number(mov?.id_movimiento);
-  if (Number.isFinite(idMov) && this.poliza?.id_poliza) {
-    this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, [idMov]).subscribe({
-      next: () => {
-        this.showToast({ type: 'success', title: 'UUID aplicado', message: `Se aplicó ${uuid} al movimiento #${index + 1}.` });
-      },
+    const uuid = this.uuidSeleccionado;
+    mov.uuid = uuid;
+
+    const idMov = Number(mov?.id_movimiento);
+    if (Number.isFinite(idMov) && this.poliza?.id_poliza) {
+      this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, [idMov]).subscribe({
+        next: () => {
+          this.showToast({ type: 'success', title: 'UUID aplicado', message: `Se aplicó ${uuid} al movimiento #${index + 1}.` });
+        },
+        error: (err) => {
+          const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
+          this.showToast({ type: 'error', title: 'Error', message: msg });
+        }
+      });
+    } else {
+      this.showToast({ type: 'info', title: 'UUID aplicado', message: `Se aplicó ${uuid}. Se guardará al actualizar la póliza.` });
+    }
+  }
+
+  vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
+    if (!this.poliza?.id_poliza || !uuid || !movimientoIds?.length) return;
+    this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, movimientoIds).subscribe({
+      next: () => this.showToast({ type: 'success', title: 'UUID vinculado', message: `Se vinculó ${uuid} a ${movimientoIds.length} movimientos.` }),
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
         this.showToast({ type: 'error', title: 'Error', message: msg });
       }
     });
-  } else {
-    // Si no existe en BD, se enviará en el próximo create/update
-    this.showToast({ type: 'info', title: 'UUID aplicado', message: `Se aplicó ${uuid}. Se guardará al actualizar la póliza.` });
   }
-}
-vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
-  if (!this.poliza?.id_poliza || !uuid || !movimientoIds?.length) return;
-  this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, movimientoIds).subscribe({
-    next: () => this.showToast({ type: 'success', title: 'UUID vinculado', message: `Se vinculó ${uuid} a ${movimientoIds.length} movimientos.` }),
-    error: (err) => {
-      const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
-      this.showToast({ type: 'error', title: 'Error', message: msg });
-    }
-  });
-}
 
-
-  // =========================================================
   // Centros de costo
-  // =========================================================
   private getCentros(): void {
     const svc: any = this.api as any;
     const fn =
@@ -952,7 +1017,7 @@ vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
     return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
   }
 
-  // ⬇️ Helpers de error
+  // Helpers de error
   private extractHttpErrorMessage(err: any): string {
     const e = err || {};
     const tryPaths = [
@@ -973,7 +1038,6 @@ vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
     return msg;
   }
 
-  /** Crea un error anotado con contexto del movimiento (índice/uuid/id_movimiento) */
   private annotateError(err: any, ctx: { i: number; uuid?: string|null; id_mov?: number|undefined }) {
     const normalized = new Error(this.extractHttpErrorMessage(err));
     (normalized as any).__ctx = ctx;
@@ -993,21 +1057,400 @@ vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
     }
   }
 
-  
-get cuentasParaModal() {
-  const fuente = this.cuentasOrdenadas.length ? this.cuentasOrdenadas : this.cuentas;
-  return (fuente || []).map(c => ({
-    id_cuenta: c.id,
-    codigo: c.codigo,
-    nombre: c.nombre,
-    posteable: this.esPosteable(c),
-    nivel: this.nivelById.get(c.id) ?? 0,   // <- para indentar en el modal, si quieres
-  }));
-}
+  get cuentasParaModal() {
+    const fuente = this.cuentasOrdenadas.length ? this.cuentasOrdenadas : this.cuentas;
+    return (fuente || []).map(c => ({
+      id_cuenta: c.id,
+      codigo: c.codigo,
+      nombre: c.nombre,
+      posteable: this.esPosteable(c),
+      nivel: this.nivelById.get(c.id) ?? 0,
+    }));
+  }
 
+  // }UTIL: descarga de archivos 
+  private descargarBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
+  private xmlEscape(s: any): string {
+    const str = (s ?? '').toString();
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 
+  private buildPolizaXMLInterno(): string {
+    const p = this.poliza || {};
+    const movs = (p.movimientos || []) as any[];
 
+    const head = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      `<Poliza id="${this.xmlEscape(p.id_poliza)}" folio="${this.xmlEscape(p.folio)}"`,
+      `        tipo="${this.xmlEscape(p.id_tipopoliza)}" periodo="${this.xmlEscape(p.id_periodo)}"`,
+      `        centro="${this.xmlEscape(p.id_centro)}" usuario="${this.xmlEscape(p.id_usuario)}">`,
+      `  <Concepto>${this.xmlEscape(p.concepto)}</Concepto>`,
+      `  <FechaCreacion>${this.xmlEscape(p.fecha_creacion || p.created_at)}</FechaCreacion>`,
+      `  <Movimientos>`
+    ].join('\n');
+
+    const body = movs.map((m, i) => [
+      `    <Movimiento index="${i + 1}">`,
+      `      <Cuenta id="${this.xmlEscape(m.id_cuenta)}"/>`,
+      `      <Operacion>${this.xmlEscape(m.operacion)}</Operacion>`,
+      `      <Monto>${this.xmlEscape(m.monto)}</Monto>`,
+      `      <Cliente>${this.xmlEscape(m.cliente)}</Cliente>`,
+      `      <Fecha>${this.xmlEscape(m.fecha)}</Fecha>`,
+      `      <CentroCosto>${this.xmlEscape(m.cc)}</CentroCosto>`,
+      `      <RefSerieVenta>${this.xmlEscape(m.ref_serie_venta)}</RefSerieVenta>`,
+      `      <UUID>${this.xmlEscape(m.uuid)}</UUID>`,
+      `    </Movimiento>`
+    ].join('\n')).join('\n');
+
+    const tail = [
+      `  </Movimientos>`,
+      `</Poliza>`
+    ].join('\n');
+
+    return `${head}\n${body}\n${tail}\n`;
+  }
+
+  // Índice perezoso por id_cuenta -> {codigo, nombre}
+  private cuentasIndex?: Record<string | number, { codigo: string; nombre?: string }>;
+
+  private ensureCuentasIndex() {
+    if (this.cuentasIndex) return;
+    const src = (this as any).cuentas || (this as any).allCuentas || [];
+    this.cuentasIndex = {};
+    for (const c of src || []) {
+      const id = c.id_cuenta ?? c.id ?? c.pk ?? c.codigo;
+      const codigo = c.codigo ?? c.code ?? c.clave ?? String(id ?? '');
+      const nombre = c.nombre ?? c.descripcion ?? c.name ?? '';
+      if (id != null) this.cuentasIndex[id] = { codigo: String(codigo), nombre: nombre || undefined };
+    }
+  }
+  private resolvePolizaNombre(p: any) {
+    const folio = p?.folio ?? p?.id_poliza ?? '';
+    return (
+      p?.nombre ??
+      p?.titulo ??
+      p?.descripcion ??
+      p?.concepto ??
+      (folio ? `Póliza ${folio}` : 'Póliza')
+    );
+  }
+
+  //  PERIODO: relación o fallback por id 
+  private periodoLabelById(id?: number | null): string {
+    if (!Number.isFinite(Number(id))) return '';
+    const p = this.allPeriodos.find(x => Number(x.id_periodo) === Number(id));
+    if (!p) return '';
+    const ini = p.fecha_inicio ?? '—';
+    const fin = p.fecha_fin ?? '—';
+    return `${ini} — ${fin}`;
+  }
+
+  private resolvePeriodoRango(p: any) {
+    const per = p?.Periodo ?? p?.periodo ?? {};
+    const ini = per?.fecha_inicio ?? per?.inicio ?? p?.periodo_inicio ?? p?.fecha_inicio ?? null;
+    const fin = per?.fecha_fin ?? per?.fin ?? p?.periodo_fin ?? p?.fecha_fin ?? null;
+
+    const iniF = ini ? this.fmtDate(ini) : '';
+    const finF = fin ? this.fmtDate(fin) : '';
+
+    if (iniF || finF) {
+      if (!iniF && finF) return `— ${finF}`;
+      if (iniF && !finF) return `${iniF} —`;
+      return `${iniF} — ${finF}`;
+    }
+    // Fallback por id_periodo
+    return this.periodoLabelById(this.toNumOrNull(p?.id_periodo));
+  }
+
+  private resolveCuenta(m: any) {
+    this.ensureCuentasIndex();
+    const fromMovCodigo =
+      m?.cuenta?.codigo ?? m?.codigo_cuenta ?? m?.cuenta_codigo ?? m?.Cuenta?.codigo ?? null;
+    const fromMovNombre =
+      m?.cuenta?.nombre ?? m?.cuenta_nombre ?? m?.Cuenta?.nombre ?? null;
+
+    const fromIndex = (m?.id_cuenta != null && this.cuentasIndex?.[m.id_cuenta]) ? this.cuentasIndex![m.id_cuenta] : undefined;
+
+    const codigo = String(fromMovCodigo ?? fromIndex?.codigo ?? m?.id_cuenta ?? '');
+    const nombre = String(fromMovNombre ?? fromIndex?.nombre ?? '') || undefined;
+
+    return { codigo, nombre };
+  }
+
+  private cuentaEtiqueta(m: any) {
+    const { codigo, nombre } = this.resolveCuenta(m);
+    return nombre ? `${codigo} — ${nombre}` : codigo;
+  }
+
+  //  Helpers de presentación 
+  private fmtMoney(v: any) {
+    const n = Number(v ?? 0);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(n);
+  }
+
+  private opLabel(op: any) {
+    return String(op) === '1' || op === 1 ? 'Abono' : 'Cargo';
+  }
+  private safeStr(v: any) { return (v ?? '').toString(); }
+
+  private buildTablaMovimientosPresentacion() {
+    const movs = (this.poliza?.movimientos ?? []) as any[];
+    return movs.map((m: any, i: number) => {
+      const { codigo } = this.resolveCuenta(m);
+      return {
+        '#': i + 1,
+        'Cuenta': codigo,
+        'Operación': this.opLabel(m.operacion),
+        'Monto': Number(m.monto ?? 0),
+        'Cliente / Concepto': this.safeStr(m.cliente || m.concepto),
+        'Fecha': this.fmtDate(m.fecha),
+        'CC': m.cc ?? '',
+        'Serie Venta': this.safeStr(m.ref_serie_venta),
+        'UUID': this.safeStr(m.uuid),
+      };
+    });
+  }
+
+  // Índice id_tipopoliza -> descripcion
+  private tiposPolizaIndex?: Record<string | number, string>;
+  private ensureTiposPolizaIndex() {
+    if (this.tiposPolizaIndex) return;
+    const src = (this as any).tiposPoliza || (this as any).catalogoTipos || [];
+    this.tiposPolizaIndex = {};
+    for (const t of src || []) {
+      const id = t.id_tipopoliza ?? t.id ?? t.pk;
+      const desc = t.descripcion ?? t.nombre ?? t.label ?? '';
+      if (id != null) this.tiposPolizaIndex[id] = String(desc || id);
+    }
+  }
+  private resolveTipoLabel(p: any) {
+    const fromRel = p?.TipoPoliza?.descripcion ?? p?.TipoPoliza?.nombre ?? null;
+    this.ensureTiposPolizaIndex();
+    const fromIdx = (p?.id_tipopoliza != null) ? this.tiposPolizaIndex?.[p.id_tipopoliza] : null;
+    return fromRel || fromIdx || String(p?.id_tipopoliza ?? '');
+  }
+
+  private centrosSerieMap = new Map<number, string>();
+
+  private headerPolizaProfesional() {
+    const p: any = this.poliza || {};
+    return {
+      'Póliza': this.resolvePolizaNombre(p),
+      'Folio': p.folio ?? '',
+      'Tipo': this.resolveTipoLabel(p),
+      'Periodo': this.resolvePeriodoRango(p),
+      'Centro (id_centro)': p.id_centro ?? '',
+      'Usuario (id_usuario)': p.id_usuario ?? '',
+      'Concepto': p.concepto ?? '',
+      'Fecha creación': this.fmtDate(p.fecha_creacion || p.created_at || ''),
+    };
+  }
+
+  private buildHeaderPairs(headerObj: Record<string, any>) {
+    const entries = Object.entries(headerObj).map(([k, v]) => [k, String(v)]);
+    const rows: any[][] = [];
+    for (let i = 0; i < entries.length; i += 2) {
+      const a = entries[i];
+      const b = entries[i + 1] || ['', ''];
+      rows.push([a[0], a[1], b[0], b[1]]);
+    }
+    return rows;
+  }
+
+  async exportarPDFPoliza() {
+    try {
+      const [{ default: jsPDF }, autoTable] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const left = 40, top = 40, line = 18;
+
+      const folioTxt = String(this.poliza?.folio || this.poliza?.id_poliza || '');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+      doc.text(`Póliza ${folioTxt}`, left, top);
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+      const hoy = new Date();
+      doc.text(`Generado: ${new Intl.DateTimeFormat('es-MX', {
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+      }).format(hoy)}`, left, top + line);
+
+      const headerPairs = this.buildHeaderPairs(this.headerPolizaProfesional());
+      (autoTable as any).default(doc, {
+        startY: top + line * 2,
+        head: [['Campo', 'Valor', 'Campo', 'Valor']],
+        body: headerPairs,
+        styles: { fontSize: 9, cellPadding: 6, overflow: 'linebreak' },
+        headStyles: { fillColor: [245,245,245], textColor: 20, fontStyle: 'bold' },
+        theme: 'striped',
+        columnStyles: {
+          0: { cellWidth: 90 },
+          1: { cellWidth: 165 },
+          2: { cellWidth: 90 },
+          3: { cellWidth: 170 },
+        },
+        margin: { left, right: left },
+      });
+
+      const data = this.buildTablaMovimientosPresentacion();
+      const startY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 18 : 160;
+
+      (autoTable as any).default(doc, {
+        startY,
+        head: [['#','Cuenta','Operación','Monto','Cliente / Concepto','Fecha','CC','Serie Venta','UUID']],
+        body: data.map(r => [
+          r['#'], r['Cuenta'], r['Operación'], this.fmtMoney(r['Monto']),
+          r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
+        ]),
+        styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
+        headStyles: { fillColor: [245,245,245], textColor: 20, fontStyle: 'bold' },
+        theme: 'striped',
+        columnStyles: {
+          0: { halign: 'right', cellWidth: 22 },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 50 },
+          3: { halign: 'right', cellWidth: 58 },
+          4: { cellWidth: 140 },
+          5: { cellWidth: 50 },
+          6: { cellWidth: 32 },
+          7: { cellWidth: 56 },
+          8: { cellWidth: 47 },
+        },
+        margin: { left, right: left },
+        didDrawPage: () => {
+          const page = `${doc.getCurrentPageInfo().pageNumber} / ${doc.getNumberOfPages()}`;
+          doc.setFontSize(9); doc.setTextColor(120);
+          doc.text(page, doc.internal.pageSize.getWidth() - left, doc.internal.pageSize.getHeight() - 20, { align: 'right' });
+        },
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY ?? startY;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      const cargos = this.fmtMoney(this.getTotal('0'));
+      const abonos = this.fmtMoney(this.getTotal('1'));
+      const dif = this.fmtMoney(this.getDiferencia());
+      doc.text(`Cargos: ${cargos}   Abonos: ${abonos}   Diferencia: ${dif}`, left, finalY + 16);
+
+      const folio = folioTxt.replace(/[^\w-]+/g, '_');
+      doc.save(`Poliza-${folio || 'sin_folio'}.pdf`);
+      this.showToast({ type: 'success', title: 'PDF', message: 'PDF exportado correctamente.' });
+    } catch (e: any) {
+      this.showToast({ type: 'error', title: 'Error', message: e?.message || 'No se pudo exportar PDF.' });
+    }
+  }
+
+  async exportarExcelPoliza() {
+    try {
+      const XLSX = await import('xlsx');
+
+      const folio = String(this.poliza?.folio || `poliza-${this.poliza?.id_poliza ?? ''}`).replace(/[^\w-]+/g, '_');
+      const hojaNombre = `Póliza ${folio || 'sin_folio'}`;
+
+      const H = this.headerPolizaProfesional();
+
+      const headerPairs: any[][] = [['Campo', 'Valor', 'Campo', 'Valor']];
+      const entries = Object.entries(H).map(([k, v]) => [k, String(v)]);
+      for (let i = 0; i < entries.length; i += 2) {
+        const a = entries[i];
+        const b = entries[i + 1] || ['', ''];
+        headerPairs.push([a[0], a[1], b[0], b[1]]);
+      }
+
+      const movs = this.buildTablaMovimientosPresentacion();
+      const movHeader = ['#','Cuenta','Operación','Monto','Cliente / Concepto','Fecha','CC','Serie Venta','UUID'];
+      const movBody = movs.map(r => [
+        r['#'], r['Cuenta'], r['Operación'], Number(r['Monto']),
+        r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
+      ]);
+
+      const aoa: any[][] = [
+        [`Póliza ${folio || ''}`],
+        [],
+        ...headerPairs,
+        [],
+        movHeader,
+        ...movBody
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      (ws as any)['!merges'] = [{ s: { r:0, c:0 }, e: { r:0, c:8 } }];
+
+      (ws as any)['!cols'] = [
+        { wch: 4 },  // #
+        { wch: 16 }, // Cuenta
+        { wch: 12 }, // Operación
+        { wch: 14 }, // Monto
+        { wch: 44 }, // Cliente / Concepto
+        { wch: 12 }, // Fecha
+        { wch: 8 },  // CC
+        { wch: 16 }, // Serie Venta
+        { wch: 40 }, // UUID
+      ];
+
+      const headerStartRow = 3;
+      const headerRows = headerPairs.length;
+      const sepRow = headerStartRow + headerRows;
+      const movHeaderRow = sepRow + 1;
+      const firstDataRow = movHeaderRow + 1;
+      const lastDataRow = movHeaderRow + movBody.length;
+
+      for (let r = firstDataRow; r <= lastDataRow; r++) {
+        const cell = ws[`D${r}`];
+        if (cell) cell.z = '"$"#,##0.00';
+      }
+
+      if (movBody.length > 0) (ws as any)['!autofilter'] = { ref: `A${movHeaderRow}:I${lastDataRow}` };
+      (ws as any)['!freeze'] = { xSplit: 0, ySplit: movHeaderRow };
+
+      const cargos = this.getTotal('0');
+      const abonos = this.getTotal('1');
+      const dif = this.getDiferencia();
+      const totalsRow = lastDataRow + 2;
+
+      XLSX.utils.sheet_add_aoa(ws, [
+        ['Totales'],
+        ['Cargos', cargos],
+        ['Abonos', abonos],
+        ['Diferencia', dif],
+      ], { origin: `A${totalsRow}` });
+
+      ['B'+(totalsRow+1), 'B'+(totalsRow+2), 'B'+(totalsRow+3)].forEach(addr => {
+        const c = ws[addr]; if (c) c.z = '"$"#,##0.00';
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, hojaNombre);
+
+      const XLSXMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: XLSXMime });
+      this.descargarBlob(blob, `Poliza-${folio || 'sin_folio'}.xlsx`);
+
+      this.showToast({ type: 'success', title: 'Excel', message: 'Excel exportado correctamente.' });
+    } catch (e: any) {
+      this.showToast({ type: 'error', title: 'Error', message: e?.message || 'No se pudo exportar Excel.' });
+    }
+  }
+
+  // Modal cuentas
   abrirModalCuentas(index: number): void {
     this.indiceMovimientoSeleccionado = index;
     this.modalCuentasAbierto = true;
@@ -1064,9 +1507,7 @@ get cuentasParaModal() {
     this.cuentaOpenIndex = null;
   }
 
-  // =========================================================
   // Helpers
-  // =========================================================
   getTotal(tipo: '0' | '1'): number {
     const movs = Array.isArray(this.poliza?.movimientos) ? this.poliza!.movimientos! : [];
     return movs
@@ -1139,9 +1580,7 @@ get cuentasParaModal() {
   }
   onToastClosed = () => { this.toast.open = false; };
 
-  // =========================================================
   // Usuario actual
-  // =========================================================
   private normalizeUsuario(u: any): UsuarioLigero | null {
     if (!u || typeof u !== 'object') return null;
     const raw = (u.user ?? u.data ?? u.currentUser ?? u) || {};

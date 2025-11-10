@@ -77,14 +77,12 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.http = http;
         this.apiSvc = apiSvc;
         this.cuentasSvc = cuentasSvc;
-        // ===== Config/API =====
         this.apiBase = 'http://localhost:3000/api/v1';
-        // ===== Estado general =====
         this.sidebarOpen = true;
         this.loading = true;
         this.errorMsg = '';
         this.updating = false;
-        // ===== UI/Toast =====
+        this.trackByMov = function (_, m) { var _a, _b; return (_b = (_a = m.id_movimiento) !== null && _a !== void 0 ? _a : m.orden) !== null && _b !== void 0 ? _b : -1; };
         this.toast = {
             open: false,
             title: '',
@@ -94,36 +92,29 @@ var PolizaEditarComponent = /** @class */ (function () {
             autoCloseMs: 3500,
             showClose: true
         };
-        // ===== Usuario =====
         this.currentUser = null;
-        // ===== Ejercicios/Periodos =====
         this.ejercicioActual = null;
         this.ejercicios = [];
         this.allPeriodos = [];
         this.periodos = [];
         this.compareById = function (a, b) { return a && b && a.id_periodo === b.id_periodo; };
-        // ===== Catálogos =====
         this.tiposPoliza = [];
         this.centros = [];
-        // ===== Centros de costo =====
         this.centrosCosto = [];
         this.centrosCostoMap = new Map();
-        // ===== Póliza =====
         this.poliza = { movimientos: [] };
-        // ===== Cuentas (typeahead por fila) =====
         this.cuentas = [];
         this.cuentasMap = new Map();
         this.cuentasFiltradas = [];
         this.cuentaOpenIndex = null;
-        // ===== Modal de selección de cuenta =====
         this.modalCuentasAbierto = false;
         this.indiceMovimientoSeleccionado = null;
-        // ===== CFDI =====
         this.xmlMovimientoIndex = null;
         this.uploadingXml = false;
         this.selectedXmlName = '';
         this.uploadXmlError = '';
         this.cfdiOptions = [];
+        this.lastOrderMap = new Map();
         this.cuentasOrdenadas = [];
         this.nivelById = new Map();
         // madal de confirmacion para eliminar movimiento
@@ -132,6 +123,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.confirmMessage = '¿Seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.';
         this.confirmIndex = null;
         this.deletingIndexSet = new Set();
+        this.centrosSerieMap = new Map();
         this.onToastClosed = function () { _this.toast.open = false; };
     }
     Object.defineProperty(PolizaEditarComponent.prototype, "api", {
@@ -139,9 +131,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    // =========================================================
-    // Init
-    // =========================================================
     PolizaEditarComponent.prototype.ngOnInit = function () {
         this.cargarCatalogosBase(); // Tipos y Centros
         this.getCentros(); // Centros de costo
@@ -151,7 +140,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             this.loading = false;
             return;
         }
-        // Orden recomendado: periodos -> ejercicio -> póliza -> cuentas/usuario -> CFDI
         this.cargarPeriodosAll();
         this.cargarEjercicioActivo();
         this.cargarPoliza(this.id_poliza);
@@ -160,9 +148,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.cargarCfdiRecientes();
     };
     PolizaEditarComponent.prototype.onSidebarToggle = function (v) { this.sidebarOpen = v; };
-    // =========================================================
     // Catálogos base
-    // =========================================================
     PolizaEditarComponent.prototype.cargarCatalogosBase = function () {
         var _this = this;
         // Tipos de póliza
@@ -195,9 +181,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             error: function (e) { return console.error('Centros:', e); }
         });
     };
-    // =========================================================
     // Ejercicio / Periodos
-    // =========================================================
     PolizaEditarComponent.prototype.cargarEjercicioActivo = function () {
         var _this = this;
         var svc = this.api;
@@ -362,7 +346,6 @@ var PolizaEditarComponent = /** @class */ (function () {
                 });
             }
         }
-        // Garantiza que el periodo de la póliza esté presente en el select
         var selId = Number((_c = this.poliza) === null || _c === void 0 ? void 0 : _c.id_periodo);
         if (Number.isFinite(selId) && !filtrados.some(function (p) { return Number(p.id_periodo) === selId; })) {
             var found = this.allPeriodos.find(function (p) { return Number(p.id_periodo) === selId; });
@@ -388,23 +371,78 @@ var PolizaEditarComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    // =========================================================
     // Póliza + movimientos
-    // =========================================================
     PolizaEditarComponent.prototype.cargarPoliza = function (id) {
         var _this = this;
+        var ORDER_KEY = function (pid) { return "polizaOrder:" + pid; };
+        var loadSavedOrder = function (pid) {
+            try {
+                return JSON.parse(localStorage.getItem(ORDER_KEY(pid)) || '[]');
+            }
+            catch (_a) {
+                return [];
+            }
+        };
+        var saveOrder = function (pid, movs) {
+            var ids = movs.map(function (m) { return Number(m.id_movimiento); }).filter(function (n) { return Number.isFinite(n); });
+            try {
+                localStorage.setItem(ORDER_KEY(pid), JSON.stringify(ids));
+            }
+            catch (_a) { }
+        };
+        var getTime = function (m) {
+            var _a, _b;
+            var s = (_b = (_a = m === null || m === void 0 ? void 0 : m.created_at) !== null && _a !== void 0 ? _a : m === null || m === void 0 ? void 0 : m.fecha) !== null && _b !== void 0 ? _b : null;
+            var t = s ? Date.parse(String(s)) : NaN;
+            return Number.isFinite(t) ? t : NaN;
+        };
         this.loading = true;
         this.http.get(this.apiBase + "/poliza/" + id + "/movimientos").subscribe({
             next: function (res) {
-                var _a, _b, _c, _d;
-                var movs = ((_a = res === null || res === void 0 ? void 0 : res.movimientos) !== null && _a !== void 0 ? _a : []).map(function (m) {
+                var _a, _b, _c, _d, _f, _g;
+                var savedOrderIds = loadSavedOrder(Number((_a = res === null || res === void 0 ? void 0 : res.id_poliza) !== null && _a !== void 0 ? _a : id));
+                var savedRank = new Map(savedOrderIds.map(function (mid, i) { return [Number(mid), i]; }));
+                var movs = ((_b = res === null || res === void 0 ? void 0 : res.movimientos) !== null && _b !== void 0 ? _b : []).map(function (m, idx) {
                     var _a;
                     var mm = _this.normalizeMovimiento(m);
+                    // índice de llegada (para desempate estable)
+                    mm._arrival = idx;
+                    // si backend no trae 'orden', usa el índice capturado
+                    mm.orden = (typeof (m === null || m === void 0 ? void 0 : m.orden) === 'number') ? Number(m.orden) : idx;
+                    // etiqueta de cuenta si ya está en cache
                     var c = _this.cuentasMap.get(Number(mm.id_cuenta || 0));
                     mm._cuentaQuery = c ? c.codigo + " \u2014 " + c.nombre : ((_a = mm._cuentaQuery) !== null && _a !== void 0 ? _a : '');
                     return mm;
                 });
-                // Asegura id_periodo numérico (para evitar TS2322) y lo reinyecta al select si hiciera falta
+                var rank = function (m) {
+                    var idm = Number(m.id_movimiento);
+                    if (Number.isFinite(idm) && savedRank.has(idm))
+                        return { type: 0, v: savedRank.get(idm) };
+                    var t = getTime(m);
+                    if (Number.isFinite(t))
+                        return { type: 1, v: t };
+                    if (Number.isFinite(idm))
+                        return { type: 2, v: idm };
+                    return { type: 3, v: Number(m._arrival) || Number.MAX_SAFE_INTEGER };
+                };
+                movs.sort(function (a, b) {
+                    var ra = rank(a), rb = rank(b);
+                    if (ra.type !== rb.type)
+                        return ra.type - rb.type;
+                    if (ra.v !== rb.v)
+                        return ra.v - rb.v;
+                    // último desempate: arrival
+                    var aa = Number(a._arrival) || 0;
+                    var ab = Number(b._arrival) || 0;
+                    return aa - ab;
+                });
+                // normaliza 'orden' solo si venía vacío/no numérico
+                movs.forEach(function (m, i) {
+                    if (!Number.isFinite(Number(m.orden)))
+                        m.orden = i;
+                });
+                saveOrder(Number((_c = res === null || res === void 0 ? void 0 : res.id_poliza) !== null && _c !== void 0 ? _c : id), movs);
+                // Asegura id_periodo numérico
                 var idPeriodoRaw = Number(res === null || res === void 0 ? void 0 : res.id_periodo);
                 var idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
                 _this.poliza = {
@@ -413,17 +451,16 @@ var PolizaEditarComponent = /** @class */ (function () {
                     id_periodo: idPeriodo,
                     id_usuario: Number(res === null || res === void 0 ? void 0 : res.id_usuario),
                     id_centro: Number(res === null || res === void 0 ? void 0 : res.id_centro),
-                    folio: String((_b = res === null || res === void 0 ? void 0 : res.folio) !== null && _b !== void 0 ? _b : ''),
-                    concepto: String((_c = res === null || res === void 0 ? void 0 : res.concepto) !== null && _c !== void 0 ? _c : ''),
+                    folio: String((_d = res === null || res === void 0 ? void 0 : res.folio) !== null && _d !== void 0 ? _d : ''),
+                    concepto: String((_f = res === null || res === void 0 ? void 0 : res.concepto) !== null && _f !== void 0 ? _f : ''),
                     movimientos: movs,
                     estado: res === null || res === void 0 ? void 0 : res.estado,
                     fecha_creacion: res === null || res === void 0 ? void 0 : res.fecha_creacion,
                     created_at: res === null || res === void 0 ? void 0 : res.created_at,
                     updated_at: res === null || res === void 0 ? void 0 : res.updated_at
                 };
-                // Reaplica filtro para reflejar el periodo actual en el select
                 _this.applyPeriodoFilter();
-                _this.cuentasFiltradas = new Array(((_d = _this.poliza.movimientos) === null || _d === void 0 ? void 0 : _d.length) || 0).fill([]);
+                _this.cuentasFiltradas = new Array(((_g = _this.poliza.movimientos) === null || _g === void 0 ? void 0 : _g.length) || 0).fill([]);
                 _this.prefillCuentaQueries();
             },
             error: function (err) {
@@ -437,7 +474,10 @@ var PolizaEditarComponent = /** @class */ (function () {
     };
     PolizaEditarComponent.prototype.normalizeMovimiento = function (m) {
         var _a, _b, _c, _d, _f, _g;
-        return __assign({ id_cuenta: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.id_cuenta), ref_serie_venta: (_a = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.ref_serie_venta)) !== null && _a !== void 0 ? _a : '', operacion: ((_b = m === null || m === void 0 ? void 0 : m.operacion) !== null && _b !== void 0 ? _b : '').toString(), monto: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.monto), cliente: (_c = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.cliente)) !== null && _c !== void 0 ? _c : '', fecha: (_d = this.toDateOrNull(m === null || m === void 0 ? void 0 : m.fecha)) !== null && _d !== void 0 ? _d : '', cc: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.cc), uuid: (_f = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.uuid)) !== null && _f !== void 0 ? _f : null, id_poliza: (_g = this.toNumOrNull(m === null || m === void 0 ? void 0 : m.id_poliza)) !== null && _g !== void 0 ? _g : undefined }, ((m === null || m === void 0 ? void 0 : m.id_movimiento) != null ? { id_movimiento: Number(m.id_movimiento) } : {}));
+        var base = __assign({ id_cuenta: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.id_cuenta), ref_serie_venta: (_a = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.ref_serie_venta)) !== null && _a !== void 0 ? _a : '', operacion: ((_b = m === null || m === void 0 ? void 0 : m.operacion) !== null && _b !== void 0 ? _b : '').toString(), monto: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.monto), cliente: (_c = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.cliente)) !== null && _c !== void 0 ? _c : '', fecha: (_d = this.toDateOrNull(m === null || m === void 0 ? void 0 : m.fecha)) !== null && _d !== void 0 ? _d : '', cc: this.toNumOrNull(m === null || m === void 0 ? void 0 : m.cc), uuid: (_f = this.toStrOrNull(m === null || m === void 0 ? void 0 : m.uuid)) !== null && _f !== void 0 ? _f : null, id_poliza: (_g = this.toNumOrNull(m === null || m === void 0 ? void 0 : m.id_poliza)) !== null && _g !== void 0 ? _g : undefined }, ((m === null || m === void 0 ? void 0 : m.id_movimiento) != null ? { id_movimiento: Number(m.id_movimiento) } : {}));
+        if (typeof (m === null || m === void 0 ? void 0 : m.orden) === 'number')
+            base.orden = Number(m.orden);
+        return base;
     };
     PolizaEditarComponent.prototype.puedeActualizar = function () {
         var _this = this;
@@ -458,7 +498,7 @@ var PolizaEditarComponent = /** @class */ (function () {
     };
     PolizaEditarComponent.prototype.actualizarPoliza = function () {
         var _this = this;
-        var _a, _b;
+        var _a, _b, _c, _d;
         if (!((_a = this.poliza) === null || _a === void 0 ? void 0 : _a.id_poliza)) {
             this.showToast({ type: 'warning', title: 'Aviso', message: 'No se encontró el ID de la póliza.' });
             return;
@@ -470,6 +510,14 @@ var PolizaEditarComponent = /** @class */ (function () {
             return;
         }
         var p = this.poliza;
+        ((_b = p.movimientos) !== null && _b !== void 0 ? _b : []).forEach(function (m, idx) { m.orden = idx; });
+        this.lastOrderMap.clear();
+        ((_c = p.movimientos) !== null && _c !== void 0 ? _c : []).forEach(function (m, idx) {
+            var _a;
+            var idMov = Number((_a = m) === null || _a === void 0 ? void 0 : _a.id_movimiento);
+            if (Number.isFinite(idMov))
+                _this.lastOrderMap.set(idMov, idx);
+        });
         var payloadHeader = {
             id_tipopoliza: this.toNumOrNull(p.id_tipopoliza),
             id_periodo: this.toNumOrNull(p.id_periodo),
@@ -479,7 +527,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             concepto: this.toStrOrNull(p.concepto)
         };
         console.log('Periodo seleccionado:', payloadHeader.id_periodo);
-        var movs = ((_b = p.movimientos) !== null && _b !== void 0 ? _b : []);
+        var movs = ((_d = p.movimientos) !== null && _d !== void 0 ? _d : []);
         var toUpdate = movs.filter(function (m) {
             var _a;
             return m.id_movimiento != null &&
@@ -504,7 +552,8 @@ var PolizaEditarComponent = /** @class */ (function () {
                 cliente: _this.toStrOrNull(m.cliente),
                 fecha: _this.toDateOrNull(m.fecha),
                 cc: _this.toNumOrNull(m.cc),
-                uuid: _this.toStrOrNull(m.uuid) // <-- CFDI UUID
+                uuid: _this.toStrOrNull(m.uuid),
+                orden: _this.toNumOrNull(m.orden)
             }).pipe(rxjs_1.catchError(function (err) { return rxjs_1.throwError(function () {
                 var _a;
                 return _this.annotateError(err, {
@@ -523,7 +572,8 @@ var PolizaEditarComponent = /** @class */ (function () {
                 cliente: _this.toStrOrNull(m.cliente),
                 fecha: _this.toDateOrNull(m.fecha),
                 cc: _this.toNumOrNull(m.cc),
-                uuid: _this.toStrOrNull(m.uuid) // <-- CFDI UUID
+                uuid: _this.toStrOrNull(m.uuid),
+                orden: _this.toNumOrNull(m.orden)
             }).pipe(rxjs_1.catchError(function (err) { return rxjs_1.throwError(function () {
                 var _a;
                 return _this.annotateError(err, {
@@ -532,9 +582,29 @@ var PolizaEditarComponent = /** @class */ (function () {
                 });
             }); }));
         });
-        this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(rxjs_1.switchMap(function () {
+        this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(
+        //  Toast temprano apenas se registra el encabezado
+        rxjs_1.switchMap(function () {
+            _this.showToast({
+                type: 'success',
+                title: 'Encabezado actualizado',
+                message: 'Guardando movimientos…'
+            });
             var reqs = __spreadArrays(updateReqs, createReqs);
-            return reqs.length ? rxjs_1.forkJoin(reqs) : rxjs_1.of(null);
+            return (reqs.length
+                ? rxjs_1.from(reqs).pipe(
+                // ejecuta 1 por 1
+                rxjs_1.concatMap(function (obs, idx) { return obs.pipe(rxjs_1.tap(function () {
+                    _this.showToast({
+                        type: 'info',
+                        title: 'Guardando movimientos…',
+                        message: "Procesando " + (idx + 1) + " de " + reqs.length,
+                        autoCloseMs: 1200
+                    });
+                })); }), rxjs_1.finalize(function () {
+                    _this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
+                }))
+                : rxjs_1.of(null));
         })).subscribe({
             next: function () {
                 var msg = [
@@ -542,6 +612,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                     toUpdate.length ? " Movs actualizados: " + toUpdate.length + "." : '',
                     toCreate.length ? " Movs creados: " + toCreate.length + "." : ''
                 ].join('');
+                // Toast final
                 _this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
                 _this.cargarPoliza(_this.poliza.id_poliza);
             },
@@ -554,22 +625,19 @@ var PolizaEditarComponent = /** @class */ (function () {
             complete: function () { _this.updating = false; }
         });
     };
-    // =========================================================
     // Cuentas
-    // =========================================================
     PolizaEditarComponent.prototype.cargarCuentas = function () {
         var _this = this;
         this.cuentasSvc.getCuentas().subscribe({
             next: function (arr) {
                 var todas = Array.isArray(arr) ? arr : [];
-                // Mantén TODAS (posteables y no posteables) para que el modal vea la jerarquía completa
                 _this.cuentas = todas;
-                // 🔽 Ordenar por jerarquía padre→hijo
+                //  Ordenar por jerarquía padre→hijo
                 var _a = _this.ordenarYNivelarCuentas(_this.cuentas), list = _a.list, niveles = _a.niveles;
                 _this.cuentasOrdenadas = list;
                 _this.nivelById = niveles;
                 // Map para búsquedas por id (usa todas)
-                _this.cuentasMap.clear();
+                _this.cuentasMap.clear;
                 for (var _i = 0, _b = _this.cuentas; _i < _b.length; _i++) {
                     var c = _b[_i];
                     _this.cuentasMap.set(c.id, c);
@@ -579,7 +647,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             error: function (e) { return console.error('Cuentas:', e); }
         });
     };
-    /** Clave de orden: normaliza segmentos numéricos para 1,2,10 => 01,02,10 */
     PolizaEditarComponent.prototype.keyCodigo = function (codigo) {
         var s = (codigo !== null && codigo !== void 0 ? codigo : '').toString();
         return s
@@ -587,7 +654,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             .map(function (seg) { return (/^\d+$/.test(seg) ? seg.padStart(8, '0') : seg.toLowerCase()); })
             .join('');
     };
-    /** Ordena por jerarquía padre→hijos y devuelve lista aplanada + niveles */
+    /** Ordena por jerarquía padre e hijo */
     PolizaEditarComponent.prototype.ordenarYNivelarCuentas = function (todas) {
         var _this = this;
         var _a, _b;
@@ -615,7 +682,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         };
         roots.sort(sortFn);
         for (var _d = 0, children_1 = children; _d < children_1.length; _d++) {
-            var _f = children_1[_d], pid = _f[0], arr = _f[1];
+            var _f = children_1[_d], arr = _f[1];
             arr.sort(sortFn);
         }
         var out = [];
@@ -650,18 +717,17 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
+    PolizaEditarComponent.prototype.nextOrden = function () {
+        var _a;
+        var movs = (_a = this.poliza.movimientos) !== null && _a !== void 0 ? _a : [];
+        return movs.reduce(function (mx, m) { var _a; return Math.max(mx, Number((_a = m === null || m === void 0 ? void 0 : m.orden) !== null && _a !== void 0 ? _a : -1)); }, -1) + 1;
+    };
     PolizaEditarComponent.prototype.agregarMovimiento = function () {
         var _a;
         var nuevo = {
-            id_cuenta: null,
-            ref_serie_venta: '',
-            operacion: '',
-            monto: null,
-            cliente: '',
-            fecha: '',
-            cc: null,
-            uuid: null,
-            _cuentaQuery: ''
+            id_cuenta: null, ref_serie_venta: '', operacion: '',
+            monto: null, cliente: '', fecha: '', cc: null, uuid: null,
+            _cuentaQuery: '', orden: this.nextOrden()
         };
         ((_a = this.poliza.movimientos) !== null && _a !== void 0 ? _a : ) = [];
         push(nuevo);
@@ -695,11 +761,13 @@ var PolizaEditarComponent = /** @class */ (function () {
         var idMov = (_b = mov) === null || _b === void 0 ? void 0 : _b.id_movimiento;
         this.deletingIndexSet.add(i);
         var finish = function () {
-            var _a;
+            var _a, _b;
             ((_a = _this.poliza.movimientos) !== null && _a !== void 0 ? _a : ) = [];
             splice(i, 1);
             _this.cuentasFiltradas.splice(i, 1);
             _this.deletingIndexSet["delete"](i);
+            // Re-normaliza el 'orden' tras eliminar
+            ((_b = _this.poliza.movimientos) !== null && _b !== void 0 ? _b : []).forEach(function (m, idx) { m.orden = idx; });
         };
         if (!idMov) {
             finish();
@@ -719,7 +787,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
-    //cfdi recientesm
+    //cfdi recientes
     PolizaEditarComponent.prototype.cargarCfdiRecientes = function () {
         var _this = this;
         var _a, _b;
@@ -752,7 +820,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             });
         }
         else {
-            // FIX: quitar el guion accidental y consultar al endpoint correcto
             this.http.get(this.apiBase + "/cfdis?limit=100").subscribe({
                 next: function (r) {
                     var _a, _b, _c, _d;
@@ -770,7 +837,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         input.value = '';
         input.click();
     };
-    // Usa tu servicio: uploadCfdiXml(file, { folio, id_periodo, id_centro, id_tipopoliza })
     PolizaEditarComponent.prototype.onXmlPickedForMovimiento = function (event, index) {
         var _a, _b, _c, _d, _f, _g, _h, _j, _k;
         return __awaiter(this, void 0, Promise, function () {
@@ -819,7 +885,6 @@ var PolizaEditarComponent = /** @class */ (function () {
                                 index = {}[0];
                             }
                             movs[index].uuid = uuid_1;
-                            // Mantén catálogo de recientes en UI
                             if (!this.cfdiOptions.some(function (x) { return x.uuid === uuid_1; })) {
                                 this.cfdiOptions = __spreadArrays([{ uuid: uuid_1 }], this.cfdiOptions).slice(0, 100);
                             }
@@ -855,7 +920,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             return;
         var uuid = this.uuidSeleccionado;
         mov.uuid = uuid;
-        // Si ya está persistido, vincula en servidor
         var idMov = Number(mov === null || mov === void 0 ? void 0 : mov.id_movimiento);
         if (Number.isFinite(idMov) && ((_b = this.poliza) === null || _b === void 0 ? void 0 : _b.id_poliza)) {
             this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, [idMov]).subscribe({
@@ -870,7 +934,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             });
         }
         else {
-            // Si no existe en BD, se enviará en el próximo create/update
             this.showToast({ type: 'info', title: 'UUID aplicado', message: "Se aplic\u00F3 " + uuid + ". Se guardar\u00E1 al actualizar la p\u00F3liza." });
         }
     };
@@ -888,9 +951,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
-    // =========================================================
     // Centros de costo
-    // =========================================================
     PolizaEditarComponent.prototype.getCentros = function () {
         var _this = this;
         var svc = this.api;
@@ -936,7 +997,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         var serie = (_b = (_a = cc) === null || _a === void 0 ? void 0 : _a.serie_venta) !== null && _b !== void 0 ? _b : null;
         return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
     };
-    // ⬇️ Helpers de error
+    // Helpers de error
     PolizaEditarComponent.prototype.extractHttpErrorMessage = function (err) {
         var _a, _b, _c;
         var e = err || {};
@@ -956,7 +1017,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         }
         return msg;
     };
-    /** Crea un error anotado con contexto del movimiento (índice/uuid/id_movimiento) */
     PolizaEditarComponent.prototype.annotateError = function (err, ctx) {
         var normalized = new Error(this.extractHttpErrorMessage(err));
         normalized.__ctx = ctx;
@@ -992,6 +1052,388 @@ var PolizaEditarComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    // }UTIL: descarga de archivos 
+    PolizaEditarComponent.prototype.descargarBlob = function (blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+    PolizaEditarComponent.prototype.xmlEscape = function (s) {
+        var str = (s !== null && s !== void 0 ? s : '').toString();
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    };
+    PolizaEditarComponent.prototype.buildPolizaXMLInterno = function () {
+        var _this = this;
+        var p = this.poliza || {};
+        var movs = (p.movimientos || []);
+        var head = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            "<Poliza id=\"" + this.xmlEscape(p.id_poliza) + "\" folio=\"" + this.xmlEscape(p.folio) + "\"",
+            "        tipo=\"" + this.xmlEscape(p.id_tipopoliza) + "\" periodo=\"" + this.xmlEscape(p.id_periodo) + "\"",
+            "        centro=\"" + this.xmlEscape(p.id_centro) + "\" usuario=\"" + this.xmlEscape(p.id_usuario) + "\">",
+            "  <Concepto>" + this.xmlEscape(p.concepto) + "</Concepto>",
+            "  <FechaCreacion>" + this.xmlEscape(p.fecha_creacion || p.created_at) + "</FechaCreacion>",
+            "  <Movimientos>"
+        ].join('\n');
+        var body = movs.map(function (m, i) { return [
+            "    <Movimiento index=\"" + (i + 1) + "\">",
+            "      <Cuenta id=\"" + _this.xmlEscape(m.id_cuenta) + "\"/>",
+            "      <Operacion>" + _this.xmlEscape(m.operacion) + "</Operacion>",
+            "      <Monto>" + _this.xmlEscape(m.monto) + "</Monto>",
+            "      <Cliente>" + _this.xmlEscape(m.cliente) + "</Cliente>",
+            "      <Fecha>" + _this.xmlEscape(m.fecha) + "</Fecha>",
+            "      <CentroCosto>" + _this.xmlEscape(m.cc) + "</CentroCosto>",
+            "      <RefSerieVenta>" + _this.xmlEscape(m.ref_serie_venta) + "</RefSerieVenta>",
+            "      <UUID>" + _this.xmlEscape(m.uuid) + "</UUID>",
+            "    </Movimiento>"
+        ].join('\n'); }).join('\n');
+        var tail = [
+            "  </Movimientos>",
+            "</Poliza>"
+        ].join('\n');
+        return head + "\n" + body + "\n" + tail + "\n";
+    };
+    PolizaEditarComponent.prototype.ensureCuentasIndex = function () {
+        var _a, _b, _c, _d, _f, _g, _h, _j, _k;
+        if (this.cuentasIndex)
+            return;
+        var src = this.cuentas || this.allCuentas || [];
+        this.cuentasIndex = {};
+        for (var _i = 0, _l = src || []; _i < _l.length; _i++) {
+            var c = _l[_i];
+            var id = (_c = (_b = (_a = c.id_cuenta) !== null && _a !== void 0 ? _a : c.id) !== null && _b !== void 0 ? _b : c.pk) !== null && _c !== void 0 ? _c : c.codigo;
+            var codigo = (_g = (_f = (_d = c.codigo) !== null && _d !== void 0 ? _d : c.code) !== null && _f !== void 0 ? _f : c.clave) !== null && _g !== void 0 ? _g : String(id !== null && id !== void 0 ? id : '');
+            var nombre = (_k = (_j = (_h = c.nombre) !== null && _h !== void 0 ? _h : c.descripcion) !== null && _j !== void 0 ? _j : c.name) !== null && _k !== void 0 ? _k : '';
+            if (id != null)
+                this.cuentasIndex[id] = { codigo: String(codigo), nombre: nombre || undefined };
+        }
+    };
+    PolizaEditarComponent.prototype.resolvePolizaNombre = function (p) {
+        var _a, _b, _c, _d, _f, _g;
+        var folio = (_b = (_a = p === null || p === void 0 ? void 0 : p.folio) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.id_poliza) !== null && _b !== void 0 ? _b : '';
+        return ((_g = (_f = (_d = (_c = p === null || p === void 0 ? void 0 : p.nombre) !== null && _c !== void 0 ? _c : p === null || p === void 0 ? void 0 : p.titulo) !== null && _d !== void 0 ? _d : p === null || p === void 0 ? void 0 : p.descripcion) !== null && _f !== void 0 ? _f : p === null || p === void 0 ? void 0 : p.concepto) !== null && _g !== void 0 ? _g : (folio ? "P\u00F3liza " + folio : 'Póliza'));
+    };
+    //  PERIODO: relación o fallback por id 
+    PolizaEditarComponent.prototype.periodoLabelById = function (id) {
+        var _a, _b;
+        if (!Number.isFinite(Number(id)))
+            return '';
+        var p = this.allPeriodos.find(function (x) { return Number(x.id_periodo) === Number(id); });
+        if (!p)
+            return '';
+        var ini = (_a = p.fecha_inicio) !== null && _a !== void 0 ? _a : '—';
+        var fin = (_b = p.fecha_fin) !== null && _b !== void 0 ? _b : '—';
+        return ini + " \u2014 " + fin;
+    };
+    PolizaEditarComponent.prototype.resolvePeriodoRango = function (p) {
+        var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l;
+        var per = (_b = (_a = p === null || p === void 0 ? void 0 : p.Periodo) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.periodo) !== null && _b !== void 0 ? _b : {};
+        var ini = (_g = (_f = (_d = (_c = per === null || per === void 0 ? void 0 : per.fecha_inicio) !== null && _c !== void 0 ? _c : per === null || per === void 0 ? void 0 : per.inicio) !== null && _d !== void 0 ? _d : p === null || p === void 0 ? void 0 : p.periodo_inicio) !== null && _f !== void 0 ? _f : p === null || p === void 0 ? void 0 : p.fecha_inicio) !== null && _g !== void 0 ? _g : null;
+        var fin = (_l = (_k = (_j = (_h = per === null || per === void 0 ? void 0 : per.fecha_fin) !== null && _h !== void 0 ? _h : per === null || per === void 0 ? void 0 : per.fin) !== null && _j !== void 0 ? _j : p === null || p === void 0 ? void 0 : p.periodo_fin) !== null && _k !== void 0 ? _k : p === null || p === void 0 ? void 0 : p.fecha_fin) !== null && _l !== void 0 ? _l : null;
+        var iniF = ini ? this.fmtDate(ini) : '';
+        var finF = fin ? this.fmtDate(fin) : '';
+        if (iniF || finF) {
+            if (!iniF && finF)
+                return "\u2014 " + finF;
+            if (iniF && !finF)
+                return iniF + " \u2014";
+            return iniF + " \u2014 " + finF;
+        }
+        // Fallback por id_periodo
+        return this.periodoLabelById(this.toNumOrNull(p === null || p === void 0 ? void 0 : p.id_periodo));
+    };
+    PolizaEditarComponent.prototype.resolveCuenta = function (m) {
+        var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+        this.ensureCuentasIndex();
+        var fromMovCodigo = (_g = (_d = (_c = (_b = (_a = m === null || m === void 0 ? void 0 : m.cuenta) === null || _a === void 0 ? void 0 : _a.codigo) !== null && _b !== void 0 ? _b : m === null || m === void 0 ? void 0 : m.codigo_cuenta) !== null && _c !== void 0 ? _c : m === null || m === void 0 ? void 0 : m.cuenta_codigo) !== null && _d !== void 0 ? _d : (_f = m === null || m === void 0 ? void 0 : m.Cuenta) === null || _f === void 0 ? void 0 : _f.codigo) !== null && _g !== void 0 ? _g : null;
+        var fromMovNombre = (_m = (_k = (_j = (_h = m === null || m === void 0 ? void 0 : m.cuenta) === null || _h === void 0 ? void 0 : _h.nombre) !== null && _j !== void 0 ? _j : m === null || m === void 0 ? void 0 : m.cuenta_nombre) !== null && _k !== void 0 ? _k : (_l = m === null || m === void 0 ? void 0 : m.Cuenta) === null || _l === void 0 ? void 0 : _l.nombre) !== null && _m !== void 0 ? _m : null;
+        var fromIndex = ((m === null || m === void 0 ? void 0 : m.id_cuenta) != null && ((_o = this.cuentasIndex) === null || _o === void 0 ? void 0 : _o[m.id_cuenta])) ? this.cuentasIndex[m.id_cuenta] : undefined;
+        var codigo = String((_q = (_p = fromMovCodigo !== null && fromMovCodigo !== void 0 ? fromMovCodigo : fromIndex === null || fromIndex === void 0 ? void 0 : fromIndex.codigo) !== null && _p !== void 0 ? _p : m === null || m === void 0 ? void 0 : m.id_cuenta) !== null && _q !== void 0 ? _q : '');
+        var nombre = String((_r = fromMovNombre !== null && fromMovNombre !== void 0 ? fromMovNombre : fromIndex === null || fromIndex === void 0 ? void 0 : fromIndex.nombre) !== null && _r !== void 0 ? _r : '') || undefined;
+        return { codigo: codigo, nombre: nombre };
+    };
+    PolizaEditarComponent.prototype.cuentaEtiqueta = function (m) {
+        var _a = this.resolveCuenta(m), codigo = _a.codigo, nombre = _a.nombre;
+        return nombre ? codigo + " \u2014 " + nombre : codigo;
+    };
+    //  Helpers de presentación 
+    PolizaEditarComponent.prototype.fmtMoney = function (v) {
+        var n = Number(v !== null && v !== void 0 ? v : 0);
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(n);
+    };
+    PolizaEditarComponent.prototype.opLabel = function (op) {
+        return String(op) === '1' || op === 1 ? 'Abono' : 'Cargo';
+    };
+    PolizaEditarComponent.prototype.safeStr = function (v) { return (v !== null && v !== void 0 ? v : '').toString(); };
+    PolizaEditarComponent.prototype.buildTablaMovimientosPresentacion = function () {
+        var _this = this;
+        var _a, _b;
+        var movs = ((_b = (_a = this.poliza) === null || _a === void 0 ? void 0 : _a.movimientos) !== null && _b !== void 0 ? _b : []);
+        return movs.map(function (m, i) {
+            var _a, _b;
+            var codigo = _this.resolveCuenta(m).codigo;
+            return {
+                '#': i + 1,
+                'Cuenta': codigo,
+                'Operación': _this.opLabel(m.operacion),
+                'Monto': Number((_a = m.monto) !== null && _a !== void 0 ? _a : 0),
+                'Cliente / Concepto': _this.safeStr(m.cliente || m.concepto),
+                'Fecha': _this.fmtDate(m.fecha),
+                'CC': (_b = m.cc) !== null && _b !== void 0 ? _b : '',
+                'Serie Venta': _this.safeStr(m.ref_serie_venta),
+                'UUID': _this.safeStr(m.uuid)
+            };
+        });
+    };
+    PolizaEditarComponent.prototype.ensureTiposPolizaIndex = function () {
+        var _a, _b, _c, _d, _f;
+        if (this.tiposPolizaIndex)
+            return;
+        var src = this.tiposPoliza || this.catalogoTipos || [];
+        this.tiposPolizaIndex = {};
+        for (var _i = 0, _g = src || []; _i < _g.length; _i++) {
+            var t = _g[_i];
+            var id = (_b = (_a = t.id_tipopoliza) !== null && _a !== void 0 ? _a : t.id) !== null && _b !== void 0 ? _b : t.pk;
+            var desc = (_f = (_d = (_c = t.descripcion) !== null && _c !== void 0 ? _c : t.nombre) !== null && _d !== void 0 ? _d : t.label) !== null && _f !== void 0 ? _f : '';
+            if (id != null)
+                this.tiposPolizaIndex[id] = String(desc || id);
+        }
+    };
+    PolizaEditarComponent.prototype.resolveTipoLabel = function (p) {
+        var _a, _b, _c, _d, _f, _g;
+        var fromRel = (_d = (_b = (_a = p === null || p === void 0 ? void 0 : p.TipoPoliza) === null || _a === void 0 ? void 0 : _a.descripcion) !== null && _b !== void 0 ? _b : (_c = p === null || p === void 0 ? void 0 : p.TipoPoliza) === null || _c === void 0 ? void 0 : _c.nombre) !== null && _d !== void 0 ? _d : null;
+        this.ensureTiposPolizaIndex();
+        var fromIdx = ((p === null || p === void 0 ? void 0 : p.id_tipopoliza) != null) ? (_f = this.tiposPolizaIndex) === null || _f === void 0 ? void 0 : _f[p.id_tipopoliza] : null;
+        return fromRel || fromIdx || String((_g = p === null || p === void 0 ? void 0 : p.id_tipopoliza) !== null && _g !== void 0 ? _g : '');
+    };
+    PolizaEditarComponent.prototype.headerPolizaProfesional = function () {
+        var _a, _b, _c, _d;
+        var p = this.poliza || {};
+        return {
+            'Póliza': this.resolvePolizaNombre(p),
+            'Folio': (_a = p.folio) !== null && _a !== void 0 ? _a : '',
+            'Tipo': this.resolveTipoLabel(p),
+            'Periodo': this.resolvePeriodoRango(p),
+            'Centro (id_centro)': (_b = p.id_centro) !== null && _b !== void 0 ? _b : '',
+            'Usuario (id_usuario)': (_c = p.id_usuario) !== null && _c !== void 0 ? _c : '',
+            'Concepto': (_d = p.concepto) !== null && _d !== void 0 ? _d : '',
+            'Fecha creación': this.fmtDate(p.fecha_creacion || p.created_at || '')
+        };
+    };
+    PolizaEditarComponent.prototype.buildHeaderPairs = function (headerObj) {
+        var entries = Object.entries(headerObj).map(function (_a) {
+            var k = _a[0], v = _a[1];
+            return [k, String(v)];
+        });
+        var rows = [];
+        for (var i = 0; i < entries.length; i += 2) {
+            var a = entries[i];
+            var b = entries[i + 1] || ['', ''];
+            rows.push([a[0], a[1], b[0], b[1]]);
+        }
+        return rows;
+    };
+    PolizaEditarComponent.prototype.exportarPDFPoliza = function () {
+        var _a, _b, _c, _d, _f;
+        return __awaiter(this, void 0, void 0, function () {
+            var _g, jsPDF, autoTable, doc_1, left_1, top, line, folioTxt, hoy, headerPairs, data, startY, finalY, cargos, abonos, dif, folio, e_1;
+            var _this = this;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
+                    case 0:
+                        _h.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, Promise.all([
+                                Promise.resolve().then(function () { return require('jspdf'); }),
+                                Promise.resolve().then(function () { return require('jspdf-autotable'); }),
+                            ])];
+                    case 1:
+                        _g = _h.sent(), jsPDF = _g[0]["default"], autoTable = _g[1];
+                        doc_1 = new jsPDF({ unit: 'pt', format: 'a4' });
+                        left_1 = 40, top = 40, line = 18;
+                        folioTxt = String(((_a = this.poliza) === null || _a === void 0 ? void 0 : _a.folio) || ((_b = this.poliza) === null || _b === void 0 ? void 0 : _b.id_poliza) || '');
+                        doc_1.setFont('helvetica', 'bold');
+                        doc_1.setFontSize(16);
+                        doc_1.text("P\u00F3liza " + folioTxt, left_1, top);
+                        doc_1.setFont('helvetica', 'normal');
+                        doc_1.setFontSize(10);
+                        hoy = new Date();
+                        doc_1.text("Generado: " + new Intl.DateTimeFormat('es-MX', {
+                            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        }).format(hoy), left_1, top + line);
+                        headerPairs = this.buildHeaderPairs(this.headerPolizaProfesional());
+                        autoTable["default"](doc_1, {
+                            startY: top + line * 2,
+                            head: [['Campo', 'Valor', 'Campo', 'Valor']],
+                            body: headerPairs,
+                            styles: { fontSize: 9, cellPadding: 6, overflow: 'linebreak' },
+                            headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
+                            theme: 'striped',
+                            columnStyles: {
+                                0: { cellWidth: 90 },
+                                1: { cellWidth: 165 },
+                                2: { cellWidth: 90 },
+                                3: { cellWidth: 170 }
+                            },
+                            margin: { left: left_1, right: left_1 }
+                        });
+                        data = this.buildTablaMovimientosPresentacion();
+                        startY = ((_c = doc_1.lastAutoTable) === null || _c === void 0 ? void 0 : _c.finalY) ? doc_1.lastAutoTable.finalY + 18 : 160;
+                        autoTable["default"](doc_1, {
+                            startY: startY,
+                            head: [['#', 'Cuenta', 'Operación', 'Monto', 'Cliente / Concepto', 'Fecha', 'CC', 'Serie Venta', 'UUID']],
+                            body: data.map(function (r) { return [
+                                r['#'], r['Cuenta'], r['Operación'], _this.fmtMoney(r['Monto']),
+                                r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
+                            ]; }),
+                            styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
+                            headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
+                            theme: 'striped',
+                            columnStyles: {
+                                0: { halign: 'right', cellWidth: 22 },
+                                1: { cellWidth: 60 },
+                                2: { cellWidth: 50 },
+                                3: { halign: 'right', cellWidth: 58 },
+                                4: { cellWidth: 140 },
+                                5: { cellWidth: 50 },
+                                6: { cellWidth: 32 },
+                                7: { cellWidth: 56 },
+                                8: { cellWidth: 47 }
+                            },
+                            margin: { left: left_1, right: left_1 },
+                            didDrawPage: function () {
+                                var page = doc_1.getCurrentPageInfo().pageNumber + " / " + doc_1.getNumberOfPages();
+                                doc_1.setFontSize(9);
+                                doc_1.setTextColor(120);
+                                doc_1.text(page, doc_1.internal.pageSize.getWidth() - left_1, doc_1.internal.pageSize.getHeight() - 20, { align: 'right' });
+                            }
+                        });
+                        finalY = (_f = (_d = doc_1.lastAutoTable) === null || _d === void 0 ? void 0 : _d.finalY) !== null && _f !== void 0 ? _f : startY;
+                        doc_1.setFont('helvetica', 'bold');
+                        doc_1.setFontSize(10);
+                        cargos = this.fmtMoney(this.getTotal('0'));
+                        abonos = this.fmtMoney(this.getTotal('1'));
+                        dif = this.fmtMoney(this.getDiferencia());
+                        doc_1.text("Cargos: " + cargos + "   Abonos: " + abonos + "   Diferencia: " + dif, left_1, finalY + 16);
+                        folio = folioTxt.replace(/[^\w-]+/g, '_');
+                        doc_1.save("Poliza-" + (folio || 'sin_folio') + ".pdf");
+                        this.showToast({ type: 'success', title: 'PDF', message: 'PDF exportado correctamente.' });
+                        return [3 /*break*/, 3];
+                    case 2:
+                        e_1 = _h.sent();
+                        this.showToast({ type: 'error', title: 'Error', message: (e_1 === null || e_1 === void 0 ? void 0 : e_1.message) || 'No se pudo exportar PDF.' });
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    PolizaEditarComponent.prototype.exportarExcelPoliza = function () {
+        var _a, _b, _c;
+        return __awaiter(this, void 0, void 0, function () {
+            var XLSX, folio, hojaNombre, H, headerPairs, entries, i, a, b, movs, movHeader, movBody, aoa, ws_1, headerStartRow, headerRows, sepRow, movHeaderRow, firstDataRow, lastDataRow, r, cell, cargos, abonos, dif, totalsRow, wb, XLSXMime, wbout, blob, e_2;
+            return __generator(this, function (_d) {
+                switch (_d.label) {
+                    case 0:
+                        _d.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, Promise.resolve().then(function () { return require('xlsx'); })];
+                    case 1:
+                        XLSX = _d.sent();
+                        folio = String(((_a = this.poliza) === null || _a === void 0 ? void 0 : _a.folio) || "poliza-" + ((_c = (_b = this.poliza) === null || _b === void 0 ? void 0 : _b.id_poliza) !== null && _c !== void 0 ? _c : '')).replace(/[^\w-]+/g, '_');
+                        hojaNombre = "P\u00F3liza " + (folio || 'sin_folio');
+                        H = this.headerPolizaProfesional();
+                        headerPairs = [['Campo', 'Valor', 'Campo', 'Valor']];
+                        entries = Object.entries(H).map(function (_a) {
+                            var k = _a[0], v = _a[1];
+                            return [k, String(v)];
+                        });
+                        for (i = 0; i < entries.length; i += 2) {
+                            a = entries[i];
+                            b = entries[i + 1] || ['', ''];
+                            headerPairs.push([a[0], a[1], b[0], b[1]]);
+                        }
+                        movs = this.buildTablaMovimientosPresentacion();
+                        movHeader = ['#', 'Cuenta', 'Operación', 'Monto', 'Cliente / Concepto', 'Fecha', 'CC', 'Serie Venta', 'UUID'];
+                        movBody = movs.map(function (r) { return [
+                            r['#'], r['Cuenta'], r['Operación'], Number(r['Monto']),
+                            r['Cliente / Concepto'], r['Fecha'], r['CC'], r['Serie Venta'], r['UUID']
+                        ]; });
+                        aoa = __spreadArrays([
+                            ["P\u00F3liza " + (folio || '')],
+                            []
+                        ], headerPairs, [
+                            [],
+                            movHeader
+                        ], movBody);
+                        ws_1 = XLSX.utils.aoa_to_sheet(aoa);
+                        ws_1['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
+                        ws_1['!cols'] = [
+                            { wch: 4 },
+                            { wch: 16 },
+                            { wch: 12 },
+                            { wch: 14 },
+                            { wch: 44 },
+                            { wch: 12 },
+                            { wch: 8 },
+                            { wch: 16 },
+                            { wch: 40 },
+                        ];
+                        headerStartRow = 3;
+                        headerRows = headerPairs.length;
+                        sepRow = headerStartRow + headerRows;
+                        movHeaderRow = sepRow + 1;
+                        firstDataRow = movHeaderRow + 1;
+                        lastDataRow = movHeaderRow + movBody.length;
+                        for (r = firstDataRow; r <= lastDataRow; r++) {
+                            cell = ws_1["D" + r];
+                            if (cell)
+                                cell.z = '"$"#,##0.00';
+                        }
+                        if (movBody.length > 0)
+                            ws_1['!autofilter'] = { ref: "A" + movHeaderRow + ":I" + lastDataRow };
+                        ws_1['!freeze'] = { xSplit: 0, ySplit: movHeaderRow };
+                        cargos = this.getTotal('0');
+                        abonos = this.getTotal('1');
+                        dif = this.getDiferencia();
+                        totalsRow = lastDataRow + 2;
+                        XLSX.utils.sheet_add_aoa(ws_1, [
+                            ['Totales'],
+                            ['Cargos', cargos],
+                            ['Abonos', abonos],
+                            ['Diferencia', dif],
+                        ], { origin: "A" + totalsRow });
+                        ['B' + (totalsRow + 1), 'B' + (totalsRow + 2), 'B' + (totalsRow + 3)].forEach(function (addr) {
+                            var c = ws_1[addr];
+                            if (c)
+                                c.z = '"$"#,##0.00';
+                        });
+                        wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws_1, hojaNombre);
+                        XLSXMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                        wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                        blob = new Blob([wbout], { type: XLSXMime });
+                        this.descargarBlob(blob, "Poliza-" + (folio || 'sin_folio') + ".xlsx");
+                        this.showToast({ type: 'success', title: 'Excel', message: 'Excel exportado correctamente.' });
+                        return [3 /*break*/, 3];
+                    case 2:
+                        e_2 = _d.sent();
+                        this.showToast({ type: 'error', title: 'Error', message: (e_2 === null || e_2 === void 0 ? void 0 : e_2.message) || 'No se pudo exportar Excel.' });
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    // Modal cuentas
     PolizaEditarComponent.prototype.abrirModalCuentas = function (index) {
         this.indiceMovimientoSeleccionado = index;
         this.modalCuentasAbierto = true;
@@ -1056,9 +1498,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.cuentasFiltradas[i] = [];
         this.cuentaOpenIndex = null;
     };
-    // =========================================================
     // Helpers
-    // =========================================================
     PolizaEditarComponent.prototype.getTotal = function (tipo) {
         var _a;
         var movs = Array.isArray((_a = this.poliza) === null || _a === void 0 ? void 0 : _a.movimientos) ? this.poliza.movimientos : [];
@@ -1147,9 +1587,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             this.toast.position = opts.position;
         this.toast.open = true;
     };
-    // =========================================================
     // Usuario actual
-    // =========================================================
     PolizaEditarComponent.prototype.normalizeUsuario = function (u) {
         var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3;
         if (!u || typeof u !== 'object')
