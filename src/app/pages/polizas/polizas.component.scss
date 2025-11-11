@@ -344,6 +344,16 @@
   min-width: 160px;
 }
 
+.tabla-movimientos td.cell-cuenta {
+  text-align: left !important;
+}
+
+.tabla-movimientos td.cell-cuenta > button.btn {
+  justify-content: flex-start !important;
+  text-align: left;
+  width: 100%;
+}
+
 .tabla-movimientos .cell-cuenta .hint {
   margin-left: 8px;
   font-size: 0.8rem;

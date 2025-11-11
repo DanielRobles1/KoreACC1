@@ -874,6 +874,13 @@ export class EmpresaComponent implements OnInit {
               this.ejercicios = [...this.ejercicios, saved];
               this.setEjercicioSeleccionado(saved);
               this.openSuccess('Ejercicio creado.');
+
+              this.modalPeriodoTitle = 'Crear período';
+              this.editPeriodoId = null;
+              this.autoCreate = true;
+              this.autoCreateTipo = 'MENSUAL';
+              this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
+              Promise.resolve().then(() => this.modalPeriodoOpen = true);
             }
           },
           error: (err) => this.openError('No se pudo guardar el ejercicio', err),

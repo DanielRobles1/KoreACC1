@@ -77,7 +77,7 @@
       <div *ngIf="editing" class="pill">Editando: {{ tipoEditando?.descripcion }}</div>
 
       <div class="form-row">
-        <label>Naturaleza *</label>
+        <label>Naturaleza de póliza *</label>
         <select formControlName="naturaleza">
           <option value="" disabled>— Selecciona —</option>
           <option *ngFor="let n of naturalezas" [value]="n">{{ n | titlecase }}</option>
@@ -85,7 +85,7 @@
       </div>
 
       <div class="form-row">
-        <label>Descripción *</label>
+        <label>Descripción de la póliza *</label>
         <input formControlName="descripcion" placeholder="p. ej. Póliza de ventas" />
       </div>
 

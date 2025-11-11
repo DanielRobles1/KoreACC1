@@ -635,6 +635,14 @@ export class PolizasComponent implements OnInit {
     return sel ? [{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }, ...base] : base;
   }
 
+  private isAbierto(e: any): boolean {
+    const v = e?.esta_abierto ?? e?.activo ?? e?.activo_flag ?? e?.is_open;
+    if (v === true || v === 1 || v === '1') return true;
+    if (typeof v === 'string') return v.trim().toLowerCase() === 'true';
+    return false;
+  }
+
+
   private cargarEjercicioActivo(): void {
     const svc: any = this.api as any;
     const fn =
@@ -660,18 +668,7 @@ export class PolizasComponent implements OnInit {
         const items = isList ? this.normalizeList(r) : [r];
 
         // Solo incluir ejercicios abiertos o activos
-        this.ejercicios = items.filter((e: any) => {
-          const activoFlag = e.activo === true || e.activo === 1 || e.activo === '1' || e.activo_flag === 1 || e.esta_abierto === true;
-          const hoy = new Date().toISOString().slice(0, 10);
-
-          const fiRaw = e.fecha_inicio ?? e.inicio ?? e.fechaInicio ?? e.inicio_ejercicio;
-          const ffRaw = e.fecha_fin ?? e.fin ?? e.fechaFin ?? e.fin_ejercicio;
-          const fi = this.fmtDate(fiRaw);
-          const ff = this.fmtDate(ffRaw);
-
-          const dentroDeFechas = !!(fi && ff && fi <= hoy && hoy <= ff);
-          return activoFlag || dentroDeFechas;
-        });
+        this.ejercicios = items.filter((e: any) => this.isAbierto(e));
 
         const seleccionado = items.find((e: any) => e.is_selected) ?? items[0];
         if (seleccionado) this.ejercicioActualId = Number(seleccionado.id_ejercicio ?? seleccionado.id);
@@ -682,33 +679,26 @@ export class PolizasComponent implements OnInit {
           return;
         }
 
-        let elegido = items.find((e: any) => e?.is_selected) ??
-          items.find((e: any) => {
-            const hoy = new Date().toISOString().slice(0, 10);
-            const fi = this.fmtDate(e?.fecha_inicio ?? e?.inicio);
-            const ff = this.fmtDate(e?.fecha_fin ?? e?.fin);
-            return fi <= hoy && hoy <= ff;
-          }) ?? items[0];
+        const elegido =
+          this.ejercicios.find(e => e.is_selected) ??
+          this.ejercicios[0] ?? null;
 
         if (!elegido) {
-          console.warn('⚠ No se encontró ejercicio activo.');
           this.ejercicioActual = null;
+          this.ejercicioActualId = undefined as any;
+          this.showToast({ type: 'info', title: 'Sin ejercicios abiertos', message: 'No hay ejercicios abiertos para seleccionar.' });
+          this.periodos = [];
           return;
         }
 
         this.ejercicioActual = {
-          id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? elegido.ID ?? 0),
-          nombre: String(
-            elegido.nombre ??
-            elegido.descripcion ??
-            elegido.year ??
-            elegido.ejercicio ??
-            ''
-          ).trim() || `Ejercicio ${elegido.id_ejercicio ?? ''}`,
+          id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? 0),
+          nombre: String(elegido.nombre ?? elegido.descripcion ?? `Ejercicio ${elegido.id_ejercicio ?? ''}`).trim(),
           fecha_inicio: this.fmtDate(elegido.fecha_inicio ?? elegido.inicio),
           fecha_fin: this.fmtDate(elegido.fecha_fin ?? elegido.fin),
-          activo: Boolean(elegido.activo ?? elegido.esta_abierto)
+          activo: true
         };
+        this.ejercicioActualId = this.ejercicioActual.id_ejercicio;
 
         console.log(' Ejercicio elegido:', this.ejercicioActual);
 
