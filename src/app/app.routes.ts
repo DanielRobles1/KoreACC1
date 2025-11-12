@@ -1,4 +1,3 @@
-// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { UsuariosComponent } from './pages/usuarios/usuarios/usuarios.component';
@@ -17,6 +16,7 @@ import { CatalogCentrosComponent } from './pages/catalog-centros/catalog-centros
 import { PolizasComponent } from './pages/polizas/polizas.component';
 import { PolizaHomeComponent } from './pages/poliza-home/poliza-home.component';
 import { PolizaEditarComponent } from './pages/poliza-editar/poliza-editar.component';
+import { BalanzaComprobacionComponent } from './pages/balanza-comprobacion/balanza-comprobacion.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -67,13 +67,13 @@ export const routes: Routes = [
     component: CatalogCentrosComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
- },
+},
  {
    path: 'polizas',
     component: PolizasComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
- },
+},
 {
   path: 'polizas/editar/:id',
   component: PolizaEditarComponent
@@ -83,6 +83,12 @@ export const routes: Routes = [
     component: PolizaHomeComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
- },
+},
+{
+   path: 'balanza-comprobacion',
+    component: BalanzaComprobacionComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {perms: ['consultar_empresa']}
+},
   { path: '**', redirectTo: 'login' }
 ];

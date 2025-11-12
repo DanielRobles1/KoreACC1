@@ -344,6 +344,16 @@
   min-width: 160px;
 }
 
+.tabla-movimientos td.cell-cuenta {
+  text-align: left !important;
+}
+
+.tabla-movimientos td.cell-cuenta > button.btn {
+  justify-content: flex-start !important;
+  text-align: left;
+  width: 100%;
+}
+
 .tabla-movimientos .cell-cuenta .hint {
   margin-left: 8px;
   font-size: 0.8rem;
@@ -402,79 +412,6 @@
     .icon { font-size: 14px; line-height: 1; }
     .text { font-size: 14px; }
   }
-}
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.28rem 0.6rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.82rem;
-  line-height: 1;
-  border: 1px solid transparent;
-  transition: all 0.2s ease-in-out;
-}
-
-/* 🟡 Por revisar */
-.status-badge.warn {
-  background: #fff8e1;      /* amarillo muy suave */
-  color: #a87900;           /* texto dorado suave */
-  border-color: #ffe69b;    /* borde tenue */
-}
-
-/* 🟢 Aprobada */
-.status-badge.ok {
-  background: #e6f4ea;      /* verde muy claro */
-  color: #0a7a3b;           /* verde texto */
-  border-color: #b8e0c5;    /* borde verde claro */
-}
-
-.status-badge svg {
-  display: block;
-}
-.cuenta-cell { position: relative; }
-.combo { position: relative; }
-
-.combo-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: min(520px, 92vw);
-  max-height: 280px;
-  overflow: auto;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: .5rem;
-  box-shadow: 0 8px 24px rgba(2,6,23,.12);
-  z-index: 10;
-}
-
-.combo-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  padding: .5rem .6rem;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  font-size: .9rem;
-
-  &:hover { background: #f8fafc; }
-  .code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-weight: 700;
-    min-width: 82px;
-  }
-  .name { color: var(--muted); }
-}
-
-.cuenta-id {
-  margin-top: .25rem;
-  font-size: .75rem;
-  color: var(--muted);
 }
 
 /* Opcional: que no se pegue a la tabla */

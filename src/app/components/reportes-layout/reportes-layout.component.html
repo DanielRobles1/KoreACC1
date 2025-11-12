@@ -1,0 +1,41 @@
+<div class="layout" [class.is-closed]="!open">
+  <aside class="sidebar-area">
+    <app-sidebar [open]="open" (openChange)="onToggle($event)"></app-sidebar>
+  </aside>
+
+  <div class="main">
+    <div class="page-bg"></div>
+
+    <section class="report-header" *ngIf="empresa$ | async as emp">
+      <div class="empresa-main">
+        <h2 class="empresa-titulo">{{ emp.razon_social }}</h2>
+        <div class="empresa-meta">
+          <span><strong>RFC:</strong> {{ emp.rfc }}</span>
+          <span><strong>Domicilio:</strong> {{ emp.domicilio_fiscal }}</span>
+          <span><strong>Tel:</strong> {{ emp.telefono }}</span>
+          <span><strong>Correo:</strong> {{ emp.correo_contacto }}</span>
+        </div>
+      </div>
+      <img class="empresa-logo" [src]="'assets/svgs/Kore-ACC.svg'" alt="Logo" />
+    </section>
+    <ng-template #headerSkeleton>
+      <section class="report-header is-loading"></section>
+    </ng-template>
+
+    <header class="page-toolbar">
+      <h1 class="page-title">
+        <ng-content select="[page-title]"></ng-content>
+      </h1>
+      <div class="page-actions">
+        <ng-content select="[page-actions]"></ng-content>
+      </div>
+    </header>
+    
+    <section class="page-container">
+      <div class="page-card">
+        <h2>Creación de reportes financieros</h2>
+        <ng-content></ng-content>
+      </div>
+    </section>
+  </div>
+</div>

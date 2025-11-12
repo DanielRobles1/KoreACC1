@@ -1,0 +1,117 @@
+<app-reportes-layout
+    [open]="sidebarOpen"
+    [empresaId]="miEmpresaId"
+    (openChange)="onSidebarToggle($event)"
+>
+    <div class="header">
+        <h3>Generación de balanza de comprobación</h3>
+
+        <div class="select-information">
+        <p>Selecciona el ejercicio</p>
+        <select
+            id="ejercicio"
+            (change)="onEjercicioChange($any($event.target).value)"
+        >
+            <option value="">-- Elegir --</option>
+            <ng-container *ngIf="ejercicios | async as ej">
+            <option *ngFor="let e of ej" [value]="e.id_ejercicio">
+                {{ e.anio }}
+            </option>
+            </ng-container>
+        </select>
+
+        <p>Selecciona los rangos por periodos</p>
+        <select
+            id="periodo_ini"
+            [disabled]="periodos.length === 0"
+            (change)="onPeriodoIniChange($any($event.target).value)"
+        >
+            <option value="">-- Inicio --</option>
+            <option
+            *ngFor="let p of periodos; trackBy: trackPeriodo"
+            [value]="p.id_periodo"
+            >
+            {{ getPeriodoLabel(p) }}
+            </option>
+        </select>
+
+        <select
+            id="periodo_fin"
+            [disabled]="periodos.length === 0 || !periodoIniId"
+            (change)="onPeriodoFinChange($any($event.target).value)"
+        >
+            <option value="">-- Fin --</option>
+            <option
+            *ngFor="let p of periodosFiltradosFin(); trackBy: trackPeriodo"
+            [value]="p.id_periodo"
+            >
+            {{ getPeriodoLabel(p) }}
+            </option>
+        </select>
+        </div>
+
+        <!-- balanza-comprobacion.component.html (fragmentos nuevos) -->
+
+        <div class="actions" style="margin-top: 1rem">
+        <button
+            type="button"
+            class="btn primary"
+            [disabled]="!periodoIniId || !periodoFinId || loading"
+            (click)="onGenerarBalanza()"
+        >
+            {{ loading ? "Generando…" : "Generar balanza" }}
+        </button>
+        </div>
+
+        <div *ngIf="balanza.length > 0" class="resultado" style="margin-top: 1rem">
+        <p><strong>Total de cuentas:</strong> {{ totalFilas }}</p>
+
+        <div class="tabla-wrap" style="overflow: auto; max-height: 60vh">
+            <table class="tabla balanza">
+            <thead>
+                <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Saldo inicial Deudor</th>
+                <th>Saldo inicial Acreedor</th>
+                <th>Cargos</th>
+                <th>Abonos</th>
+                <th>Saldo final Deudor</th>
+                <th>Saldo final Acreedor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let r of balanza; trackBy: trackCodigo">
+                <td>{{ r.codigo }}</td>
+                <td>{{ r.nombre }}</td>
+                <td>{{ r.saldo_inicial_deudor }}</td>
+                <td>{{ r.saldo_inicial_acreedor }}</td>
+                <td>{{ r.cargos }}</td>
+                <td>{{ r.abonos }}</td>
+                <td>{{ r.saldo_final_deudor }}</td>
+                <td>{{ r.saldo_final_acreedor }}</td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+        </div>
+
+        <!-- opcional: vacío -->
+        <div
+        *ngIf="!loading && balanza?.length === 0"
+        style="margin-top: 0.5rem; opacity: 0.7"
+        >
+        <em>Sin datos para mostrar.</em>
+        </div>
+    </div>
+</app-reportes-layout>
+
+<app-toast-message
+    [open]="vm?.open ?? false"
+    [title]="vm?.title ?? ''"
+    [message]="vm?.message ?? ''"
+    [type]="vm?.type ?? 'info'"
+    position="top-right"
+    [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+    (closed)="toast.close()"
+/>
