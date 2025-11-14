@@ -63,7 +63,7 @@
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="reportesOpen">
-          <li><a href="#" class="subbtn flex items-center">
+          <li><a href="#" class="subbtn flex items-center" [routerLink]="'/balance-general'">
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balance general">
             <span class="ml-2">Balance general</span>
           </a></li>
@@ -71,7 +71,7 @@
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balanza de comprobacion">
             <span class="ml-2">Balanza de comprobacion</span>
           </a></li>
-          <li><a href="#" class="subbtn flex items-center">
+          <li><a href="#" class="subbtn flex items-center" [routerLink]="'/estado-resultados'">
             <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Estado de resultados">
             <span class="ml-2">Estado de resultados</span>
           </a></li>

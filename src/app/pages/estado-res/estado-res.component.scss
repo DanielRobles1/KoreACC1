@@ -1,0 +1,425 @@
+:host {
+  --er-text: #101828;
+  --er-muted: #475467;
+  --er-line: rgba(0, 0, 0, .06);
+  --er-focus: #1d4ed8;
+  --er-focus-ghost: rgba(29, 78, 216, .15);
+  --er-bg: #fff;
+  --er-bg-soft: #fafafa;
+  --er-ingresos: #047857;
+  --er-costos: #b45309;
+  --er-gastos: #b91c1c;
+  --er-utilidad: #0f766e;
+  display: block;
+}
+
+/* ===== Header / contenedor superior ===== */
+.header {
+  background: linear-gradient(0deg, var(--er-bg), var(--er-bg));
+  border: 1px solid var(--er-line);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.header h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--er-text);
+}
+
+/* ===== Toolbar de selects ===== */
+.select-information {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  border-top: 1px solid var(--er-line);
+  padding-top: 10px;
+}
+
+.select-information p {
+  margin: 0 8px 0 0;
+  color: var(--er-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.select-information > select {
+  appearance: none;
+  padding: 8px 12px;
+  min-width: 210px;
+  border: 1px solid var(--er-line);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--er-text);
+  background: var(--er-bg)
+    linear-gradient(180deg, rgba(0, 0, 0, .02), rgba(0, 0, 0, 0) 60%);
+  outline: none;
+  transition: border-color .15s ease,
+              box-shadow .15s ease,
+              background-color .15s ease;
+}
+
+.select-information > select:hover {
+  background-color: var(--er-bg-soft);
+}
+
+.select-information > select:focus {
+  border-color: var(--er-focus);
+  box-shadow: 0 0 0 3px var(--er-focus-ghost);
+}
+
+.select-information > select:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+/* Responsive: selects a ancho completo en pantallas chicas */
+@media (max-width: 640px) {
+  .select-information {
+    gap: 8px 0;
+  }
+  .select-information > select {
+    min-width: 100%;
+  }
+}
+
+/* ===== Acciones ===== */
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 8px;
+}
+
+/* Botón genérico y variante primary */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border: 1px solid var(--er-line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--er-text);
+  background: var(--er-bg);
+  cursor: pointer;
+  transition: background-color .15s ease,
+              border-color .15s ease,
+              box-shadow .15s ease,
+              opacity .15s ease;
+}
+
+.btn:hover {
+  background-color: var(--er-bg-soft);
+}
+
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--er-focus);
+  box-shadow: 0 0 0 3px var(--er-focus-ghost);
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  border-color: transparent;
+  background: var(--er-focus);
+  color: #fff;
+}
+
+.btn.primary:hover {
+  filter: brightness(0.95);
+}
+
+.btn.primary:active {
+  filter: brightness(0.92);
+}
+
+.btn.ghost {
+  border-color: transparent;
+  background: #2f7237;
+  color: #ffffff;
+}
+
+.btn.ghost:hover {
+  filter: brightness(0.95);
+}
+
+.btn.ghost:active {
+  filter: brightness(0.92);
+}
+
+/* =======================================================================
+   SECCIÓN: ESTADO DE RESULTADOS
+   ======================================================================= */
+
+.er-container {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ===== Resumen tipo "cards" ===== */
+.er-resumen {
+  border-radius: 12px;
+  padding: 16px;
+  background: radial-gradient(circle at 0 0, #eff6ff 0, #eff6ff 18%, #ffffff 45%);
+  border: 1px solid var(--er-line);
+}
+
+.er-resumen h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--er-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.er-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.er-card {
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, .25);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.er-card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--er-muted);
+}
+
+/* Modificadores por tipo */
+.er-card.ingresos::before {
+  background: var(--er-ingresos);
+}
+.er-card.costos::before {
+  background: var(--er-costos);
+}
+.er-card.bruta::before {
+  background: var(--er-utilidad);
+}
+.er-card.gastos::before {
+  background: var(--er-gastos);
+}
+.er-card.neta::before {
+  background: var(--er-utilidad);
+}
+
+.er-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--er-muted);
+}
+
+.er-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--er-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Utilidad neta con pill visual */
+.er-card.neta .er-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.er-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.er-pill.pos {
+  background: #ecfdf3;
+  color: #027a48;
+  border-color: rgba(2, 122, 72, .2);
+}
+
+.er-pill.neg {
+  background: #fef3f2;
+  color: #b42318;
+  border-color: rgba(180, 35, 24, .2);
+}
+
+/* ===== Secciones (Ingresos / Costos / Gastos) ===== */
+
+.er-section {
+  border-radius: 12px;
+  border: 1px solid var(--er-line);
+  background: var(--er-bg);
+  padding: 12px 14px;
+}
+
+.er-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, .4);
+  padding-bottom: 6px;
+}
+
+.er-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--er-text);
+}
+
+.er-section-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--er-muted);
+}
+
+/* Subtotal al lado derecho del título */
+.er-section-total {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--er-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Tabla de detalle de cuentas ===== */
+
+.er-table-wrap {
+  margin-top: 4px;
+  overflow: auto;
+  max-height: 50vh;
+}
+
+table.er-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--er-text);
+}
+
+/*Encabezado pegajoso */
+table.er-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(0deg, #f9fafb, #eff6ff);
+  color: #1f2937;
+  text-align: left;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--er-line);
+  white-space: nowrap;
+}
+
+table.er-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--er-line);
+  vertical-align: middle;
+}
+
+/* Zebra + hover */
+table.er-table tbody tr:nth-child(odd) {
+  background: #fcfcfc;
+}
+table.er-table tbody tr:hover {
+  background: #f4f7ff;
+}
+
+/* Columnas específicas */
+table.er-table td.codigo,
+table.er-table th.codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: nowrap;
+}
+
+table.er-table td.nombre {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+table.er-table td.importe,
+table.er-table th.importe {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fila de subtotal dentro de la sección */
+table.er-table tfoot td {
+  padding: 8px 10px;
+  font-weight: 700;
+  background: #fffef7;
+  border-top: 1px solid var(--er-line);
+}
+
+/* Mensaje "Sin datos" */
+.er-empty {
+  margin-top: .5rem;
+  opacity: .7;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* ===== Estado global (por si agregas alguna pill general) ===== */
+
+.er-estado-global {
+  margin-top: .25rem;
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: var(--er-muted);
+}
+
+/* Responsive: secciones en columna full width */
+@media (max-width: 768px) {
+  .er-resumen-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .er-section {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .er-resumen-grid {
+    grid-template-columns: 1fr;
+  }
+}

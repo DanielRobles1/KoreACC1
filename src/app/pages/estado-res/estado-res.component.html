@@ -1,0 +1,177 @@
+<app-reportes-layout
+    [open]="sidebarOpen"
+    [empresaId]="miEmpresaId"
+    (openChange)="onSidebarToggle($event)">
+
+    <div class="header">
+        <h3>Generación de estado de resultados</h3>
+
+        <div class="select-information">
+            <p>Selecciona el ejercicio</p>
+            <select
+                id="ejercicio"
+                (change)="onEjercicioChange($any($event.target).value)"
+            >
+                <option value="">-- Elegir --</option>
+                <ng-container *ngIf="ejercicios | async as ej">
+                <option *ngFor="let e of ej" [value]="e.id_ejercicio">
+                    {{ e.anio }}
+                </option>
+                </ng-container>
+            </select>
+
+            <p>Selecciona los rangos por periodos</p>
+            <select
+                id="periodo_ini"
+                [disabled]="periodos.length === 0"
+                (change)="onPeriodoIniChange($any($event.target).value)"
+            >
+                <option value="">-- Inicio --</option>
+                <option
+                *ngFor="let p of periodos; trackBy: trackPeriodo"
+                [value]="p.id_periodo"
+                >
+                {{ getPeriodoLabel(p) }}
+                </option>
+            </select>
+
+            <select
+                id="periodo_fin"
+                [disabled]="periodos.length === 0 || !periodoIniId"
+                (change)="onPeriodoFinChange($any($event.target).value)"
+            >
+                <option value="">-- Fin --</option>
+                <option
+                *ngFor="let p of periodosFiltradosFin(); trackBy: trackPeriodo"
+                [value]="p.id_periodo"
+                >
+                {{ getPeriodoLabel(p) }}
+                </option>
+            </select>
+        </div>
+
+        <div class="actions" style="margin-top: 1rem;">
+            <button
+                type="button"
+                class="btn primary"
+                [disabled]="!periodoIniId || !periodoFinId"
+                (click)="onGenerarEstadoResultados()">
+                {{ loading ? 'Generando…' : 'Generar estado de resultados' }}
+            </button>
+            <button class="btn ghost" 
+                (click)="exportToExcel(true)"
+                [disabled]="!periodoIniId || !periodoFinId || loading">
+                Exportar Excel (incluye hojas por categoría)
+            </button>
+        </div>
+
+        <div class="er-container" *ngIf="estadoResultados as er">
+
+            <!-- RESUMEN -->
+            <section class="er-resumen">
+                <h4>Resumen</h4>
+                <div class="er-resumen-grid">
+                <div class="er-card">
+                    <span class="er-label">Ingresos</span>
+                    <span class="er-value">{{ er.resumen.ingresos | number:'1.2-2' }}</span>
+                </div>
+                <div class="er-card">
+                    <span class="er-label">Costos</span>
+                    <span class="er-value">{{ er.resumen.costos | number:'1.2-2' }}</span>
+                </div>
+                <div class="er-card">
+                    <span class="er-label">Utilidad bruta</span>
+                    <span class="er-value">{{ er.resumen.utilidad_bruta | number:'1.2-2' }}</span>
+                </div>
+                <div class="er-card">
+                    <span class="er-label">Gastos de operación</span>
+                    <span class="er-value">{{ er.resumen.gastos_operacion | number:'1.2-2' }}</span>
+                </div>
+                <div class="er-card">
+                    <span class="er-label">Utilidad neta</span>
+                    <span class="er-value">{{ er.resumen.utilidad_neta | number:'1.2-2' }}</span>
+                </div>
+                </div>
+            </section>
+
+            <!-- DETALLE INGRESOS -->
+            <section *ngIf="detalleIngresos.length">
+                <h4>Ingresos</h4>
+                <table class="er-table">
+                <thead>
+                    <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th style="text-align:right;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let row of detalleIngresos">
+                    <td>{{ row.codigo }}</td>
+                    <td>{{ row.nombre }}</td>
+                    <td style="text-align:right;">
+                        {{ toNum(row.importe) | number:'1.2-2' }}
+                    </td>
+                    </tr>
+                </tbody>
+                </table>
+            </section>
+
+            <!-- DETALLE COSTOS -->
+            <section *ngIf="detalleCostos.length">
+                <h4>Costos</h4>
+                <table class="er-table">
+                <thead>
+                    <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th style="text-align:right;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let row of detalleCostos">
+                    <td>{{ row.codigo }}</td>
+                    <td>{{ row.nombre }}</td>
+                    <td style="text-align:right;">
+                        {{ toNum(row.importe) | number:'1.2-2' }}
+                    </td>
+                    </tr>
+                </tbody>
+                </table>
+            </section>
+
+            <!-- DETALLE GASTOS -->
+            <section *ngIf="detalleGastos.length">
+                <h4>Gastos de operación</h4>
+                <table class="er-table">
+                <thead>
+                    <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th style="text-align:right;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let row of detalleGastos">
+                    <td>{{ row.codigo }}</td>
+                    <td>{{ row.nombre }}</td>
+                    <td style="text-align:right;">
+                        {{ toNum(row.importe) | number:'1.2-2' }}
+                    </td>
+                    </tr>
+                </tbody>
+                </table>
+            </section>
+        </div>
+    </div>
+</app-reportes-layout>
+
+<app-toast-message
+    [open]="toast.open"
+    [title]="toast.title"
+    [message]="toast.message ?? ''"
+    [type]="toast.type"
+    position="top-right"
+    [autoCloseMs]="toast.autoCloseMs ?? 3500"
+    (closed)="onToastClosed()"
+/>

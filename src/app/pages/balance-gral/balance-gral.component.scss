@@ -280,3 +280,27 @@ table.tabla tfoot td {
 .diff-row .bad {
   font-weight: 800;
 }
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-detalle td {
+  font-weight: 500;
+}
+
+.row-subtotal td {
+  background: #f5f8ff;
+  font-weight: 700;
+  border-top: 1px solid var(--bc2-line);
+  border-bottom: 1px solid var(--bc2-line);
+}
+
+.row-total td {
+  background: #fffef7;
+  font-weight: 800;
+  border-top: 2px solid var(--bc2-line);
+  border-bottom: 2px solid var(--bc2-line);
+}

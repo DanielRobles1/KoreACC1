@@ -17,13 +17,16 @@ body { margin: 0; }
   overflow: hidden;
   border-right: 1px solid rgba(255,255,255,.06);
 }
-
-/* 👉 Tres filas: cabecera empresa + toolbar + contenido */
 .main {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto 1fr; /* ⬅️ antes: auto 1fr */
+  grid-template-rows: auto auto 1fr; 
   min-width: 0;
+}
+
+.empresa-main {
+  position: relative;
+  text-align: center;
 }
 
 /* fondo azul */
@@ -50,7 +53,7 @@ body { margin: 0; }
   align-items: center;
   column-gap: 16px;
 
-  .empresa-main{ display: grid; gap: 6px; min-width: 0; }
+  .empresa-main{ display: grid; gap: 6px; min-width: 0; justify-content: center; text-align: center;}
   .empresa-titulo{ margin:0; font-size:18px; font-weight:800; color:#101828; }
   .empresa-meta{ display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:#475467; }
   .empresa-meta span{ white-space:nowrap; }
@@ -62,7 +65,13 @@ body { margin: 0; }
   margin: 0; font-size: 18px; font-weight: 800; color: #101828; letter-spacing: .2px;
 }
 .report-header .empresa-meta {
-  display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: #475467;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13px;
+  color: #475467;
+  justify-content: center;
+  text-align: center;
 }
 .report-header .empresa-meta span { white-space: nowrap; }
 .report-header .empresa-logo {

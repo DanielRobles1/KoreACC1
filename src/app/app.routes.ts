@@ -17,6 +17,8 @@ import { PolizasComponent } from './pages/polizas/polizas.component';
 import { PolizaHomeComponent } from './pages/poliza-home/poliza-home.component';
 import { PolizaEditarComponent } from './pages/poliza-editar/poliza-editar.component';
 import { BalanzaComprobacionComponent } from './pages/balanza-comprobacion/balanza-comprobacion.component';
+import { EstadoResComponent } from './pages/estado-res/estado-res.component';
+import { BalanceGralComponent } from './pages/balance-gral/balance-gral.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -87,6 +89,18 @@ export const routes: Routes = [
 {
    path: 'balanza-comprobacion',
     component: BalanzaComprobacionComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {perms: ['consultar_empresa']}
+},
+{
+   path: 'estado-resultados',
+    component: EstadoResComponent,
+    canActivate: [AuthGuard, PermissionGuard],
+    data: {perms: ['consultar_empresa']}
+},
+{
+   path: 'balance-general',
+    component: BalanceGralComponent,
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
 },
