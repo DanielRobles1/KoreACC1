@@ -2,7 +2,7 @@
   --bc2-text: #101828;
   --bc2-muted: #475467;
   --bc2-line: rgba(0, 0, 0, .06);
-  --bc2-focus: #1d4ed8;
+  --bc2-focus: #203447;
   --bc2-focus-ghost: rgba(29, 78, 216, .15);
   --bc2-bg: #fff;
   --bc2-bg-soft: #fafafa;
@@ -24,6 +24,33 @@
   color: var(--bc2-text);
 }
 
+.field {
+  position: relative;
+  display: inline-block;
+}
+
+.flag {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  padding: 0 6px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  letter-spacing: .01em;
+  border: 1px solid var(--bc2-line);
+  background: #fff; /* si usas dark, podrías cambiarlo por var(--bc2-bg) */
+  color: var(--bc2-muted);
+  box-shadow: 0 1px 0 rgba(0,0,0,.03);
+}
+
+/* Espacio para que la flag no se “encime” visualmente */
+.field > select {
+  margin-top: 6px;
+}
+
 /* ===== Toolbar de selects ===== */
 .select-information {
   display: flex;
@@ -41,7 +68,7 @@
   font-weight: 600;
 }
 
-.select-information > select {
+.select-information  select {
   appearance: none;
   padding: 8px 12px;
   min-width: 210px;
@@ -55,16 +82,16 @@
   transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
 
-.select-information > select:hover {
+.select-information select:hover {
   background-color: var(--bc2-bg-soft);
 }
 
-.select-information > select:focus {
+.select-information select:focus {
   border-color: var(--bc2-focus);
   box-shadow: 0 0 0 3px var(--bc2-focus-ghost);
 }
 
-.select-information > select:disabled {
+.select-information select:disabled {
   opacity: .7;
   cursor: not-allowed;
 }
@@ -83,8 +110,13 @@
 .actions {
   margin-top: 1rem;
   display: flex;
+  align-items: center;
+  justify-content: space-between; /* separa a extremos */
   gap: 8px;
 }
+
+.actions .left { display: flex; align-items: center; gap: 8px; }
+.actions .right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
 /* Botón genérico y variante primary */
 .btn {
@@ -133,6 +165,8 @@
 }
 
 .btn.ghost {
+  justify-content: end;
+  text-align: end;
   border-color: transparent;
   background: #2f7237;
   color: #ffffff;
