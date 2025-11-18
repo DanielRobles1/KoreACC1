@@ -4,46 +4,62 @@
     (openChange)="onSidebarToggle($event)">
 
     <div class="header">
-        <h3>Generación de balance general</h3>
+        <h3>Balance general</h3>
 
         <div class="select-information">
-        <p>Selecciona el ejercicio</p>
-        <select id="ejercicio" (change)="onEjercicioChange($any($event.target).value)">
-            <option value="">-- Elegir --</option>
-            <ng-container *ngIf="ejercicios | async as ej">
-            <option *ngFor="let e of ej" [value]="e.id_ejercicio">{{ e.anio }}</option>
-            </ng-container>
-        </select>
+            <p>Selecciona el ejercicio</p>
+            <select id="ejercicio" (change)="onEjercicioChange($any($event.target).value)">
+                <option value="">-- Elegir --</option>
+                <ng-container *ngIf="ejercicios | async as ej">
+                <option *ngFor="let e of ej" [value]="e.id_ejercicio">{{ e.anio }}</option>
+                </ng-container>
+            </select>
 
-        <p>Selecciona los rangos por periodos</p>
-        <select id="periodo_ini" [disabled]="periodos.length === 0" (change)="onPeriodoIniChange($any($event.target).value)">
-            <option value="">-- Inicio --</option>
-            <option *ngFor="let p of periodos; trackBy: trackPeriodo" [value]="p.id_periodo">
-            {{ getPeriodoLabel(p) }}
-            </option>
-        </select>
+            <p>Selecciona los rangos por periodos</p>
+            <div class="field">
+                <label for="periodo_ini" class="flag" *ngIf="periodoIniId">Inicio</label>
+                <select id="periodo_ini"
+                        [disabled]="periodos.length === 0"
+                        (change)="onPeriodoIniChange($any($event.target).value)">
+                    <option value="">-- Inicio --</option>
+                    <option *ngFor="let p of periodos; trackBy: trackPeriodo" [value]="p.id_periodo">
+                    {{ getPeriodoLabel(p) }}
+                    </option>
+                </select>
+            </div>
 
-        <select id="periodo_fin" [disabled]="periodos.length === 0 || !periodoIniId" (change)="onPeriodoFinChange($any($event.target).value)">
-            <option value="">-- Fin --</option>
-            <option *ngFor="let p of periodosFiltradosFin(); trackBy: trackPeriodo" [value]="p.id_periodo">
-            {{ getPeriodoLabel(p) }}
-            </option>
-        </select>
+            <div class="field">
+                <label for="periodo_fin" class="flag" *ngIf="periodoFinId">Término</label>
+                <select id="periodo_fin"
+                        [disabled]="periodos.length === 0 || !periodoIniId"
+                        (change)="onPeriodoFinChange($any($event.target).value)">
+                    <option value="">-- Fin --</option>
+                    <option *ngFor="let p of periodosFiltradosFin(); trackBy: trackPeriodo" [value]="p.id_periodo">
+                    {{ getPeriodoLabel(p) }}
+                    </option>
+                </select>
+            </div>
         </div>
 
-        <div class="actions" style="margin-top: 1rem">
-        <button type="button" class="btn primary" [disabled]="!periodoIniId || !periodoFinId || loading" (click)="onGenerarBalance()">
-            {{ loading ? 'Generando…' : 'Generar balance' }}
-        </button>
-        <button class="btn ghost" 
-                [disabled]="!periodoIniId || !periodoFinId || loading"
-                (click)="exportToExcel(true)">
-                Exportar Excel (todas)
-            </button>
+        <div class="actions">
+            <div class="left">
+                <button type="button" class="btn primary"
+                        [disabled]="!periodoIniId || !periodoFinId || loading"
+                        (click)="onGenerarBalance()">
+                {{ loading ? 'Generando…' : 'Generar' }}
+                </button>
+            </div>
+
+            <div class="right">
+                <button class="btn ghost"
+                        *ngIf="!loading && (balance?.length ?? 0) > 0"
+                        (click)="exportToExcel(true)">
+                Exportar
+                </button>
+            </div>
         </div>
 
         <div *ngIf="balance.length > 0" class="resultado" style="margin-top: 1rem">
-        <p><strong>Total de filas:</strong> {{ totalFilas }}</p>
 
         <div class="tabla-wrap" style="overflow: auto; max-height: 60vh">
             <table class="tabla balanza">

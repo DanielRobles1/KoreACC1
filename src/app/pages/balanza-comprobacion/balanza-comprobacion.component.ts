@@ -10,6 +10,7 @@ import { PeriodoContableService, PeriodoContableDto } from '@app/services/period
 import { EjercicioContableDto } from '@app/services/ejercicio-contable.service';
 import { ReportesService } from '@app/services/reportes.service';
 import { BalanzaResp, BalanzaRow } from '@app/models/balanza-row';
+import { Empresa } from '@app/models/empresa';
 
 import { ToastService, ToastState } from '@app/services/toast-service.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
@@ -21,6 +22,15 @@ type PeriodoConId = PeriodoContableDto & { id_periodo: number };
 // === Type-guard para estrechar PeriodoContableDto -> PeriodoConId
 function hasPeriodoId(p: PeriodoContableDto): p is PeriodoConId {
   return typeof p.id_periodo === 'number';
+}
+
+function parseYMDLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const y = +m[1], mo = +m[2] - 1, d = +m[3];
+  const dt = new Date(y, mo, d);
+  return isNaN(dt.getTime()) ? null : dt;
 }
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -38,7 +48,14 @@ export class BalanzaComprobacionComponent {
     private polizaService: PolizasService,
     private periodoService: PeriodoContableService,
     private reportesService: ReportesService
-  ) { }
+  ) {
+    this.reportesService.getEmpresaInfo(this.miEmpresaId).subscribe({
+      next: (emp) => this.empresaInfo = emp,
+      error: () => { }
+    });
+  }
+
+  empresaInfo?: Empresa;
 
   // --- UI/Toast
   toast = {
@@ -154,38 +171,51 @@ export class BalanzaComprobacionComponent {
   trackPeriodo = (_: number, p: PeriodoConId) => p.id_periodo;
 
   getPeriodoLabel(p: PeriodoContableDto | PeriodoConId): string {
-    const fi = p?.fecha_inicio ? new Date(p.fecha_inicio) : null;
-    const ff = p?.fecha_fin ? new Date(p.fecha_fin) : null;
+    const fi = parseYMDLocal(p?.fecha_inicio);
+    const ff = parseYMDLocal(p?.fecha_fin);
 
-    const isValidFi = !!fi && !isNaN(fi.getTime());
-    const isValidFf = !!ff && !isNaN(ff.getTime());
-
-    try {
-      const locale = 'es-MX';
-      if (
-        isValidFi &&
-        isValidFf &&
-        fi!.getMonth() === ff!.getMonth() &&
-        fi!.getFullYear() === ff!.getFullYear()
-      ) {
-        return fi!.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-      }
-
-      if (isValidFi && isValidFf) {
-        const ini = fi!.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
-        const fin = ff!.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
-        return `${ini} - ${fin}`;
-      }
-
-      if (isValidFi) {
-        return fi!.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-      }
-    } catch {
+    if (!fi || !ff) {
+      return p?.id_periodo != null ? `Periodo ${p.id_periodo}` : 'Periodo';
     }
 
-    if (p.id_periodo != null) return `Periodo ${p.id_periodo}`;
-    return 'Periodo';
+    const mesCorto = (d: Date) =>
+      d.toLocaleDateString('es-MX', { month: 'short' })
+        .replace(/\.$/, '')
+        .replace(/^./, c => c.toUpperCase());
+
+    const ultimoDiaMes = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+
+    const mesIni = mesCorto(fi);
+    const mesFin = mesCorto(ff);
+    const anioIni = fi.getFullYear();
+    const anioFin = ff.getFullYear();
+
+    const diaIniPrimero = 1;
+    const diaIniUltimo = ultimoDiaMes(fi);
+    const diaFinPrimero = 1;
+    const diaFinUltimo = ultimoDiaMes(ff);
+
+    if (fi.getMonth() === ff.getMonth() && anioIni === anioFin) {
+      return `${mesIni} (${diaIniPrimero}-${diaFinUltimo}) ${anioIni}`;
+    }
+
+    return `${mesIni} (${diaIniPrimero}-${diaIniUltimo}) ${anioIni} a ${mesFin} (${diaFinPrimero}-${diaFinUltimo}) ${anioFin}`;
   }
+
+  private getRangoPeriodosLabel(): string {
+    if (this.periodoIniId && this.periodoFinId) {
+      const pIni = this.periodos.find(p => p.id_periodo === this.periodoIniId);
+      const pFin = this.periodos.find(p => p.id_periodo === this.periodoFinId);
+
+      if (pIni && pFin) {
+        const iniLbl = this.getPeriodoLabel(pIni);
+        const finLbl = this.getPeriodoLabel(pFin);
+        return `Periodos: ${iniLbl} a ${finLbl}`;
+      }
+    }
+    return 'Periodos: (no especificado)';
+  }
+
 
 
   private comparePeriodo = (a: PeriodoConId, b: PeriodoConId) => {
@@ -238,9 +268,40 @@ export class BalanzaComprobacionComponent {
     });
   }
 
-  exportToExcel(allRows = false): void {
+    exportToExcel(allRows = false): void {
     const rows = (allRows ? this.balanza : this.filteredRows) ?? [];
 
+    const headerRows: any[][] = [];
+
+    if (this.empresaInfo) {
+      headerRows.push([this.empresaInfo.razon_social ?? '']);
+      headerRows.push([`RFC: ${this.empresaInfo.rfc ?? ''}`]);
+
+      if (this.empresaInfo.domicilio_fiscal) {
+        headerRows.push([`Domicilio: ${this.empresaInfo.domicilio_fiscal}`]);
+      }
+
+      const contactoParts: string[] = [];
+      if (this.empresaInfo.telefono) contactoParts.push(`Tel: ${this.empresaInfo.telefono}`);
+      if (this.empresaInfo.correo_contacto) contactoParts.push(`Correo: ${this.empresaInfo.correo_contacto}`);
+      if (contactoParts.length > 0) {
+        headerRows.push([contactoParts.join('   ')]);
+      }
+    }
+
+    if (headerRows.length > 0) {
+      headerRows.push([]); 
+    }
+
+    const rangoLabel = this.getRangoPeriodosLabel();
+    const fechaLabel = `Fecha de generación: ${this.fmtDateISO()}`;
+
+    headerRows.push(['Balanza de comprobación']);
+    headerRows.push([rangoLabel]);
+    headerRows.push([fechaLabel]);
+    headerRows.push([]); 
+
+    const headerLines = headerRows.length;
     const HEAD = [
       'Código',
       'Nombre',
@@ -259,7 +320,7 @@ export class BalanzaComprobacionComponent {
       this.toNum(r.saldo_final_acreedor),
     ]));
 
-    const firstDataRow = 2;
+    const firstDataRow = headerLines + 2; 
     const lastDataRow = firstDataRow + BODY.length - 1;
 
     const totalLabel = 'Totales';
@@ -272,42 +333,131 @@ export class BalanzaComprobacionComponent {
       { f: `SUM(F${firstDataRow}:F${lastDataRow})` },
     ] : [totalLabel, '', 0, 0, 0, 0];
 
-    const ws = XLSX.utils.aoa_to_sheet([HEAD, ...BODY, TOTALS]);
+    const aoa = [
+      ...headerRows,
+      HEAD,
+      ...BODY,
+      TOTALS,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     const numberFmt = '#,##0.00';
-    const range = XLSX.utils.decode_range(ws['!ref']!);
-    for (let R = firstDataRow - 1; R <= range.e.r; R++) {
-      for (let C = 2; C <= 5; C++) { 
-        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+
+    if (ws['!ref']) {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+
+      for (let R = firstDataRow - 1; R <= range.e.r; R++) {
+        for (let C = 2; C <= 5; C++) { 
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[addr];
+          if (!cell) continue;
+          if (typeof cell.v === 'number' || (cell as any).f) {
+            (cell as any).z = numberFmt;
+          }
+        }
+      }
+
+      ws['!autofilter'] = {
+        ref: XLSX.utils.encode_range({
+          s: { r: headerLines, c: 0 }, 
+          e: { r: Math.max(headerLines, range.e.r), c: 5 },
+        }),
+      };
+
+      (ws as any)['!freeze'] = { xSplit: 0, ySplit: headerLines + 1 };
+
+      // Ancho de columnas
+      const rowsForWidth = aoa.map(row =>
+        row.map(v => {
+          if (typeof v === 'object' && v && 'f' in v) return 'Σ';
+          return (v ?? '').toString();
+        })
+      );
+
+      const colCount = HEAD.length;
+      const colWidths = Array.from({ length: colCount }).map((_, colIdx) => {
+        const maxLen = rowsForWidth.reduce(
+          (m, row) => Math.max(m, (row[colIdx] ?? '').length),
+          0
+        );
+        return { wch: Math.min(Math.max(10, maxLen + 2), 50) };
+      });
+
+      (ws as any)['!cols'] = colWidths;
+
+      const titleRow = headerRows.findIndex(r => r[0] === 'Balanza de comprobación');
+      if (titleRow >= 0) {
+        const addr = XLSX.utils.encode_cell({ r: titleRow, c: 0 });
+        if (!ws[addr]) ws[addr] = { t: 's', v: 'Balanza de comprobación' };
+        (ws[addr] as any).s = {
+          font: { bold: true, sz: 16 },
+          alignment: { horizontal: 'left' },
+        };
+      }
+      const headRowIdx = headerLines; 
+      for (let c = 0; c < HEAD.length; c++) {
+        const addr = XLSX.utils.encode_cell({ r: headRowIdx, c });
         const cell = ws[addr];
         if (!cell) continue;
-        if (typeof cell.v === 'number' || cell.f) {
-          (cell as any).z = numberFmt;
+        (cell as any).s = {
+          font: { bold: true, sz: 11 },
+          fill: { fgColor: { rgb: 'D9E1F2' } }, 
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border: {
+            top:    { style: 'thin', color: { rgb: 'AAAAAA' } },
+            bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
+            left:   { style: 'thin', color: { rgb: 'AAAAAA' } },
+            right:  { style: 'thin', color: { rgb: 'AAAAAA' } },
+          },
+        };
+      }
+
+      const totalRowIdx = headerLines + 1 + BODY.length;
+      for (let c = 0; c < HEAD.length; c++) {
+        const addr = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+        const cell = ws[addr];
+        if (!cell) continue;
+        (cell as any).s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: 'F2F2F2' } },
+          alignment: { horizontal: c >= 2 ? 'right' : 'left' },
+        };
+      }
+
+      for (let R = firstDataRow - 1; R <= range.e.r; R++) {
+        for (let C = 2; C <= 5; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[addr];
+          if (!cell) continue;
+          (cell as any).s = {
+            ...(cell as any).s,
+            alignment: { horizontal: 'right' },
+          };
         }
       }
     }
 
-    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, range.e.r), c: range.e.c } }) };
-    (ws as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
-
-    const allRowsForWidth = [HEAD, ...BODY.map(r => r.map(v => (v ?? '').toString())), TOTALS.map(v => (typeof v === 'object' && 'f' in v) ? totalLabel : (v ?? '').toString())];
-    const colWidths = HEAD.map((_, colIdx) => {
-      const maxLen = allRowsForWidth.reduce((m, row) => Math.max(m, (row[colIdx] ?? '').toString().length), 0);
-      return { wch: Math.min(Math.max(10, maxLen + 2), 50) };
-    });
-    (ws as any)['!cols'] = colWidths;
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Balanza');
 
-    const rango =
+    const rangoSlug =
       (this.periodoIniId && this.periodoFinId)
         ? `_p${this.periodoIniId}-p${this.periodoFinId}`
         : '';
     const fecha = this.fmtDateISO();
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `balanzaComprobacion${rango}_${fecha}.xlsx`);
+
+    const blob = new Blob(
+      [excelBuffer],
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    );
+
+    const empresaSlug = this.empresaInfo?.razon_social
+      ? this.empresaInfo.razon_social.replace(/[^\w\d]+/g, '_')
+      : 'empresa';
+
+    saveAs(blob, `${empresaSlug}_BalanzaComprobacion${rangoSlug}_${fecha}.xlsx`);
 
     this.showToast({
       type: 'success',

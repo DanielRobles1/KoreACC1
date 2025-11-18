@@ -11,6 +11,7 @@ import { finalize, Observable } from 'rxjs';
 import { BalanceResp, BalanceRow } from '@app/models/balance-gral';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { Empresa } from '@app/models/empresa';
 
 type BalanceNivel = 'DETALLE' | 'SUBTOTAL' | 'TOTAL';
 type TipoGrupo = 'ACTIVO' | 'PASIVO' | 'CAPITAL';
@@ -26,6 +27,15 @@ function inferTipoFromCodigo(codigo?: string | null): TipoGrupo | null {
 
 function isAlreadyBalanceGeneralRow(r: any): boolean {
   return 'nivel' in r && ('saldo_deudor' in r || 'saldo_acreedor' in r);
+}
+
+function parseYMDLocal(s?: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const y = +m[1], mo = +m[2] - 1, d = +m[3];
+  const dt = new Date(y, mo, d);
+  return isNaN(dt.getTime()) ? null : dt;
 }
 
 // === Tipo estrecho con id_periodo requerido
@@ -49,7 +59,12 @@ export class BalanceGralComponent {
     private polizaService: PolizasService,
     private periodoService: PeriodoContableService,
     private reportesService: ReportesService
-  ) { }
+  ) {
+    this.reportesService.getEmpresaInfo(this.miEmpresaId).subscribe({
+      next: (emp) => this.empresaInfo = emp,
+      error: () => {}
+    });
+  }
 
   loading = false;
   balance: BalanceRow[] = [];
@@ -62,6 +77,7 @@ export class BalanceGralComponent {
 
   totDeudor = 0;
   totAcreedor = 0;
+  empresaInfo?: Empresa;
 
   // --- UI/Toast
   toast = {
@@ -169,37 +185,49 @@ export class BalanceGralComponent {
   trackPeriodo = (_: number, p: PeriodoConId) => p.id_periodo;
 
   getPeriodoLabel(p: PeriodoContableDto | PeriodoConId): string {
-    const fi = p?.fecha_inicio ? new Date(p.fecha_inicio) : null;
-    const ff = p?.fecha_fin ? new Date(p.fecha_fin) : null;
+    const fi = parseYMDLocal(p?.fecha_inicio);
+    const ff = parseYMDLocal(p?.fecha_fin);
 
-    const isValidFi = !!fi && !isNaN(fi.getTime());
-    const isValidFf = !!ff && !isNaN(ff.getTime());
-
-    try {
-      const locale = 'es-MX';
-      if (
-        isValidFi &&
-        isValidFf &&
-        fi!.getMonth() === ff!.getMonth() &&
-        fi!.getFullYear() === ff!.getFullYear()
-      ) {
-        return fi!.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-      }
-
-      if (isValidFi && isValidFf) {
-        const ini = fi!.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
-        const fin = ff!.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
-        return `${ini} - ${fin}`;
-      }
-
-      if (isValidFi) {
-        return fi!.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-      }
-    } catch {
+    if (!fi || !ff) {
+      return p?.id_periodo != null ? `Periodo ${p.id_periodo}` : 'Periodo';
     }
 
-    if (p.id_periodo != null) return `Periodo ${p.id_periodo}`;
-    return 'Periodo';
+    const mesCorto = (d: Date) =>
+      d.toLocaleDateString('es-MX', { month: 'short' })
+        .replace(/\.$/, '')
+        .replace(/^./, c => c.toUpperCase());
+
+    const ultimoDiaMes = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+
+    const mesIni = mesCorto(fi);
+    const mesFin = mesCorto(ff);
+    const anioIni = fi.getFullYear();
+    const anioFin = ff.getFullYear();
+
+    const diaIniPrimero = 1;
+    const diaIniUltimo = ultimoDiaMes(fi);
+    const diaFinPrimero = 1;
+    const diaFinUltimo = ultimoDiaMes(ff);
+
+    if (fi.getMonth() === ff.getMonth() && anioIni === anioFin) {
+      return `${mesIni} (${diaIniPrimero}-${diaFinUltimo}) ${anioIni}`;
+    }
+
+    return `${mesIni} (${diaIniPrimero}-${diaIniUltimo}) ${anioIni} a ${mesFin} (${diaFinPrimero}-${diaFinUltimo}) ${anioFin}`;
+  }
+
+  private getRangoPeriodosLabel(): string {
+    if (this.periodoIniId && this.periodoFinId) {
+      const pIni = this.periodos.find(p => p.id_periodo === this.periodoIniId);
+      const pFin = this.periodos.find(p => p.id_periodo === this.periodoFinId);
+
+      if (pIni && pFin) {
+        const iniLbl = this.getPeriodoLabel(pIni);
+        const finLbl = this.getPeriodoLabel(pFin);
+        return `Periodos: ${iniLbl} a ${finLbl}`;
+      }
+    }
+    return 'Periodos: (no especificado)';
   }
 
 
@@ -207,16 +235,6 @@ export class BalanceGralComponent {
     return a.id_periodo - b.id_periodo;
   };
 
-  private computeTotals() {
-    const total = this.balance.find(r => r.nivel === 'TOTAL');
-    if (total) {
-      this.totDeudor = this.toNum(total.saldo_deudor);
-      this.totAcreedor = this.toNum(total.saldo_acreedor);
-    } else {
-      this.totDeudor = this.round2(this.balance.reduce((s, r) => s + this.toNum(r.saldo_deudor), 0));
-      this.totAcreedor = this.round2(this.balance.reduce((s, r) => s + this.toNum(r.saldo_acreedor), 0));
-    }
-  }
   private resetBalanceView(): void {
     this.balance = [];
     this.totalFilas = 0;
@@ -314,8 +332,41 @@ export class BalanceGralComponent {
   exportToExcel(allRows = false): void {
     const rows = (allRows ? this.balance : this.filteredRows) ?? [];
 
-    const HEAD = ['Nivel', 'Tipo', 'Código', 'Nombre / Grupo', 'Deudor', 'Acreedor'];
+    const headerRows: any[][] = [];
 
+    if (this.empresaInfo) {
+      headerRows.push([this.empresaInfo.razon_social ?? '']);
+      headerRows.push([`RFC: ${this.empresaInfo.rfc ?? ''}`]);
+
+      if (this.empresaInfo.domicilio_fiscal) {
+        headerRows.push([`Domicilio: ${this.empresaInfo.domicilio_fiscal}`]);
+      }
+
+      const contactoParts: string[] = [];
+      if (this.empresaInfo.telefono) contactoParts.push(`Tel: ${this.empresaInfo.telefono}`);
+      if (this.empresaInfo.correo_contacto) contactoParts.push(`Correo: ${this.empresaInfo.correo_contacto}`);
+      if (contactoParts.length > 0) {
+        headerRows.push([contactoParts.join('   ')]);
+      }
+    }
+
+    if (headerRows.length > 0) {
+      headerRows.push([]);
+    }
+
+    const rangoLabel = this.getRangoPeriodosLabel();
+    const fechaLabel = `Fecha de generación: ${this.fmtDateISO()}`;
+
+    headerRows.push(['Balance general']);
+    headerRows.push([rangoLabel]);
+    headerRows.push([fechaLabel]);
+    headerRows.push([]); // línea en blanco antes de la tabla
+
+    const headerLines = headerRows.length;
+
+    const HEAD = ['Tipo', 'Código', 'Nombre / Grupo', 'Deudor', 'Acreedor'];
+
+    // === 3) CUERPO DE LA TABLA ===
     const BODY = rows.map(r => {
       const nivel = r.nivel ?? 'DETALLE';
       const tipo = r.tipo ?? '';
@@ -326,7 +377,6 @@ export class BalanceGralComponent {
             (r.nombre ?? '');
 
       return [
-        nivel,
         tipo,
         codigo,
         nombre,
@@ -335,61 +385,145 @@ export class BalanceGralComponent {
       ];
     });
 
-    const firstDataRow = 2; 
-    const lastDataRow = firstDataRow + BODY.length - 1;
-    const totalsRow =
-      BODY.length > 0
-        ? [
-          'Totales (DETALLE)',
-          '',
-          '',
-          '',
-          { f: `SUMIFS(E${firstDataRow}:E${lastDataRow},A${firstDataRow}:A${lastDataRow},"DETALLE")` },
-          { f: `SUMIFS(F${firstDataRow}:F${lastDataRow},A${firstDataRow}:A${lastDataRow},"DETALLE")` },
-        ]
-        : ['Totales (DETALLE)', '', '', '', 0, 0];
+    const totDetDeudor = this.round2(
+      rows.filter(r => r.nivel === 'DETALLE')
+        .reduce((s, r) => s + this.toNum(r.saldo_deudor), 0)
+    );
+    const totDetAcreedor = this.round2(
+      rows.filter(r => r.nivel === 'DETALLE')
+        .reduce((s, r) => s + this.toNum(r.saldo_acreedor), 0)
+    );
 
-    const ws = XLSX.utils.aoa_to_sheet([HEAD, ...BODY, totalsRow]);
+    const totalsRow = [
+      'Totales (DETALLE)',
+      '',
+      '',
+      totDetDeudor,
+      totDetAcreedor,
+    ];
+
+    const aoa = [
+      ...headerRows,
+      HEAD,
+      ...BODY,
+      totalsRow,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     const numberFmt = '#,##0.00';
+
     if (ws['!ref']) {
       const range = XLSX.utils.decode_range(ws['!ref']);
+
+      const firstDataRow = headerLines + 1 + 1;
       for (let R = firstDataRow - 1; R <= range.e.r; R++) {
-        for (let C = 4; C <= 5; C++) {
+        for (let C = 3; C <= 4; C++) {
           const addr = XLSX.utils.encode_cell({ r: R, c: C });
           const cell = ws[addr];
           if (!cell) continue;
-          if (typeof cell.v === 'number' || (cell as any).f) {
+          if (typeof cell.v === 'number') {
             (cell as any).z = numberFmt;
           }
         }
       }
 
       ws['!autofilter'] = {
-        ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, range.e.r), c: range.e.c } }),
+        ref: XLSX.utils.encode_range({
+          s: { r: headerLines, c: 0 },
+          e: { r: Math.max(headerLines, range.e.r), c: 4 },
+        }),
       };
-      (ws as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
 
-      const rowsForWidth = [HEAD, ...BODY.map(r => r.map(v => (v ?? '').toString())), totalsRow.map(v => {
-        if (typeof v === 'object' && 'f' in v) return 'Σ';
-        return (v ?? '').toString();
-      })];
-      const colWidths = HEAD.map((_, colIdx) => {
-        const maxLen = rowsForWidth.reduce((m, row) => Math.max(m, (row[colIdx] ?? '').length), 0);
+      (ws as any)['!freeze'] = { xSplit: 0, ySplit: headerLines + 1 };
+
+      const rowsForWidth = aoa.map(row =>
+        row.map(v => (v ?? '').toString())
+      );
+
+      const colCount = HEAD.length;
+      const colWidths = Array.from({ length: colCount }).map((_, colIdx) => {
+        const maxLen = rowsForWidth.reduce(
+          (m, row) => Math.max(m, (row[colIdx] ?? '').length),
+          0
+        );
         return { wch: Math.min(Math.max(10, maxLen + 2), 50) };
       });
+
       (ws as any)['!cols'] = colWidths;
+
+
+      const titleRow = headerRows.findIndex(r => r[0] === 'Balance general');
+      if (titleRow >= 0) {
+        const addr = XLSX.utils.encode_cell({ r: titleRow, c: 0 });
+        if (!ws[addr]) ws[addr] = { t: 's', v: 'Balance general' };
+        (ws[addr] as any).s = {
+          font: { bold: true, sz: 16 },
+          alignment: { horizontal: 'left' },
+        };
+      }
+
+      const headRowIdx = headerLines;
+      for (let c = 0; c < HEAD.length; c++) {
+        const addr = XLSX.utils.encode_cell({ r: headRowIdx, c });
+        const cell = ws[addr];
+        if (!cell) continue;
+        (cell as any).s = {
+          font: { bold: true, sz: 11 },
+          fill: { fgColor: { rgb: 'D9E1F2' } }, // azulito claro
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border: {
+            top: { style: 'thin', color: { rgb: 'AAAAAA' } },
+            bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
+            left: { style: 'thin', color: { rgb: 'AAAAAA' } },
+            right: { style: 'thin', color: { rgb: 'AAAAAA' } },
+          },
+        };
+      }
+
+      const totalRowIdx = headerLines + 1 + BODY.length;
+      for (let c = 0; c < HEAD.length; c++) {
+        const addr = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+        const cell = ws[addr];
+        if (!cell) continue;
+        (cell as any).s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: 'F2F2F2' } },
+          alignment: { horizontal: c >= 3 ? 'right' : 'left' },
+        };
+      }
+
+      for (let R = firstDataRow - 1; R <= range.e.r; R++) {
+        for (let C = 3; C <= 4; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[addr];
+          if (!cell) continue;
+          (cell as any).s = {
+            ...(cell as any).s,
+            alignment: { horizontal: 'right' },
+          };
+        }
+      }
     }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Balance');
 
-    const rango =
+    const rangoSlug =
       (this.periodoIniId && this.periodoFinId) ? `_p${this.periodoIniId}-p${this.periodoFinId}` : '';
     const fecha = this.fmtDateISO();
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `balanceGeneral${rango}_${fecha}.xlsx`);
+
+    const blob = new Blob(
+      [excelBuffer],
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    );
+
+    const empresaSlug = this.empresaInfo?.razon_social
+      ? this.empresaInfo.razon_social.replace(/[^\w\d]+/g, '_')
+      : 'empresa';
+
+    saveAs(blob, `${empresaSlug}_BalanceGeneral${rangoSlug}_${fecha}.xlsx`);
 
     this.showToast({
       type: 'success',
@@ -397,4 +531,5 @@ export class BalanceGralComponent {
       message: `Se exportaron ${rows.length} filas ${allRows ? '(todas)' : '(filtradas)'}`
     });
   }
+
 }
