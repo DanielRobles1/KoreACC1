@@ -19,6 +19,10 @@ import { PolizaEditarComponent } from './pages/poliza-editar/poliza-editar.compo
 import { BalanzaComprobacionComponent } from './pages/balanza-comprobacion/balanza-comprobacion.component';
 import { EstadoResComponent } from './pages/estado-res/estado-res.component';
 import { BalanceGralComponent } from './pages/balance-gral/balance-gral.component';
+import { EmpresaPrincipalComponent } from './pages/empresa-principal/empresa-principal.component';
+import { DashboardContableComponent } from './pages/dashboard-contable/dashboard-contable.component';
+
+
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
@@ -80,6 +84,7 @@ export const routes: Routes = [
   path: 'polizas/editar/:id',
   component: PolizaEditarComponent
 },
+{ path: 'empresas', component: EmpresaPrincipalComponent },
 {
    path: 'poliza-home',
     component: PolizaHomeComponent,
@@ -104,5 +109,9 @@ export const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_empresa']}
 },
+// app.routes.ts
+{ path: 'dashboard-contable', component: DashboardContableComponent }
+,
   { path: '**', redirectTo: 'login' }
+
 ];

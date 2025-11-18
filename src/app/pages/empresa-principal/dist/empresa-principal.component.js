@@ -71,7 +71,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 exports.__esModule = true;
-exports.EmpresaComponent = void 0;
+exports.EmpresaPrincipalComponent = void 0;
 var core_1 = require("@angular/core");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
@@ -80,9 +80,8 @@ var crud_panel_component_1 = require("src/app/components/crud-panel/crud-panel.c
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
-var EmpresaComponent = /** @class */ (function () {
-    function EmpresaComponent(empresaService, periodosService, auth, toast, ejerciciosService, polizasService) {
-        var _this = this;
+var EmpresaPrincipalComponent = /** @class */ (function () {
+    function EmpresaPrincipalComponent(empresaService, periodosService, auth, toast, ejerciciosService, polizasService) {
         this.empresaService = empresaService;
         this.periodosService = periodosService;
         this.auth = auth;
@@ -94,13 +93,7 @@ var EmpresaComponent = /** @class */ (function () {
         // tablas
         this.title = 'Configuración de la Empresa';
         this.tabs = [
-            { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
-            { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
-            {
-                id: 'tipo-poliza',
-                label: '+ Tipo póliza'
-            },
-            { id: 'empresa', label: 'empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresas' },
+            { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             {
                 id: 'tipo-poliza',
                 label: '+ Tipo póliza'
@@ -199,40 +192,40 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmPayload = null;
         // PARA FECHAS
         this.minDate = '';
-        this.onSelectEjercicioId = function (id) {
-            var row = _this.ejercicios.find(function (e) { return e.id_ejercicio === Number(id); });
-            if (!row)
-                return;
-            _this.updateSelectedEjercicioUI(__assign({}, row));
-        };
-        this.ejFechaMin = '';
-        this.ejFechaMax = '';
         // GENERACIÓN AUTOMÁTICA DE PERÍODOS 
         this.genModalOpen = false;
         this.genTipo = 'MENSUAL';
         this.genIncluirCerrados = false;
         this.isGenerating = false;
     }
+    Object.defineProperty(EmpresaPrincipalComponent.prototype, "currentEmpresa", {
+        get: function () {
+            var _a, _b;
+            return (_b = (_a = this.rows) === null || _a === void 0 ? void 0 : _a[0]) !== null && _b !== void 0 ? _b : null;
+        },
+        enumerable: false,
+        configurable: true
+    });
     // FECHAS 
-    EmpresaComponent.prototype.pad = function (n) { return n < 10 ? "0" + n : "" + n; };
-    EmpresaComponent.prototype.toISO = function (d) { return d.getFullYear() + "-" + this.pad(d.getMonth() + 1) + "-" + this.pad(d.getDate()); };
-    EmpresaComponent.prototype.todayLocal = function () { var now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); };
-    EmpresaComponent.prototype.parseISODateLocal = function (iso) { var _a = iso.split('-').map(Number), y = _a[0], m = _a[1], d = _a[2]; return new Date(y, (m !== null && m !== void 0 ? m : 1) - 1, d !== null && d !== void 0 ? d : 1); };
-    EmpresaComponent.prototype.isPast = function (dateStr) { if (!dateStr)
+    EmpresaPrincipalComponent.prototype.pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+    EmpresaPrincipalComponent.prototype.toISO = function (d) { return d.getFullYear() + "-" + this.pad(d.getMonth() + 1) + "-" + this.pad(d.getDate()); };
+    EmpresaPrincipalComponent.prototype.todayLocal = function () { var now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); };
+    EmpresaPrincipalComponent.prototype.parseISODateLocal = function (iso) { var _a = iso.split('-').map(Number), y = _a[0], m = _a[1], d = _a[2]; return new Date(y, (m !== null && m !== void 0 ? m : 1) - 1, d !== null && d !== void 0 ? d : 1); };
+    EmpresaPrincipalComponent.prototype.isPast = function (dateStr) { if (!dateStr)
         return false; var d = this.parseISODateLocal(dateStr); return d < this.todayLocal(); };
-    EmpresaComponent.prototype.startOfMonth = function (d) { return new Date(d.getFullYear(), d.getMonth(), 1); };
-    EmpresaComponent.prototype.endOfMonth = function (d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); };
-    EmpresaComponent.prototype.startOfYear = function (d) { return new Date(d.getFullYear(), 0, 1); };
-    EmpresaComponent.prototype.endOfYear = function (d) { return new Date(d.getFullYear(), 12, 0); };
-    EmpresaComponent.prototype.addDays = function (d, days) { var r = new Date(d); r.setDate(r.getDate() + days); return r; };
-    EmpresaComponent.prototype.startOfWeek = function (d) {
+    EmpresaPrincipalComponent.prototype.startOfMonth = function (d) { return new Date(d.getFullYear(), d.getMonth(), 1); };
+    EmpresaPrincipalComponent.prototype.endOfMonth = function (d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); };
+    EmpresaPrincipalComponent.prototype.startOfYear = function (d) { return new Date(d.getFullYear(), 0, 1); };
+    EmpresaPrincipalComponent.prototype.endOfYear = function (d) { return new Date(d.getFullYear(), 12, 0); };
+    EmpresaPrincipalComponent.prototype.addDays = function (d, days) { var r = new Date(d); r.setDate(r.getDate() + days); return r; };
+    EmpresaPrincipalComponent.prototype.startOfWeek = function (d) {
         var wd = d.getDay(); // 0=Dom, 1=Lun,----6=Sáb
         var diff = (wd === 0 ? -6 : 1 - wd); // llevar a lunes
         var res = new Date(d);
         res.setDate(d.getDate() + diff);
         return new Date(res.getFullYear(), res.getMonth(), res.getDate());
     };
-    EmpresaComponent.prototype.computeCurrentPeriod = function (type, ref) {
+    EmpresaPrincipalComponent.prototype.computeCurrentPeriod = function (type, ref) {
         if (type === 'PERSONALIZADO')
             return null;
         var base = ref !== null && ref !== void 0 ? ref : this.todayLocal();
@@ -243,7 +236,7 @@ var EmpresaComponent = /** @class */ (function () {
         }
         return null;
     };
-    EmpresaComponent.prototype.onTipoPolizaCreado = function (_nuevo) {
+    EmpresaPrincipalComponent.prototype.onTipoPolizaCreado = function (_nuevo) {
         // Aquí puedes refrescar catálogos si aplica
         this.vm = {
             open: true,
@@ -255,7 +248,7 @@ var EmpresaComponent = /** @class */ (function () {
         // Si prefieres cerrar el modal desde el padre:
         // this.closeTipoPolizaModal();
     };
-    EmpresaComponent.prototype.setDatesByType = function (type, referenceDate) {
+    EmpresaPrincipalComponent.prototype.setDatesByType = function (type, referenceDate) {
         if (type === 'PERSONALIZADO')
             return;
         var range = this.computeCurrentPeriod(type, referenceDate !== null && referenceDate !== void 0 ? referenceDate : this.todayLocal());
@@ -265,7 +258,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.formPeriodo.fecha_fin = this.toISO(range.end);
     };
     // CICLO DE VIDA
-    EmpresaComponent.prototype.ngOnInit = function () {
+    EmpresaPrincipalComponent.prototype.ngOnInit = function () {
         var _this = this;
         this.toast.state$.subscribe(function (s) { return _this.vm = s; });
         this.canEdit = this.auth.hasPermission('editar_empresa');
@@ -280,14 +273,14 @@ var EmpresaComponent = /** @class */ (function () {
         this.minDate = this.toISO(this.todayLocal());
         this.loadDataEmpresa();
     };
-    EmpresaComponent.prototype.openSuccess = function (message) { this.toast.success(message, 'Éxito', 3000); };
-    EmpresaComponent.prototype.openError = function (message, err) { if (err)
+    EmpresaPrincipalComponent.prototype.openSuccess = function (message) { this.toast.success(message, 'Éxito', 3000); };
+    EmpresaPrincipalComponent.prototype.openError = function (message, err) { if (err)
         console.error('[EmpresaComponent] Error:', err); this.toast.error(message, 'Error', 0); };
-    EmpresaComponent.prototype.extractErrorMessage = function (err) {
+    EmpresaPrincipalComponent.prototype.extractErrorMessage = function (err) {
         var _a;
         return ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || (typeof err === 'string' ? err : null);
     };
-    EmpresaComponent.prototype.loadDataEmpresa = function () {
+    EmpresaPrincipalComponent.prototype.loadDataEmpresa = function () {
         var _this = this;
         this.empresaService.getEmpresa().subscribe({
             next: function (data) {
@@ -302,7 +295,7 @@ var EmpresaComponent = /** @class */ (function () {
             error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
         });
     };
-    EmpresaComponent.prototype.onTabChange = function (id) {
+    EmpresaPrincipalComponent.prototype.onTabChange = function (id) {
         // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
         if (id === 'tipo-poliza') {
             this.tpOpen = true; // abre el modal
@@ -317,7 +310,7 @@ var EmpresaComponent = /** @class */ (function () {
         }
     };
     // Editar empresa
-    EmpresaComponent.prototype.onPrimary = function () {
+    EmpresaPrincipalComponent.prototype.onPrimary = function () {
         if (!this.canEdit)
             return this.openError('No tienes permisos para editar la empresa');
         var empresa = this.rows[0];
@@ -326,15 +319,15 @@ var EmpresaComponent = /** @class */ (function () {
         this.formEmpresa = __assign({}, empresa);
         this.editOpen = true;
     };
-    EmpresaComponent.prototype.onEdit = function (row) {
+    EmpresaPrincipalComponent.prototype.onEdit = function (row) {
         if (!this.canEdit)
             return this.openError('No tienes permisos para editar');
         this.formEmpresa = __assign({}, row);
         this.editOpen = true;
     };
-    EmpresaComponent.prototype.closeModal = function () { this.editOpen = false; };
-    EmpresaComponent.prototype.cancelModal = function () { this.editOpen = false; };
-    EmpresaComponent.prototype.confirmModal = function () {
+    EmpresaPrincipalComponent.prototype.closeModal = function () { this.editOpen = false; };
+    EmpresaPrincipalComponent.prototype.cancelModal = function () { this.editOpen = false; };
+    EmpresaPrincipalComponent.prototype.confirmModal = function () {
         this.confirmTitle = 'Confirmar guardado';
         this.confirmMessage = '¿Deseas guardar los cambios de la empresa?';
         this.confirmKind = 'empresa-save';
@@ -342,13 +335,13 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmOpen = true;
     };
     // PERI
-    EmpresaComponent.prototype.empresaId = function () {
+    EmpresaPrincipalComponent.prototype.empresaId = function () {
         var _a;
         var e = this.rows[0];
         var id = ((_a = e === null || e === void 0 ? void 0 : e.id_empresa) !== null && _a !== void 0 ? _a : e === null || e === void 0 ? void 0 : e.id);
         return id !== null && id !== void 0 ? id : null;
     };
-    EmpresaComponent.prototype.loadPeriodos = function () {
+    EmpresaPrincipalComponent.prototype.loadPeriodos = function () {
         var _this = this;
         var _a;
         var idEmp = this.empresaId();
@@ -366,7 +359,7 @@ var EmpresaComponent = /** @class */ (function () {
             error: function (err) { return _this.openError('Error al cargar los períodos', err); }
         });
     };
-    EmpresaComponent.prototype.onTipoPeriodoChange = function (newType) {
+    EmpresaPrincipalComponent.prototype.onTipoPeriodoChange = function (newType) {
         this.formPeriodo.tipo_periodo = newType;
         if (newType === 'PERSONALIZADO' || this.autoCreate)
             return;
@@ -375,7 +368,7 @@ var EmpresaComponent = /** @class */ (function () {
             : this.todayLocal();
         this.setDatesByType(newType, ref);
     };
-    EmpresaComponent.prototype.onFechaInicioChange = function (newStartStr) {
+    EmpresaPrincipalComponent.prototype.onFechaInicioChange = function (newStartStr) {
         this.formPeriodo.fecha_inicio = newStartStr;
         if (this.autoCreate)
             return;
@@ -397,7 +390,7 @@ var EmpresaComponent = /** @class */ (function () {
             }
         }
     };
-    EmpresaComponent.prototype.onFechaFinChange = function (newEndStr) {
+    EmpresaPrincipalComponent.prototype.onFechaFinChange = function (newEndStr) {
         if (this.autoCreate)
             return;
         var t = this.formPeriodo.tipo_periodo;
@@ -421,7 +414,7 @@ var EmpresaComponent = /** @class */ (function () {
         }
     };
     // Abrir creación de período
-    EmpresaComponent.prototype.onPrimaryPeriodo = function () {
+    EmpresaPrincipalComponent.prototype.onPrimaryPeriodo = function () {
         var _a;
         if (!this.canEdit)
             return this.openError('No tienes permisos para crear períodos');
@@ -438,7 +431,7 @@ var EmpresaComponent = /** @class */ (function () {
         this.setDatesByType('MENSUAL', this.todayLocal());
         this.modalPeriodoOpen = true;
     };
-    EmpresaComponent.prototype.onPeriodoAction = function (evt) {
+    EmpresaPrincipalComponent.prototype.onPeriodoAction = function (evt) {
         var _a;
         switch (evt.action) {
             case 'edit':
@@ -473,10 +466,10 @@ var EmpresaComponent = /** @class */ (function () {
         }
     };
     // Cierre modal período
-    EmpresaComponent.prototype.closePeriodoModal = function () { this.modalPeriodoOpen = false; };
-    EmpresaComponent.prototype.cancelPeriodoModal = function () { this.modalPeriodoOpen = false; };
+    EmpresaPrincipalComponent.prototype.closePeriodoModal = function () { this.modalPeriodoOpen = false; };
+    EmpresaPrincipalComponent.prototype.cancelPeriodoModal = function () { this.modalPeriodoOpen = false; };
     // Confirmación antes de guardar período
-    EmpresaComponent.prototype.confirmPeriodoModal = function () {
+    EmpresaPrincipalComponent.prototype.confirmPeriodoModal = function () {
         var _a;
         // Flujo especial: crear automáticamente todos los periodos del ejercicio
         if (this.autoCreate && !this.editPeriodoId) {
@@ -509,11 +502,11 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmOpen = true;
     };
     // EJERCICIOS: lógica de almacenamiento local de selección
-    EmpresaComponent.prototype.storageKey = function () {
+    EmpresaPrincipalComponent.prototype.storageKey = function () {
         var idEmp = this.empresaId();
         return idEmp ? "ejercicio_seleccionado:" + idEmp : null;
     };
-    EmpresaComponent.prototype.saveEjercicioSeleccionado = function (ej) {
+    EmpresaPrincipalComponent.prototype.saveEjercicioSeleccionado = function (ej) {
         var key = this.storageKey();
         if (!key)
             return;
@@ -522,14 +515,14 @@ var EmpresaComponent = /** @class */ (function () {
         else
             localStorage.removeItem(key);
     };
-    EmpresaComponent.prototype.restoreEjercicioSeleccionado = function () {
+    EmpresaPrincipalComponent.prototype.restoreEjercicioSeleccionado = function () {
         var key = this.storageKey();
         if (!key)
             return;
         var raw = localStorage.getItem(key);
         this.ejercicioSeleccionado = raw ? JSON.parse(raw) : null;
     };
-    Object.defineProperty(EmpresaComponent.prototype, "ejercicioSeleccionadoLabel", {
+    Object.defineProperty(EmpresaPrincipalComponent.prototype, "ejercicioSeleccionadoLabel", {
         get: function () {
             var ej = this.ejercicioSeleccionado;
             return ej ? "Ejercicio seleccionado: " + ej.anio : 'Sin ejercicio seleccionado';
@@ -537,7 +530,7 @@ var EmpresaComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    EmpresaComponent.prototype.loadEjercicios = function () {
+    EmpresaPrincipalComponent.prototype.loadEjercicios = function () {
         var _this = this;
         var idEmp = this.empresaId();
         if (!idEmp)
@@ -548,7 +541,7 @@ var EmpresaComponent = /** @class */ (function () {
         });
     };
     // Abrir creación de ejercicio
-    EmpresaComponent.prototype.onPrimaryEjercicio = function () {
+    EmpresaPrincipalComponent.prototype.onPrimaryEjercicio = function () {
         if (!this.canEdit)
             return this.openError('No tienes permisos para crear ejercicios');
         this.modalEjercicioTitle = 'Crear ejercicio';
@@ -563,12 +556,9 @@ var EmpresaComponent = /** @class */ (function () {
             esta_abierto: true,
             id_empresa: this.empresaId()
         };
-        var _a = this.yearToBounds(y), min = _a.min, max = _a.max;
-        this.ejFechaMin = min;
-        this.ejFechaMax = max;
         this.modalEjercicioOpen = true;
     };
-    EmpresaComponent.prototype.onEjercicioAction = function (evt) {
+    EmpresaPrincipalComponent.prototype.onEjercicioAction = function (evt) {
         var _a;
         switch (evt.action) {
             case 'edit':
@@ -577,15 +567,6 @@ var EmpresaComponent = /** @class */ (function () {
                 this.modalEjercicioTitle = 'Editar ejercicio';
                 this.editEjercicioId = (_a = evt.row.id_ejercicio) !== null && _a !== void 0 ? _a : null;
                 this.formEjercicio = __assign({}, evt.row);
-                if (this.formEjercicio.anio) {
-                    var y = Number(this.formEjercicio.anio);
-                    var _b = this.yearToBounds(y), min = _b.min, max = _b.max;
-                    this.ejFechaMin = min;
-                    this.ejFechaMax = max;
-                    // Opcional: si las fechas guardadas quedaron fuera del año, encuadra
-                    this.formEjercicio.fecha_inicio = this.clampToYear(this.formEjercicio.fecha_inicio, y);
-                    this.formEjercicio.fecha_fin = this.clampToYear(this.formEjercicio.fecha_fin, y);
-                }
                 this.modalEjercicioOpen = true;
                 break;
             case 'delete':
@@ -616,99 +597,30 @@ var EmpresaComponent = /** @class */ (function () {
                 this.confirmOpen = true;
                 break;
             case 'select':
-                var id = Number(evt.row.id_ejercicio);
-                this.persistEjercicioSeleccion(id);
+                this.setEjercicioSeleccionado(evt.row);
+                this.openSuccess("Seleccionado ejercicio " + evt.row.anio + ".");
                 break;
             default:
                 this.openError("Acci\u00F3n no soportada: " + evt.action);
         }
     };
-    EmpresaComponent.prototype.setEjercicioSeleccionado = function (ej) {
+    EmpresaPrincipalComponent.prototype.setEjercicioSeleccionado = function (ej) {
         this.ejercicioSeleccionado = ej;
         this.saveEjercicioSeleccionado(ej);
         this.loadPeriodos();
-    };
-    EmpresaComponent.prototype.updateSelectedEjercicioUI = function (ej) {
-        this.ejercicioSeleccionado = ej;
-        this.saveEjercicioSeleccionado(ej);
-        this.loadPeriodos();
-    };
-    EmpresaComponent.prototype.persistEjercicioSeleccion = function (id_ejercicio) {
-        var _this = this;
-        this.polizasService.selectEjercicio(id_ejercicio).subscribe({
-            next: function (res) {
-                // Refleja is_selected en memoria de forma segura
-                _this.ejercicios = _this.ejercicios.map(function (e) { return (__assign(__assign({}, e), { is_selected: e.id_ejercicio === id_ejercicio })); });
-                var nuevoSel = _this.ejercicios.find(function (e) { return e.id_ejercicio === id_ejercicio; }) || null;
-                _this.updateSelectedEjercicioUI(nuevoSel);
-                _this.openSuccess('Ejercicio seleccionado.');
-            },
-            error: function (err) {
-                console.error('❌ Error al seleccionar ejercicio en BD:', err);
-                _this.openError('No se pudo seleccionar el ejercicio en el servidor.', err);
-            }
-        });
-    };
-    EmpresaComponent.prototype.yearToBounds = function (year) {
-        var start = new Date(year, 0, 1);
-        var end = new Date(year, 11, 31);
-        return { min: this.toISO(start), max: this.toISO(end) };
-    };
-    EmpresaComponent.prototype.clampToYear = function (isoDate, year) {
-        if (!isoDate)
-            return isoDate;
-        var _a = this.yearToBounds(year), min = _a.min, max = _a.max;
-        var d = this.parseISODateLocal(isoDate);
-        var dMin = this.parseISODateLocal(min);
-        var dMax = this.parseISODateLocal(max);
-        if (d < dMin)
-            return min;
-        if (d > dMax)
-            return max;
-        return isoDate;
-    };
-    EmpresaComponent.prototype.setEjercicioDatesFromYear = function (year) {
-        // Establece automáticamente el 1/ene y 31/dic del año
-        var _a = this.yearToBounds(year), min = _a.min, max = _a.max;
-        this.formEjercicio.fecha_inicio = min;
-        this.formEjercicio.fecha_fin = max;
-        this.ejFechaMin = min;
-        this.ejFechaMax = max;
-    };
-    EmpresaComponent.prototype.onEjercicioAnioChange = function (year) {
-        // Actualiza límites y fechas automáticamente al cambiar el año
-        this.setEjercicioDatesFromYear(Number(year));
-    };
-    EmpresaComponent.prototype.onEjercicioFechaInicioChange = function (newStart) {
-        var y = Number(this.formEjercicio.anio);
-        if (!y)
-            return;
-        // Asegura que la fecha inicio quede dentro del año y no supere fin
-        this.formEjercicio.fecha_inicio = this.clampToYear(newStart, y);
-        if (this.formEjercicio.fecha_fin) {
-            var fi = this.parseISODateLocal(this.formEjercicio.fecha_inicio);
-            var ff = this.parseISODateLocal(this.formEjercicio.fecha_fin);
-            if (ff < fi) {
-                this.formEjercicio.fecha_fin = this.formEjercicio.fecha_inicio;
-            }
-        }
-    };
-    EmpresaComponent.prototype.onEjercicioFechaFinChange = function (newEnd) {
-        var y = Number(this.formEjercicio.anio);
-        if (!y)
-            return;
-        // Asegura que la fecha fin quede dentro del año y no sea < inicio
-        this.formEjercicio.fecha_fin = this.clampToYear(newEnd, y);
-        if (this.formEjercicio.fecha_inicio) {
-            var fi = this.parseISODateLocal(this.formEjercicio.fecha_inicio);
-            var ff = this.parseISODateLocal(this.formEjercicio.fecha_fin);
-            if (ff < fi) {
-                this.formEjercicio.fecha_inicio = this.formEjercicio.fecha_fin;
-            }
+        if (ej === null || ej === void 0 ? void 0 : ej.id_ejercicio) {
+            this.polizasService.selectEjercicio(ej.id_ejercicio).subscribe({
+                next: function () {
+                    console.log('✅ Ejercicio seleccionado reflejado en base de datos');
+                },
+                error: function (err) {
+                    console.error('❌ Error al actualizar el ejercicio en la base de datos:', err);
+                }
+            });
         }
     };
     // Guardar ejercicio desde modal
-    EmpresaComponent.prototype.confirmEjercicioModal = function () {
+    EmpresaPrincipalComponent.prototype.confirmEjercicioModal = function () {
         var idEmp = this.empresaId();
         if (!idEmp)
             return this.openError('No hay empresa seleccionada.');
@@ -730,11 +642,11 @@ var EmpresaComponent = /** @class */ (function () {
         this.confirmOpen = true;
     };
     // Cierre modal ejercicio
-    EmpresaComponent.prototype.closeEjercicioModal = function () { this.modalEjercicioOpen = false; };
-    EmpresaComponent.prototype.cancelEjercicioModal = function () { this.modalEjercicioOpen = false; };
-    EmpresaComponent.prototype.closeConfirm = function () { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; };
-    EmpresaComponent.prototype.cancelConfirm = function () { this.closeConfirm(); };
-    EmpresaComponent.prototype.confirmProceed = function () {
+    EmpresaPrincipalComponent.prototype.closeEjercicioModal = function () { this.modalEjercicioOpen = false; };
+    EmpresaPrincipalComponent.prototype.cancelEjercicioModal = function () { this.modalEjercicioOpen = false; };
+    EmpresaPrincipalComponent.prototype.closeConfirm = function () { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; };
+    EmpresaPrincipalComponent.prototype.cancelConfirm = function () { this.closeConfirm(); };
+    EmpresaPrincipalComponent.prototype.confirmProceed = function () {
         var _this = this;
         var _a, _b, _c, _d;
         var kind = this.confirmKind;
@@ -799,12 +711,13 @@ var EmpresaComponent = /** @class */ (function () {
                     return this.openError('No se encontró el identificador del período.');
                 this.periodosService.cerrar(idp_1).subscribe({
                     next: function (res) {
+                        // Actualiza el registro localmente a cerrado
                         _this.periodos = _this.periodos.map(function (p) {
                             return p.id_periodo === idp_1 ? __assign(__assign({}, p), { esta_abierto: false }) : p;
                         });
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.message) || 'Período cerrado correctamente.');
                     },
-                    error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
+                    error: function (err) { return _this.openError('No se pudo cerrar el período', err); }
                 });
                 break;
             }
@@ -851,12 +764,6 @@ var EmpresaComponent = /** @class */ (function () {
                             _this.ejercicios = __spreadArrays(_this.ejercicios, [saved]);
                             _this.setEjercicioSeleccionado(saved);
                             _this.openSuccess('Ejercicio creado.');
-                            _this.modalPeriodoTitle = 'Crear período';
-                            _this.editPeriodoId = null;
-                            _this.autoCreate = true;
-                            _this.autoCreateTipo = 'MENSUAL';
-                            _this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
-                            Promise.resolve().then(function () { return _this.modalPeriodoOpen = true; });
                         }
                     },
                     error: function (err) { return _this.openError('No se pudo guardar el ejercicio', err); }
@@ -931,23 +838,23 @@ var EmpresaComponent = /** @class */ (function () {
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.mensaje) ||
                             'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).');
                     },
-                    error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
+                    error: function (err) { return _this.openError('No se pudo cerrar el ejercicio', err); }
                 });
                 break;
             }
         }
     };
-    EmpresaComponent.prototype.onRowAction = function (evt) {
+    EmpresaPrincipalComponent.prototype.onRowAction = function (evt) {
         if (evt.action === 'edit')
             return this.onEdit(evt.row);
         this.openError("Acci\u00F3n no soportada: " + evt.action);
     };
-    EmpresaComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
+    EmpresaPrincipalComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
     // Abrir gestor de ejercicios
-    EmpresaComponent.prototype.onOpenEjercicioManager = function () {
+    EmpresaPrincipalComponent.prototype.onOpenEjercicioManager = function () {
         this.onPrimaryEjercicio();
     };
-    EmpresaComponent.prototype.ensureEjercicioSeleccionado = function () {
+    EmpresaPrincipalComponent.prototype.ensureEjercicioSeleccionado = function () {
         var ej = this.ejercicioSeleccionado;
         if (!(ej === null || ej === void 0 ? void 0 : ej.id_ejercicio)) {
             this.openError('Selecciona un ejercicio contable antes de generar períodos.');
@@ -955,7 +862,7 @@ var EmpresaComponent = /** @class */ (function () {
         }
         return ej;
     };
-    EmpresaComponent.prototype.generatePeriodsForSelectedExercise = function (tipo) {
+    EmpresaPrincipalComponent.prototype.generatePeriodsForSelectedExercise = function (tipo) {
         if (tipo === void 0) { tipo = 'MENSUAL'; }
         return __awaiter(this, void 0, void 0, function () {
             var ej, idEmp, userId, centroId;
@@ -995,20 +902,20 @@ var EmpresaComponent = /** @class */ (function () {
             });
         });
     };
-    EmpresaComponent.prototype.openGenerarPeriodos = function (tipo) {
+    EmpresaPrincipalComponent.prototype.openGenerarPeriodos = function (tipo) {
         if (tipo === void 0) { tipo = 'MENSUAL'; }
         this.genTipo = tipo;
         this.generatePeriodsForSelectedExercise(tipo);
     };
-    EmpresaComponent = __decorate([
+    EmpresaPrincipalComponent = __decorate([
         core_1.Component({
             selector: 'app-empresa',
             standalone: true,
             imports: [common_1.CommonModule, forms_1.FormsModule, crud_panel_component_1.CrudPanelComponent, sidebar_component_1.SidebarComponent, modal_component_1.ModalComponent, toast_message_component_component_1.ToastMessageComponent, modal_tipopoliza_component_1.TipoPolizaModalComponent],
-            templateUrl: './empresa.component.html',
-            styleUrls: ['./empresa.component.scss']
+            templateUrl: './empresa-principal.component.html',
+            styleUrls: ['./empresa-principal.component.scss']
         })
-    ], EmpresaComponent);
-    return EmpresaComponent;
+    ], EmpresaPrincipalComponent);
+    return EmpresaPrincipalComponent;
 }());
-exports.EmpresaComponent = EmpresaComponent;
+exports.EmpresaPrincipalComponent = EmpresaPrincipalComponent;

@@ -80,12 +80,14 @@
 
       <li>
         <button type="button"
-                class="btn"
-                [class.btn--active]="active==='dashboard'"
-                (click)="setActive('dashboard')">
-          <img src="assets/svgs/dashboard.svg" alt="Dashboard" class="icon">
-          <span class="ml-2">Dashboard</span>
-        </button>
+        class="btn"
+        [class.btn--active]="active==='dashboard'"
+        [routerLink]="['/dashboard-contable']"
+        (click)="setActive('dashboard')">
+  <img src="assets/svgs/dashboard.svg" alt="Dashboard" class="icon">
+  <span class="ml-2">Dashboard</span>
+</button>
+
       </li>
     </ul>
   </div>

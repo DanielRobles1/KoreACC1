@@ -15,7 +15,7 @@
     <!-- LISTA -->
     <div class="modal-body" style="padding-bottom: 0;">
       <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <strong>Tipos registrados</strong>
+        <strong>Tipos de póliza registrados</strong>
         <button class="btn ghost" type="button" (click)="loadTipos()" [disabled]="loading">
           {{ loading ? 'Actualizando…' : 'Actualizar' }}
         </button>
@@ -24,6 +24,7 @@
       <div style="max-height: 220px; overflow:auto; border:1px solid #eee; border-radius:10px;">
         <table style="width:100%; border-collapse:collapse; font-size:14px;">
           <thead>
+
             <tr style="background:#fafafa;">
               <th style="padding:10px;">#</th>
               <th style="padding:10px;">Naturaleza</th>
@@ -33,6 +34,7 @@
           </thead>
 
           <tbody>
+            
             <tr *ngIf="!tipos.length">
               <td colspan="4" style="padding:12px; text-align:center;">No hay tipos registrados</td>
             </tr>
@@ -72,8 +74,10 @@
     </div>
 
     <!-- FORM -->
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-body">
+                 
 
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="modal-body">
+ <Strong>   Registrar nuevo tipo de póliza</Strong>
       <div *ngIf="editing" class="pill">Editando: {{ tipoEditando?.descripcion }}</div>
 
       <div class="form-row">

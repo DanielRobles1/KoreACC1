@@ -9,37 +9,13 @@
     <div class="crud-wrapper">
 
       <!-- Empresa apartaso -->
-      <app-crud-panel
-        *ngIf="activeTabId === 'datos'"
-        [title]="title"
-        [tabs]="tabs"
-        [activeTabId]="activeTabId"
-        (tabChange)="onTabChange($event)"
-        
-        [primaryActionLabel]="primaryActionLabel"
-        (primaryAction)="onPrimary()"
-        [disablePrimary]="!canEdit"
-
-        [columns]="columns"
-        [data]="rows"
-        [actions]="actions"
-        [showSearch]="false"
-        [hidePrimary]="true"
-
-        (edit)="onEdit($event)"
-        (action)="onRowAction($event)">
-         <ng-container tabs>
-    <button type="button" class="btn btn-primary" (click)="tpOpen = true" title="Crear tipo de póliza">
-      + Tipo póliza
-    </button>
-  </ng-container>
-      </app-crud-panel>
+     
 
       
       <!-- Ejercicios contables  -->
       <app-crud-panel
         [title]="'Ejercicios Contables'"
-
+        [tabs]="tabs"
         [activeTabId]="activeTabId"
         (tabChange)="onTabChange($event)"
 

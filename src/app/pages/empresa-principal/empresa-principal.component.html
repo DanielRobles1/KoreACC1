@@ -1,0 +1,109 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <div class="content">
+    <div class="crud-wrapper">
+
+      <!-- Empresa apartaso -->
+      <app-crud-panel
+        *ngIf="activeTabId === 'datos'"
+        [title]="title"
+        [tabs]="tabs"
+        [activeTabId]="activeTabId"
+        (tabChange)="onTabChange($event)"
+        
+        [primaryActionLabel]="primaryActionLabel"
+        (primaryAction)="onPrimary()"
+        [disablePrimary]="!canEdit"
+
+        [columns]="columns"
+        [data]="rows"
+        [actions]="actions"
+        [showSearch]="false"
+        [hidePrimary]="true"
+
+        (edit)="onEdit($event)"
+        (action)="onRowAction($event)">
+         <ng-container tabs>
+    <button type="button" class="btn btn-primary" (click)="tpOpen = true" title="Crear tipo de póliza">
+      + Tipo póliza
+    </button>
+  </ng-container>
+      </app-crud-panel>
+
+      
+     
+
+<!-- modañ para la empresa-->
+<app-modal
+  [open]="editOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  [showClose]="showClose"
+  (closed)="closeModal()"
+  (canceled)="cancelModal()"
+  (confirmed)="confirmModal()">
+  <form #empresaForm="ngForm" style="display: grid; gap: 10px;">
+    <div>
+      <label class="field-label required">Razón social</label>
+      <input class="field-input" type="text" [(ngModel)]="formEmpresa.razon_social" name="razon_social" required />
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label class="field-label required">RFC</label>
+        <input
+          class="field-input"
+          type="text"
+          [(ngModel)]="formEmpresa.rfc"
+          name="rfc"
+          required
+          pattern="^[A-ZÑ&]{3}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z0-9]{2}[0-9A]$|^[A-ZÑ&]{4}\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[A-Z0-9]{2}[0-9A]$"
+        />
+      </div>
+      <div>
+        <label class="field-label">Teléfono</label>
+        <input class="field-input" type="text" [(ngModel)]="formEmpresa.telefono" name="telefono" />
+      </div>
+    </div>
+    <div>
+      <label class="field-label">Domicilio fiscal</label>
+      <input class="field-input" type="text" [(ngModel)]="formEmpresa.domicilio_fiscal" name="domicilio_fiscal" />
+    </div>
+    <div>
+      <label class="field-label">Correo de contacto</label>
+      <input class="field-input" type="email" [(ngModel)]="formEmpresa.correo_contacto" name="correo_contacto" />
+    </div>
+  </form>
+</app-modal>
+
+
+<!--  MODAL: CONFIRMACIÓN -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  [size]="'sm'"
+  [showClose]="true"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0">{{ confirmMessage }}</p>
+</app-modal>
+<app-modal-tipopoliza
+  [(open)]="tpOpen"
+  (saved)="onTipoPolizaCreado($event)">
+</app-modal-tipopoliza>
+
+
+<app-toast-message
+  [open]="vm?.open ?? false"
+  [title]="vm?.title ?? ''"
+  [message]="vm?.message ?? ''"
+  [type]="vm?.type ?? 'info'"
+  position="top-right"
+  [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+  (closed)="toast.close()"
+/>

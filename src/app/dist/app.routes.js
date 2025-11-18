@@ -15,6 +15,12 @@ var impuestos_component_1 = require("./pages/impuestos/impuestos.component");
 var catalog_centros_component_1 = require("./pages/catalog-centros/catalog-centros.component");
 var polizas_component_1 = require("./pages/polizas/polizas.component");
 var poliza_home_component_1 = require("./pages/poliza-home/poliza-home.component");
+var poliza_editar_component_1 = require("./pages/poliza-editar/poliza-editar.component");
+var balanza_comprobacion_component_1 = require("./pages/balanza-comprobacion/balanza-comprobacion.component");
+var estado_res_component_1 = require("./pages/estado-res/estado-res.component");
+var balance_gral_component_1 = require("./pages/balance-gral/balance-gral.component");
+var empresa_principal_component_1 = require("./pages/empresa-principal/empresa-principal.component");
+var dashboard_contable_component_1 = require("./pages/dashboard-contable/dashboard-contable.component");
 exports.routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: login_component_1.LoginComponent },
@@ -71,10 +77,35 @@ exports.routes = [
         data: { perms: ['consultar_empresa'] }
     },
     {
+        path: 'polizas/editar/:id',
+        component: poliza_editar_component_1.PolizaEditarComponent
+    },
+    { path: 'empresas', component: empresa_principal_component_1.EmpresaPrincipalComponent },
+    {
         path: 'poliza-home',
         component: poliza_home_component_1.PolizaHomeComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
         data: { perms: ['consultar_empresa'] }
     },
+    {
+        path: 'balanza-comprobacion',
+        component: balanza_comprobacion_component_1.BalanzaComprobacionComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
+    {
+        path: 'estado-resultados',
+        component: estado_res_component_1.EstadoResComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
+    {
+        path: 'balance-general',
+        component: balance_gral_component_1.BalanceGralComponent,
+        canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
+        data: { perms: ['consultar_empresa'] }
+    },
+    // app.routes.ts
+    { path: 'dashboard-contable', component: dashboard_contable_component_1.DashboardContableComponent },
     { path: '**', redirectTo: 'login' }
 ];
