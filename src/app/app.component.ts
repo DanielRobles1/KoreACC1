@@ -1,14 +1,26 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
-
+import { AuthService } from './services/auth.service';
+import { WsService } from './services/ws.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet,RouterModule],
+  imports: [RouterOutlet, RouterModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'KoreAcc';
+  constructor(
+
+    private auth: AuthService,
+    private ws: WsService
+  ) { }
+
+  ngOnInit(): void {
+    if (this.auth.isLoggedIn()) {
+      this.ws.connect();
+    }
+  }
 }

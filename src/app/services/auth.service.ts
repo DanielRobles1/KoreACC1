@@ -2,18 +2,21 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, finalize, tap, switchMap } from 'rxjs/operators';
-import { Observable, throwError, of } from 'rxjs';
+import { Observable, throwError, of, Subject } from 'rxjs';
 
-export type UserRole =  string;
+export type UserRole = string;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl   = 'http://localhost:3000/api/v1';
+  private apiUrl = 'http://localhost:3000/api/v1';
   private tokenKey = 'auth_token';
-  private userKey  = 'user';
-  private permKey  = 'permissions'; 
+  private userKey = 'user';
+  private permKey = 'permissions';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
+
+  private permissionsChangedSubject = new Subject<void>();
+  permissionsChanged$ = this.permissionsChangedSubject.asObservable();
 
   login(identifier: string, password: string, recaptchaToken: string) {
     const body = { identifier, password, recaptchaToken };
@@ -30,7 +33,7 @@ export class AuthService {
           localStorage.setItem(this.userKey, JSON.stringify(res.user));
           console.log(' Login exitoso', res);
 
-          
+
           return this.loadPermissions().pipe(
             tap(() => console.log(' Permisos cargados tras login')),
             catchError(err => {
@@ -45,7 +48,7 @@ export class AuthService {
         if (err.status === 428) {
           console.warn('Cambio de contraseña requerido', err.error);
 
-         
+
           if (err.error?.token) {
             localStorage.setItem(this.tokenKey, err.error.token);
             localStorage.setItem(this.userKey, JSON.stringify(err.error.user));
@@ -57,22 +60,36 @@ export class AuthService {
       })
     );
   }
-loadPermissions() {
-  return this.http.get<{ permisos: Array<{ nombre: string }> }>(
-    'http://localhost:3000/api/v1/usuarios/permisos'
-  ).pipe(
-    tap(({ permisos }) => {
-      const perms = permisos.map(p => p.nombre);
-      localStorage.setItem(this.permKey, JSON.stringify(perms));
-      console.log('Permisos cargados:', perms);
-    }),
-    catchError(err => {
-      console.error('Error al cargar permisos:', err);
-      return throwError(() => err);
-    })
-  );
-}
+  loadPermissions() {
+    return this.http.get<{ permisos: Array<{ nombre: string }> }>(
+      'http://localhost:3000/api/v1/usuarios/permisos'
+    ).pipe(
+      tap(({ permisos }) => {
+        const perms = permisos.map(p => p.nombre);
+        localStorage.setItem(this.permKey, JSON.stringify(perms));
+        console.log('Permisos cargados:', perms);
+        this.permissionsChangedSubject.next();
+      }),
+      catchError(err => {
+        console.error('Error al cargar permisos:', err);
+        return throwError(() => err);
+      })
+    );
+  }
 
+  refreshUserFromServer() {
+    return this.http.get<any>(`${this.apiUrl}/usuarios/me`).pipe(
+      tap(user => {
+        localStorage.setItem(this.userKey, JSON.stringify(user));
+        console.log('Usuario refrescado desde servidor:', user);
+        this.permissionsChangedSubject.next();
+      }),
+      catchError(err => {
+        console.error('Error al refrescar usuario:', err);
+        return throwError(() => err);
+      })
+    );
+  }
 
   resetPassword(email: string) {
     return this.http.post(`${this.apiUrl}/auth/reset-password`, { email }).pipe(

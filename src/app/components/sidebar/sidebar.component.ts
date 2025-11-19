@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
+import { WsService } from '@app/services/ws.service';
 import { UsuariosService } from '@app/services/usuarios.service';
 import { Router, RouterModule } from '@angular/router';
 import { EditProfileModalComponent } from '../edit-profile-modal/edit-profile-modal.component';
@@ -22,7 +23,8 @@ export class SidebarComponent {
   constructor(
     private auth: AuthService,
     private router: Router,
-    private users: UsuariosService
+    private users: UsuariosService,
+    private ws: WsService
   ) { }
 
   user: any = null;
@@ -99,6 +101,7 @@ tempUser: any = {};
   onLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    this.ws.disconnect();
     this.auth.logout().subscribe({ next: () => this.router.navigate(['/login']) });
   }
 

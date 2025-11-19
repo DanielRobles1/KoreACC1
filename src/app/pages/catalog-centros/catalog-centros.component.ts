@@ -170,7 +170,15 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(s => (this.vm = s));
 
-    // Ajusta estos nombres a tus permisos reales de "centros de costo"
+    this.updatePermissionsFromAuth();
+
+    this.auth.permissionsChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      console.log('Permisos han cambiado');
+      this.updatePermissionsFromAuth();
+    })
+  }
+
+  private updatePermissionsFromAuth(): void {
     this.canCreate = this.auth.hasPermission('crear_empresa');
     this.canEdit   = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');

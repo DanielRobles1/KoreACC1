@@ -1,7 +1,13 @@
+<aside 
+  class="sidebar-area" 
+  [class.is-closed]="!open">
+  <app-sidebar 
+    [open]="open"
+    (openChange)="onToggle($event)">
+  </app-sidebar>
+</aside>
+
 <div class="layout" [class.is-closed]="!open">
-  <aside class="sidebar-area">
-    <app-sidebar [open]="open" (openChange)="onToggle($event)"></app-sidebar>
-  </aside>
 
   <div class="main">
     <div class="page-bg"></div>
@@ -39,3 +45,14 @@
     </section>
   </div>
 </div>
+
+<!-- Solo se renderiza cuando el sidebar está cerrado -->
+<button
+  *ngIf="!open"
+  class="sidebar-toggle"
+  type="button"
+  aria-expanded="false"
+  aria-label="Mostrar menú"
+  (click)="onToggle(true)">
+  >
+</button>

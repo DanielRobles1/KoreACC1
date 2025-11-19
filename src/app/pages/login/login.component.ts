@@ -1,4 +1,3 @@
-// src/app/pages/login/login.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { RecaptchaModule, RECAPTCHA_SETTINGS, RecaptchaSettings } from 'ng-recaptcha';
 import { environment } from '@environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { WsService } from '@app/services/ws.service';
 
 @Component({
   selector: 'app-login',
@@ -30,7 +30,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private auth: AuthService
+    private auth: AuthService,
+    private ws: WsService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -85,6 +86,7 @@ export class LoginComponent {
     this.loading = true;
     this.auth.login(username, password, this.recaptchaToken!).subscribe({
       next: () => {
+        this.ws.connect();
         this.loading = false;
         this.router.navigate(["/poliza-home"]); 
       },

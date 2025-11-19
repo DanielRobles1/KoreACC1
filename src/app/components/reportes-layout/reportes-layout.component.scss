@@ -7,16 +7,54 @@ html, body { height: 100%; }
 body { margin: 0; }
 
 .layout {
+  height: 100vh;
   display: grid;
-  grid-template-columns: 280px 1fr;
-  transition: grid-template-columns .25s ease;
+  grid-template-columns: 1fr;
+  margin-left: 280px;
+  transition: margin-left .25s ease;
 }
-.layout.is-closed { grid-template-columns: 0 1fr; }
+
+.layout.is-closed {
+  margin-left: 0;   
+}
+
+/* ---- Sidebar fuera del layout ---- */
 
 .sidebar-area {
-  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  overflow: auto;
+  background: #1b2a38;
   border-right: 1px solid rgba(255,255,255,.06);
+  transition: width .25s ease, transform .25s ease;
+  z-index: 50;
 }
+
+/* Cuando se cierra */
+.sidebar-area.is-closed {
+  transform: translateX(-100%);
+}
+
+.sidebar-toggle.is-hidden { display: none; }
+
+.sidebar-toggle{
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 100;  
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  border: 1px solid #cce0f0;
+  background: #cce0f0;
+  box-shadow: 0 6px 20px rgba(16,24,40,.12);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+:host-context(.sidebar-open) .sidebar-toggle { display: none; }
+
 .main {
   position: relative;
   display: grid;
