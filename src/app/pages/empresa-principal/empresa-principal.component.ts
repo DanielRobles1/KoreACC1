@@ -60,12 +60,18 @@ export class EmpresaPrincipalComponent implements OnInit {
   // tablas
   title = 'Configuración de la Empresa';
   tabs: CrudTab[] = [
-    { id: 'datos', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
-   
+   { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
+    { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+
+    
+
+  { id: 'empresa', label: 'empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresas' },
+
     {
     id: 'tipo-poliza',
     label: '+ Tipo póliza',
     }  
+
   ];
   activeTabId: 'datos' | 'periodos' = 'datos';
   get currentEmpresa() {

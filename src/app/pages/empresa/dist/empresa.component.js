@@ -96,10 +96,6 @@ var EmpresaComponent = /** @class */ (function () {
         this.tabs = [
             { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
-            {
-                id: 'tipo-poliza',
-                label: '+ Tipo póliza'
-            },
             { id: 'empresa', label: 'empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresas' },
             {
                 id: 'tipo-poliza',
