@@ -849,45 +849,6 @@ input.field, select.field, textarea.field {
   box-sizing: border-box;
 }
 
-/* ----- VARIABLES GLOBALES (POR SI NO EXISTEN) ----- */
-:root {
-  --primary: #2563eb;
-  --line: #cbd5e1;
-  --line-soft: #e2e8f0;
-  --text: #1e293b;
-}
-.th-with-filter {
-  position: relative;
-  padding: .5rem .6rem; /* ajusta según necesites */
-}
-
-.th-with-filter .th-content {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.tabla-wrapper {
-  overflow-x: auto;
-}
-
-.tabla-movimientos {
-  min-width: 100%; /* fuerza a que el thead y tbody tengan mismo ancho */
-}
-/* Evita que inputs/selects descuadren el ancho fijo */
-.tabla-movimientos td > * { width: 100%; min-width: 0; }
-.tabla-movimientos th, .tabla-movimientos td { box-sizing: border-box; }
-.uuid-wrapper {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-
-  &.has-uuid .uuid-badge {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .btn-xml {
   display: inline-flex;
   align-items: center;
@@ -926,53 +887,5 @@ input.field, select.field, textarea.field {
   transform: translateY(-2px);
   transition: all .2s ease;
 }
-/* ===== Header ===== */
-.poliza-header{
-  display:flex; align-items:flex-start; justify-content:space-between;
-  gap:.75rem; margin-bottom:.75rem;
-}
 .back-btn{ background:none; border:none; cursor:pointer; padding:0; color:var(--text); }
 .back-btn:focus-visible{ outline:none; box-shadow: var(--ring); border-radius:.5rem; }
-
-.poliza-title{
-  font-size:1rem; line-height:1.25rem; margin:0 0 .35rem; font-weight:800; color:var(--text);
-}
-.meta-grid{
-  display:flex; flex-wrap:wrap; align-items:center; gap:.5rem;
-}
-.meta-chip{
-  display:inline-flex; align-items:center; gap:.35rem;
-  padding:.22rem .5rem; border-radius:9999px; font-size:.78rem; font-weight:700;
-  border:1px solid var(--line); background:#f8fafc; color:var(--text);
-  &.muted{ color:#64748b; border-color: var(--line); background:#fff; }
-}
-
-/* Chip de estado (amarillo “Por revisar”) */
-.status-badge{
-  display:inline-flex; align-items:center; gap:.4rem;
-  padding:.28rem .6rem; border-radius:9999px; font-weight:800; font-size:.8rem; line-height:1;
-  border:1px solid transparent;
-  &.warn{ background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-br); }
-}
-.status-badge svg{ display:block; }
-
-/* Acciones del header */
-.header-actions{ display:flex; gap:.5rem; align-items:center; }
-
-/* ===== Barra “Cabecera de póliza” ===== */
-.subsection-bar{
-  display:flex; align-items:center; gap:.5rem;
-  margin:.35rem 0 .65rem;
-  padding:.5rem .75rem;
-  background:#f3f6fb;
-  border:1px solid var(--line);
-  border-radius:.6rem;
-  color:#1f2937;
-  font-weight:800;
-}
-.subsection-bar svg{ stroke:#1f2937; }
-
-/* (Opcional) Ajuste fino de tabla/encabezados ya estilo captura */
-.tabla-movimientos thead th{
-  background:#113960; color:#fff; font-weight:700;
-}

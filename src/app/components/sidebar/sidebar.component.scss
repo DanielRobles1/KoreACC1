@@ -3,39 +3,19 @@
 @tailwind utilities;
 
 :host {
-  --accent: #2E5777;
+  --accent: #2e5777;
   --sidebar-w: 280px;
   display: block;
   height: 100%;
   width: var(--sidebar-w);
-  border-right: 1px solid rgba(0,0,0,.08);
-  overflow: hidden; 
-  transition: width .28s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: visible;
+  transition: width 0.28s ease;
 }
 
 :host(.is-collapsed) {
   --sidebar-w: 0px;
   border-right: none;
-}
-
-@media (max-width: 1024px) {
-  :host {
-    position: fixed;
-    inset: 0 auto 0 0;  
-    width: 280px;   
-    max-width: 86vw;
-    height: 100vh;
-    z-index: 50;
-    background: #fff;
-    border-right: 1px solid rgba(0,0,0,.08);
-    transform: translateX(0);
-    transition: transform .28s ease;
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-  :host(.is-collapsed) {
-    transform: translateX(-100%);
-  }
 }
 
 .sidebar-shell {
@@ -46,6 +26,33 @@
 
 .sidebar-shell .sidebar-bottom {
   margin-top: auto;
+}
+
+@media (max-width: 1024px) {
+  :host {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 280px;
+    max-width: 86vw;
+    height: 100vh;
+    z-index: 50;
+    background: transparent;
+    border-right: none;
+  }
+
+  .sidebar-shell {
+    height: 100%;
+    background: #fff;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    transform: translateX(0);
+    transition: transform 0.28s ease;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  :host(.is-collapsed) .sidebar-shell {
+    transform: translateX(-100%);
+  }
 }
 
 .btn {
@@ -70,16 +77,49 @@
   }
 }
 
-.icon { width: 1.25rem; height: 1.25rem; }
-.icon-sm { width: 1rem; height: 1rem; }
+.subbtn--active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.icon-sm {
+  width: 1rem;
+  height: 1rem;
+}
 
 .btn:hover img.icon,
 .btn--active img.icon,
-.subbtn:hover img.icon-sm {
+.subbtn:hover img.icon-sm,
+.subbtn--active img.icon-sm {
   filter: brightness(0) invert(1);
 }
 
-.caret { transition: transform 180ms ease; }
+.btn svg,
+.subbtn svg {
+  flex-shrink: 0;
+}
+
+.btn--active svg,
+.btn:hover svg,
+.subbtn--active svg,
+.subbtn:hover svg {
+  color: #fff !important;
+}
+
+.caret {
+  transition: transform 180ms ease;
+}
+
+.menu-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 .layout-container {
   display: flex;
   flex-direction: column;
@@ -90,7 +130,6 @@
   box-sizing: border-box;
 }
 
-/* Encabezado (título y selector) */
 .layout-header {
   display: flex;
   align-items: center;

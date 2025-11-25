@@ -1,66 +1,112 @@
 :root {
-  --content-max: 1600px
+  --content-max: 1600px;
 }
 
-:host, .layout { height: 100vh; display: block; }
-html, body { height: 100%; }
-body { margin: 0; }
+:host {
+  display: block;
+}
 
 .layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;           /* ancho sidebar abierto */
-  transition: grid-template-columns .25s ease;
+  position: relative;
+  height: 100vh;
+  background: #f8fafc;
 }
-.layout.is-closed { grid-template-columns: 0 1fr; }
 
+/* === SIDEBAR === */
 .sidebar-area {
-  overflow: hidden;
-  border-right: 1px solid rgba(255,255,255,.06);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;        
+  overflow-y: auto;      
+  background: #1b2a38;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 50;
+  transition: margin-left 0.25s ease;   /* antes: transform */
 }
 
-/* columna derecha */
+/* 👇 Igual que en tu otro layout */
+.sidebar-area.is-closed {
+  margin-left: -280px;  
+}
+
+/* Ya no usamos transform aquí */
+.layout.is-closed .sidebar-area {
+  /* remove: transform: translateX(-100%); */
+}
+
+/* === MAIN === */
 .main {
   position: relative;
+  margin-left: 280px;        /* cuando sidebar está abierto */
+  height: 100vh;    
   display: grid;
-  grid-template-rows: auto 1fr;               /* toolbar + contenido */
+  grid-template-rows: auto 1fr; 
   min-width: 0;
 }
 
-/* fondo azul */
+/* Cuando el layout está cerrado, el contenido ocupa todo el ancho */
+.layout.is-closed .main {
+  margin-left: 0;
+}
+
 .page-bg {
-  position: absolute; inset: 0;
-  background: #203447;                        /* tono de tu app */
+  position: absolute;
+  inset: 0;
+  background: #203447;
   z-index: 0;
 }
 
-/* toolbar */
 .page-toolbar {
-  position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 1rem;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   padding: 1.25rem 1.5rem;
   color: #e9eef5;
 }
-.page-title { margin: 0; font-weight: 800; font-size: 2.25rem; }
-.page-actions { margin-left: auto; display: flex; gap: .75rem; }
 
-/* contenedor con scroll y card centrada */
+.page-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 2.25rem;
+}
+
+.page-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* ===== SOLO EL CONTENIDO SCROLLEA ===== */
 .page-container {
-  position: relative; z-index: 1;
-  overflow: auto;
+  position: relative;
+  z-index: 1;
+  overflow: auto;                 
   padding: 0 1.5rem 1.5rem;
 }
+
+/* Card central donde metes las pólizas, tablas, etc. */
 .page-card {
   background: #fff;
   border: 1px solid #e7edf5;
   box-shadow: 0 6px 20px rgba(16, 24, 40, 0.08);
   border-radius: 16px;
   padding: 16px;
-  max-width: --var(--content-max);
+  max-width: var(--content-max);
   margin: 0 auto;
 }
 
-/* responsive */
+/* RESPONSIVE */
 @media (max-width: 992px) {
-  .layout { grid-template-columns: 0 1fr; }
-  .page-title { font-size: 1.6rem; }
+  /* en móvil, el contenido siempre a ancho completo */
+  .main {
+    margin-left: 0;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
 }

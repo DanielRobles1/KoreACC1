@@ -1,13 +1,11 @@
-<aside 
-  class="sidebar-area" 
-  [class.is-closed]="!open">
+<div class="layout" [class.is-closed]="!open">
+
   <app-sidebar 
+    class="sidebar-area"
+    [class.is-closed]="!open"
     [open]="open"
     (openChange)="onToggle($event)">
   </app-sidebar>
-</aside>
-
-<div class="layout" [class.is-closed]="!open">
 
   <div class="main">
     <div class="page-bg"></div>
@@ -24,6 +22,7 @@
       </div>
       <img class="empresa-logo" [src]="'assets/svgs/Kore-ACC.svg'" alt="Logo" />
     </section>
+
     <ng-template #headerSkeleton>
       <section class="report-header is-loading"></section>
     </ng-template>
@@ -45,14 +44,3 @@
     </section>
   </div>
 </div>
-
-<!-- Solo se renderiza cuando el sidebar está cerrado -->
-<button
-  *ngIf="!open"
-  class="sidebar-toggle"
-  type="button"
-  aria-expanded="false"
-  aria-label="Mostrar menú"
-  (click)="onToggle(true)">
-  >
-</button>

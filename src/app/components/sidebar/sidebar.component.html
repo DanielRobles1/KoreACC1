@@ -1,246 +1,487 @@
-<button class="fixed top-4 left-4 z-50 bg-blue-100 border rounded p-2 shadow-md"
-        type="button"
-        (click)="toggleSidebar()">
-  <svg *ngIf="!open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
-       fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-  <svg *ngIf="open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
-       fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M6 18L18 6M6 6l12 12" />
-  </svg>
+<button
+  class="fixed top-4 left-4 z-50 bg-blue-100 border rounded p-2 shadow-md"
+  type="button"
+  (click)="toggleSidebar()"
+>
+  <strong><span *ngIf="open">&lt;</span></strong>
+  <strong><span *ngIf="!open">&gt;</span></strong>
 </button>
 
-<div class="sidebar-shell h-full bg-white text-gray-800 p-0 shadow-md border-r border-gray-200">
+<div
+  class="sidebar-shell h-full bg-white text-gray-800 p-0 shadow-md border-r border-gray-200"
+>
   <div class="p-4">
     <div class="mb-4 flex flex-col items-center text-center">
-      <img src="assets/svgs/Kore-ACC.svg" alt="Logo" class="h-28 w-auto">
-      <h2 class="text-lg font-bold mb-4 text-center">KORE ACC</h2>
+      <img src="assets/svgs/Kore-ACC.svg" alt="Logo" class="h-28 w-auto" />
+      <h2 class="text-lg font-bold mb-4 text-center">Kore ACC</h2>
 
       <div *ngIf="user" class="mt-2">
-        <p class="text-lg font-extrabold cursor-pointer" (click)="openEditProfile()">{{ user.nombre }}</p>
+        <p
+          class="text-base font-normal cursor-pointer"
+          (click)="openEditProfile()"
+        >
+          {{ user.nombre }}
+        </p>
       </div>
 
-     <app-edit-profile-modal
-  [open]="editProfileOpen"
-  [user]="tempUser"
-  (closed)="closeEditProfile()"
-  (saved)="saveProfile($event)">
-</app-edit-profile-modal>
+      <app-edit-profile-modal
+        [open]="editProfileOpen"
+        [user]="tempUser"
+        (closed)="closeEditProfile()"
+        (saved)="saveProfile($event)"
+      >
+      </app-edit-profile-modal>
     </div>
-
 
     <!-- Menú -->
     <ul class="space-y-2">
-     <li>
-  <button type="button"
+      <!-- Pólizas -->
+      <li>
+        <button
+          type="button"
           class="btn"
           [routerLink]="['/poliza-home']"
           routerLinkActive="btn--active"
-          [routerLinkActiveOptions]="{ exact: true }">
-    <img src="assets/svgs/poliza.svg" alt="Pólizas" class="icon">
-    <span class="ml-2">Pólizas</span>
-  </button>
-</li>
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <img src="assets/svgs/poliza.svg" alt="Pólizas" class="icon" />
+          <span class="ml-2">Pólizas</span>
+        </button>
+      </li>
 
-
+      <!-- Reportes -->
       <li>
-        <button type="button"
-                class="btn"
-                [class.btn--active]="active==='reportes'"
-                (click)="toggleReportes()">
-          <img src="assets/svgs/reportes.svg" alt="Reportes" class="icon">
+        <button
+          type="button"
+          class="btn"
+          [class.btn--active]="
+            reportesOpen ||
+            router.url.includes('/balance-general') ||
+            router.url.includes('/balanza-comprobacion') ||
+            router.url.includes('/estado-resultados')
+          "
+          (click)="toggleReportes()"
+        >
+          <img src="assets/svgs/reportes.svg" alt="Reportes" class="icon" />
           <span class="ml-2 flex-1 text-left">Reportes</span>
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-4 w-4 caret transition-transform"
-               [class.rotate-180]="reportesOpen"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 9l-7 7-7-7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 caret transition-transform"
+            [class.rotate-180]="reportesOpen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="reportesOpen">
-          <li><a href="#" class="subbtn flex items-center" [routerLink]="'/balance-general'">
-            <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balance general">
-            <span class="ml-2">Balance general</span>
-          </a></li>
-          <li><a href="#" class="subbtn flex items-center" [routerLink]="'/balanza-comprobacion'">
-            <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Balanza de comprobacion">
-            <span class="ml-2">Balanza de comprobacion</span>
-          </a></li>
-          <li><a href="#" class="subbtn flex items-center" [routerLink]="'/estado-resultados'">
-            <img src="assets/svgs/reporte-opciones.svg" class="icon-sm" alt="Estado de resultados">
-            <span class="ml-2">Estado de resultados</span>
-          </a></li>
+          <li>
+            <a
+              class="subbtn flex items-center"
+              [routerLink]="'/balance-general'"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('reportes')"
+            >
+              <img
+                src="assets/svgs/reporte-opciones.svg"
+                class="icon-sm"
+                alt="Balance general"
+              />
+              <span class="ml-2">Balance general</span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="subbtn flex items-center"
+              [routerLink]="'/balanza-comprobacion'"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('reportes')"
+            >
+              <img
+                src="assets/svgs/reporte-opciones.svg"
+                class="icon-sm"
+                alt="Balanza de comprobación"
+              />
+              <span class="ml-2">Balanza de comprobación</span>
+            </a>
+          </li>
+          <li>
+            <a
+              class="subbtn flex items-center"
+              [routerLink]="'/estado-resultados'"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('reportes')"
+            >
+              <img
+                src="assets/svgs/reporte-opciones.svg"
+                class="icon-sm"
+                alt="Estado de resultados"
+              />
+              <span class="ml-2">Estado de resultados</span>
+            </a>
+          </li>
         </ul>
       </li>
 
+      <!-- Dashboard -->
       <li>
-        <button type="button"
-        class="btn"
-        [class.btn--active]="active==='dashboard'"
-        [routerLink]="['/dashboard-contable']"
-        (click)="setActive('dashboard')">
-  <img src="assets/svgs/dashboard.svg" alt="Dashboard" class="icon">
-  <span class="ml-2">Dashboard</span>
-</button>
-
+        <button
+          type="button"
+          class="btn"
+          [routerLink]="['/dashboard-contable']"
+          routerLinkActive="btn--active"
+          (click)="setActive('dashboard')"
+        >
+          <img src="assets/svgs/dashboard.svg" alt="Dashboard" class="icon" />
+          <span class="ml-2">Dashboard</span>
+        </button>
       </li>
     </ul>
   </div>
 
   <!-- Configuración -->
   <div class="px-4 mt-auto">
-    <button type="button"
-            class="btn w-full"
-            [class.btn--active]="active==='configuracion'"
-            (click)="toggleConfiguracion()">
-      <span>⚙️</span>
-      <span class="ml-2 flex-1 text-left">Configuración</span>
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-4 w-4 caret transition-transform"
-           [class.rotate-180]="configOpen"
-           fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M19 9l-7 7-7-7" />
+    <button
+      type="button"
+      class="btn w-full"
+      [class.btn--active]="
+        configOpen ||
+        usuariosPermisosOpen ||
+        catalogosOpen ||
+        empresaOpen ||
+        router.url.includes('/usuarios') ||
+        router.url.includes('/login/roles') ||
+        router.url.includes('/catalogos') ||
+        router.url.includes('/centros-costo') ||
+        router.url.includes('/empresa') ||
+        router.url.includes('/impuestos')
+      "
+      (click)="toggleConfiguracion()"
+    >
+      <span class="mr-2">⚙️</span>
+      <span class="ml-0 flex-1 text-left">Configuración</span>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-4 w-4 caret transition-transform"
+        [class.rotate-180]="configOpen"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M19 9l-7 7-7-7"
+        />
       </svg>
     </button>
 
     <ul class="mt-2 space-y-1 pl-10" *ngIf="configOpen">
-
       <!-- Usuarios / Permisos -->
       <li>
-        <button type="button"
-                class="btn"
-                [class.btn--active]="active==='usuarios-permisos'"
-                (click)="toggleUsuariosPermisos()">
-          <span>👤</span>
-          <span class="ml-2 flex-1 text-left">Usuarios / Permisos</span>
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-4 w-4 caret transition-transform"
-               [class.rotate-180]="usuariosPermisosOpen"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 9l-7 7-7-7" />
+        <button
+          type="button"
+          class="btn"
+          [class.btn--active]="
+            usuariosPermisosOpen ||
+            router.url.includes('/usuarios') ||
+            router.url.includes('/login/roles')
+          "
+          (click)="toggleUsuariosPermisos()"
+        >
+          <!-- Ícono Usuarios -->
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="w-5 h-5 mr-2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z
+                 M4.5 20.25a8.25 8.25 0 0115 0"
+            />
+          </svg>
+
+          <span class="menu-title flex-1 text-left">Usuarios / Permisos</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 caret transition-transform"
+            [class.rotate-180]="usuariosPermisosOpen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="usuariosPermisosOpen">
-          <li><a [routerLink]="['/usuarios']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
-           <!-- Ícono de usuario -->
-<svg xmlns="http://www.w3.org/2000/svg" 
-     fill="none" 
-     viewBox="0 0 24 24" 
-     stroke-width="1.5" 
-     stroke="currentColor" 
-     class="w-6 h-6 text-slate-600">
-  <path stroke-linecap="round" 
-        stroke-linejoin="round" 
-        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 
-           3.75 0 017.5 0zM4.5 20.25a8.25 
-           8.25 0 1115 0v.75H4.5v-.75z" />
-</svg>
+          <li>
+            <a
+              [routerLink]="['/usuarios']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('usuarios-permisos')"
+            >
+              <!-- Ícono usuario -->
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-6 h-6"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 
+             3.75 0 017.5 0zM4.5 20.25a8.25 
+             8.25 0 1115 0v.75H4.5v-.75z"
+                />
+              </svg>
 
-            <span class="ml-2">Usuarios</span>
-          </a></li>
-          <li><a [routerLink]="['/login/roles']" class="subbtn flex items-center" (click)="setActive('usuarios-permisos')">
-<svg xmlns="http://www.w3.org/2000/svg" 
-     fill="none" 
-     viewBox="0 0 24 24" 
-     stroke-width="1.5" 
-     stroke="currentColor" 
-     class="icon-sm text-slate-600">
-  <path stroke-linecap="round" 
-        stroke-linejoin="round" 
-        d="M9 12.75l2.25 2.25L15 9.75M12 
-           2.25c-4.97 0-9 2.686-9 
-           6v4.5c0 4.314 4.03 7.5 9 
-           7.5s9-3.186 9-7.5V8.25c0-3.314-4.03-6-9-6z" />
-</svg>            <span class="ml-2">Permisos</span>
-          </a></li>
+              <span class="ml-2">Usuarios</span>
+            </a>
+          </li>
+          <li>
+            <a
+              [routerLink]="['/login/roles']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('usuarios-permisos')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="icon-sm"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75l2.25 2.25L15 9.75M12 
+             2.25c-4.97 0-9 2.686-9 
+             6v4.5c0 4.314 4.03 7.5 9 
+             7.5s9-3.186 9-7.5V8.25c0-3.314-4.03-6-9-6z"
+                />
+              </svg>
+              <span class="ml-2">Permisos</span>
+            </a>
+          </li>
         </ul>
       </li>
 
       <!-- Catálogos -->
       <li>
-        <button type="button"
-                class="btn"
-                [class.btn--active]="active==='catalogos'"
-                (click)="toggleCatalogos()">
-          <span>📚</span>
-          <span class="ml-2 flex-1 text-left">Catálogos</span>
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-4 w-4 caret transition-transform"
-               [class.rotate-180]="catalogosOpen"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 9l-7 7-7-7" />
+        <button
+          type="button"
+          class="btn"
+          [class.btn--active]="
+            catalogosOpen ||
+            router.url.includes('/catalogos/cuentas') ||
+            router.url.includes('/centros-costo')
+          "
+          (click)="toggleCatalogos()"
+        >
+          <!-- Ícono Catálogos -->
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="w-5 h-5 mr-2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4.5 6.75A2.25 2.25 0 016.75 4.5h10.5
+                 A2.25 2.25 0 0119.5 6.75v10.5
+                 A2.25 2.25 0 0117.25 19.5H6.75
+                 A2.25 2.25 0 014.5 17.25V6.75z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 8.25h6M9 12h6M9 15.75h3"
+            />
+          </svg>
+
+          <span class="menu-title flex-1 text-left">Catálogos</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 caret transition-transform"
+            [class.rotate-180]="catalogosOpen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="catalogosOpen">
-          <li><a [routerLink]="['/catalogos/cuentas']" class="subbtn flex items-center" (click)="setActive('catalogos')">
-            <img src="assets/svgs/catalog-cuentas.svg" class="icon-sm" alt="Cuentas">
-            <span class="ml-2">Cuentas</span>
-          </a></li>
-          <li><a [routerLink]="['/centros-costo']" class="subbtn flex items-center" (click)="setActive('catalogos')">
-            <img src="assets/svgs/catalogue-catalog.svg" class="icon-sm" alt="Centros de costo">
-            <span class="ml-2">Centros de costo</span>
-          </a></li>
+          <li>
+            <a
+              [routerLink]="['/catalogos/cuentas']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('catalogos')"
+            >
+              <img
+                src="assets/svgs/catalog-cuentas.svg"
+                class="icon-sm"
+                alt="Cuentas"
+              />
+              <span class="ml-2">Cuentas</span>
+            </a>
+          </li>
+          <li>
+            <a
+              [routerLink]="['/centros-costo']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('catalogos')"
+            >
+              <img
+                src="assets/svgs/catalogue-catalog.svg"
+                class="icon-sm"
+                alt="Centros de costo"
+              />
+              <span class="ml-2">Centros de costo</span>
+            </a>
+          </li>
         </ul>
       </li>
 
       <!-- Empresa / Periodos -->
       <li>
-        <button type="button"
-                class="btn"
-                [class.btn--active]="active==='empresa'"
-                (click)="toggleEmpresa()">
-          <span>🏢</span>
-          <span class="ml-2 flex-1 text-left">Empresa / Impuestos</span>
-          <svg xmlns="http://www.w3.org/2000/svg"
-               class="h-4 w-4 caret transition-transform"
-               [class.rotate-180]="empresaOpen"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 9l-7 7-7-7" />
+        <button
+          type="button"
+          class="btn"
+          [class.btn--active]="
+            empresaOpen ||
+            router.url.includes('/empresa') ||
+            router.url.includes('/impuestos')
+          "
+          (click)="toggleEmpresa()"
+        >
+          <!-- Ícono Empresa -->
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            class="w-5 h-5 mr-2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3.75 20.25h16.5M4.5 9.75L12 3l7.5 6.75
+                 M6.75 20.25v-6h3v6
+                 M14.25 20.25v-6h3v6"
+            />
+          </svg>
+
+          <span class="menu-title flex-1 text-left">Empresa / Impuestos</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 caret transition-transform"
+            [class.rotate-180]="empresaOpen"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
         <ul class="mt-2 space-y-1 pl-10" *ngIf="empresaOpen">
-          <li><a [routerLink]="['/empresa']" class="subbtn flex items-center" (click)="setActive('empresa')">
-            <img src="assets/svgs/company.svg" class="icon-sm" alt="Empresa">
-            <span class="ml-2">Empresa</span>
-          </a></li>
-          <li><a [routerLink]="['/impuestos']" class="subbtn flex items-center" (click)="setActive('empresa')">
-            <img src="assets/svgs/taxes.svg" class="icon-sm" alt="Periodos">
-            <span class="ml-2">Impuestos</span>
-          </a></li>
+          <li>
+            <a
+              [routerLink]="['/empresa']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('empresa')"
+            >
+              <img
+                src="assets/svgs/company.svg"
+                class="icon-sm"
+                alt="Empresa"
+              />
+              <span class="ml-2">Empresa</span>
+            </a>
+          </li>
+          <li>
+            <a
+              [routerLink]="['/impuestos']"
+              class="subbtn flex items-center"
+              routerLinkActive="subbtn--active"
+              (click)="setActive('empresa')"
+            >
+              <img
+                src="assets/svgs/taxes.svg"
+                class="icon-sm"
+                alt="Impuestos"
+              />
+              <span class="ml-2">Impuestos</span>
+            </a>
+          </li>
         </ul>
       </li>
-
-   
     </ul>
   </div>
- <div class="mt-4 p-4">
-    <button type="button" 
-            class="subbtn text-red-600 flex items-center w-full" 
-            (click)="openLogoutConfirm()">
+
+  <div class="mt-4 p-4">
+    <button
+      type="button"
+      class="subbtn text-red-600 flex items-center w-full"
+      (click)="openLogoutConfirm()"
+    >
       🚪 <span class="ml-2">Cerrar sesión</span>
     </button>
   </div>
+
   <!-- Modal confirmación -->
   <app-modal
     [open]="confirmOpen"
     [title]="confirmTitle"
     size="sm"
-     
     (closed)="closeConfirm()"
     (canceled)="cancelConfirm()"
-    (confirmed)="confirmProceed()">
+    (confirmed)="confirmProceed()"
+  >
     <p class="mb-2">{{ confirmMessage }}</p>
   </app-modal>
 </div>

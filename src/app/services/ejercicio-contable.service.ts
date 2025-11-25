@@ -22,6 +22,10 @@ export class EjercicioContableService {
     return this.http.get<EjercicioContableDto[]>(`${this.baseUrl}?id_empresa=${id_empresa}`);
   }
 
+  listEjercicios(): Observable<EjercicioContableDto[]> {
+    return this.http.get<EjercicioContableDto[]>(this.baseUrl);
+  }
+
   create(payload: EjercicioContableDto): Observable<EjercicioContableDto> {
     return this.http.post<EjercicioContableDto>(this.baseUrl, payload);
   }

@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
+import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
 
@@ -41,14 +42,19 @@ export class PolizaHomeComponent {
   constructor(
     private location: Location,
     private router: Router,
-    private api: PolizasService
+    private api: PolizasService,
+    private ejercicioSvc: EjercicioContableService
   ) { }
+
+  ejercicios: Array<{ id_ejercicio: number; etiqueta: string }> = [];
+  selectedEjercicioId: number | null = null;
+  Math = Math;
 
   ngOnInit() {
     this.cargarCatalogos();
-    this.cargarPolizas();
     this.cargarCfdiRecientes();
     this.cargarCuentas();
+    this.cargarEjercicios();
   }
 
   volver() { this.location.back(); }
@@ -149,6 +155,72 @@ export class PolizaHomeComponent {
   movsLoadingId: number | null = null;
   movsLoaded: Record<number, boolean> = {};
 
+  // Este es el listado de todas las pólizas
+  currentPage = 1;
+  pageSize = 10;
+  totalPolizas = 0;
+
+  // Listado de movimientos por póliza
+  movsPageByPoliza: Record<number, number> = {};
+  movsTotalByPoliza: Record<number, number> = {};
+  movsPageSize = 10;
+
+  // Helpers para el template
+  private getIdPolizaSafe(p: PolizaRow): number {
+    const id = this.getIdPoliza(p);
+    return id != null ? id : 0;
+  }
+
+  movsTotalFor(p: PolizaRow): number {
+    const id = this.getIdPolizaSafe(p);
+    return this.movsTotalByPoliza[id] ?? 0;
+  }
+
+  movsPageFor(p: PolizaRow): number {
+    const id = this.getIdPolizaSafe(p);
+    return this.movsPageByPoliza[id] ?? 1;
+  }
+
+  lastMovsPageFor(p: PolizaRow): number {
+    const total = this.movsTotalFor(p);
+    return total > 0 ? Math.ceil(total / this.movsPageSize) : 1;
+  }
+
+  private readonly MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+  private toDate(v: any): Date | null {
+    if (!v) return null;
+    const s = String(v).trim();
+
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+      return new Date(Date.UTC(y, mo - 1, d));
+    }
+
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  private periodoEtiqueta(ini: any, fin: any): string {
+    const di = this.toDate(ini);
+    const df = this.toDate(fin);
+
+    if (di && df) {
+      const yi = di.getUTCFullYear();
+      const yf = df.getUTCFullYear();
+      const mi = di.getUTCMonth();
+      const mf = df.getUTCMonth();
+
+      return (yi === yf)
+        ? `${this.MESES_CORTOS[mi]}–${this.MESES_CORTOS[mf]} ${yi}`
+        : `${this.MESES_CORTOS[mi]} ${yi} — ${this.MESES_CORTOS[mf]} ${yf}`;
+    }
+    if (di) return `${this.MESES_CORTOS[di.getUTCMonth()]} ${di.getUTCFullYear()}`;
+    if (df) return `${this.MESES_CORTOS[df.getUTCMonth()]} ${df.getUTCFullYear()}`;
+    return '—';
+  }
+
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
   }
@@ -195,7 +267,7 @@ export class PolizaHomeComponent {
           const id = Number(p.id_periodo ?? p.id ?? p.ID);
           const fi0 = p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini;
           const ff0 = p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin;
-          return { id_periodo: id, nombre: `${this.fmtDate(fi0)} — ${this.fmtDate(ff0)}` };
+          return { id_periodo: id, nombre: this.periodoEtiqueta(fi0, ff0) };
         });
         this.mapPeriodos.clear();
         for (const p of this.periodos) this.mapPeriodos.set(p.id_periodo, p.nombre);
@@ -241,6 +313,77 @@ export class PolizaHomeComponent {
       error: (e) => console.error('Cuentas:', e)
     });
   }
+
+  cargarEjercicios() {
+    this.ejercicioSvc.listEjercicios().subscribe({
+      next: (res: any) => {
+        const arr = Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res ?? []);
+        this.ejercicios = arr.map((e: any) => {
+          const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
+          const anio = e.anio ?? e.year ?? null;
+          const fi = e.fecha_inicio ?? e.inicio ?? e.start_date ?? null;
+          const ff = e.fecha_fin ?? e.fin ?? e.end_date ?? null;
+
+          let etiqueta = '';
+          if (anio != null) etiqueta = `Ejercicio ${anio}`;
+          else if (fi || ff) etiqueta = `${this.fmtDate(fi)} — ${this.fmtDate(ff)}`;
+          else etiqueta = `Ejercicio ${id}`;
+
+          return { id_ejercicio: id, etiqueta };
+        })
+      },
+      error: (err) => {
+        console.error('Ejercicios contables:', err);
+        this.showToast({
+          type: 'warning',
+          title: 'Aviso',
+          message: 'No se pudieron cargar los ejercicios contables.'
+        });
+      }
+    });
+  }
+
+  private cargarMovimientosPagina(p: PolizaRow, page: number) {
+    const id = this.getIdPoliza(p);
+    if (!id) return;
+
+    this.movsLoadingId = id;
+    this.api.listPolizaConMovimientos(id, page, this.movsPageSize).subscribe({
+      next: (res: any) => {
+        (p as any).movimientos = res?.data ?? res?.rows ?? [];
+        this.movsPageByPoliza[id] = res?.page ?? page;
+        this.movsTotalByPoliza[id] = res?.total ?? (p as any).movimientos.length ?? 0;
+        console.log(p)
+      },
+      error: (err) => {
+        console.error('getPolizaConMovimientos:', err);
+        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
+      },
+      complete: () => (this.movsLoadingId = null),
+    });
+  }
+
+  cambiarPaginaMovimientos(p: PolizaRow, delta: number) {
+    const id = this.getIdPoliza(p);
+    if (!id) return;
+
+    const current = this.movsPageByPoliza[id] || 1;
+    const total = this.movsTotalByPoliza[id] || 0;
+    const lastPage = Math.max(1, Math.ceil(total / this.movsPageSize));
+
+    const next = Math.min(Math.max(1, current + delta), lastPage);
+    if (next === current) return;
+
+    this.cargarMovimientosPagina(p, next);
+  }
+
+
+  onEjercicioChange(id: number | null) {
+    this.selectedEjercicioId = id;
+    this.currentPage = 1;
+    this.cargarPolizas();
+  }
+
 
   cuentaEtiqueta(id?: number | null, m?: any): string {
     if (id == null) {
@@ -308,50 +451,71 @@ export class PolizaHomeComponent {
 
     this.expandedId = id;
 
-    if (this.movsLoaded[id]) return;
-
-    this.movsLoadingId = id;
-    this.api.getPolizaConMovimientos(id).subscribe({
-      next: (res: any) => {
-        (p as any).movimientos = res?.movimientos ?? [];
-        this.movsLoaded[id] = true;
-      },
-      error: (err) => {
-        console.error('getPolizaConMovimientos:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
-      },
-      complete: () => (this.movsLoadingId = null),
-    });
+    const page = this.movsPageByPoliza[id] ?? 1;
+    this.cargarMovimientosPagina(p, page);
   }
 
+
   cargarPolizas(): void {
-    this.api.getPolizas({
-      id_tipopoliza: this.filtroTipo,
-      id_periodo: this.filtroPeriodo,
-      includeMovimientos: true
-    } as any).subscribe({
+    if (!this.selectedEjercicioId) {
+      this.polizas = [];
+      this.polizasFiltradas = [];
+      this.totalPolizas = 0;
+      return;
+    }
+
+    const obs$ = this.api.getPolizaByEjercicio(this.selectedEjercicioId, {
+      page: this.currentPage,
+      pageSize: this.pageSize
+    });
+
+    obs$.subscribe({
       next: (r: any) => {
-        const list = this.normalizeList(r) ?? (r?.polizas ?? []);
+        const list = this.normalizeList(r?.data ?? r) ?? [];
         this.polizas = Array.isArray(list) ? list : [];
+        this.totalPolizas = r?.total ?? 0;
+
         this.aplicarFiltroLocal();
+
         for (const p of this.polizas) {
           this.periodoLabelFromRow(p);
         }
 
         if (this.polizas.length === 0) {
-          this.showToast({ type: 'info', message: 'No se encontraron pólizas para los filtros/búsqueda actuales.' });
+          this.showToast({
+            type: 'info',
+            message: 'No hay pólizas registradas para este ejercicio.'
+          });
         }
       },
       error: err => {
         console.error('Pólizas:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar las pólizas.' });
+        this.showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'No se pudieron cargar las pólizas del ejercicio seleccionado.'
+        });
       },
     });
   }
 
+  cambiarPagina(pagina: number): void {
+    this.currentPage = pagina;
+    this.cargarPolizas();
+  }
+
+  cambiarTamanioPagina(nuevoTamanio: number): void {
+    this.pageSize = nuevoTamanio;
+    this.currentPage = 1;
+    this.cargarPolizas();
+  }
+
   onBuscarChange(_: string) {
     if (this.buscarTimer) clearTimeout(this.buscarTimer);
-    this.buscarTimer = setTimeout(() => this.cargarPolizas(), 250);
+    this.buscarTimer = setTimeout(() => {
+      this.currentPage = 1;
+      this.cargarPolizas();
+    }, 250);
   }
 
   private aplicarFiltroLocal() {
@@ -379,20 +543,17 @@ export class PolizaHomeComponent {
 
   periodoLabelFromRow(p: any): string {
     const id = Number(p?.id_periodo ?? p?.periodo_id);
-    const labelEnMapa = this.mapPeriodos.get(id);
-    if (labelEnMapa) return labelEnMapa;
+    const enMapa = this.mapPeriodos.get(id);
+    if (enMapa) return enMapa;
 
     const ini = p?.periodo_inicio ?? p?.fecha_inicio ?? p?.inicio;
     const fin = p?.periodo_fin ?? p?.fecha_fin ?? p?.fin;
 
-    if (ini || fin) {
-      const etiqueta = `${this.fmtDate(ini)} — ${this.fmtDate(fin)}`;
-      if (!Number.isNaN(id)) this.mapPeriodos.set(id, etiqueta); 
-      return etiqueta;
-    }
-
-    return (id != null && !Number.isNaN(id)) ? (this.mapPeriodos.get(id) ?? String(id)) : '—';
+    const etiqueta = this.periodoEtiqueta(ini, fin);
+    if (!Number.isNaN(id)) this.mapPeriodos.set(id, etiqueta);
+    return etiqueta;
   }
+
 
   getEstado(p: any):
     'Cuadrada' | 'Descuadrada' | 'Pendiente' | 'Cerrada' | 'Cancelada' | 'Borrador' | 'Activa' | 'Aprobada' | string {

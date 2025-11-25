@@ -71,21 +71,21 @@ export class PolizasService {
   /** ---------------- TIPOS DE PÓLIZA (CRUD) ---------------- */
 
   /** GET /api/v1/tipo-poliza */
- 
 
-getTiposPoliza(): Observable<TipoPoliza[]> {
-  return this.http.get<any>(`${this.api}/tipo-poliza`, {
-    headers: this.getAuthHeaders(),
-  }).pipe(
-    map((res): TipoPoliza[] => {
-      if (Array.isArray(res)) return res;
-      if (Array.isArray(res?.data)) return res.data;
-      if (Array.isArray(res?.rows)) return res.rows;
-      if (Array.isArray(res?.results)) return res.results;
-      return [];
-    })
-  );
-}
+
+  getTiposPoliza(): Observable<TipoPoliza[]> {
+    return this.http.get<any>(`${this.api}/tipo-poliza`, {
+      headers: this.getAuthHeaders(),
+    }).pipe(
+      map((res): TipoPoliza[] => {
+        if (Array.isArray(res)) return res;
+        if (Array.isArray(res?.data)) return res.data;
+        if (Array.isArray(res?.rows)) return res.rows;
+        if (Array.isArray(res?.results)) return res.results;
+        return [];
+      })
+    );
+  }
 
   /** POST /api/v1/tipo-poliza */
   createTipoPoliza(payload: TipoPolizaCreate): Observable<TipoPoliza> {
@@ -143,6 +143,16 @@ getTiposPoliza(): Observable<TipoPoliza[]> {
     });
   }
 
+  getPolizaByEjercicio(id_ejercicio: Number, options?: { page?: number, pageSize?: number }): Observable<any> {
+    const params: any = {};
+    if (options?.page) params.page = options.page;
+    if (options?.pageSize) params.pageSize = options.pageSize;
+    return this.http.get<any>(`${this.basePoliza}/por-ejercicio/${id_ejercicio}`, {
+      headers: this.getAuthHeaders(),
+      params,
+    });
+  }
+
   /** POST /api/v1/poliza */
   createPoliza(body: any): Observable<any> {
     return this.http.post<any>(this.basePoliza, body, {
@@ -151,9 +161,22 @@ getTiposPoliza(): Observable<TipoPoliza[]> {
   }
 
   /** GET /api/v1/poliza/:id/movimientos */
-  getPolizaConMovimientos(id: number): Observable<any> {
+  getPolizaConMovimientos(id: number, page: number = 1, pageSize: number = 10): Observable<{ data: Movimiento[]; total: number; page: number; pageSize: number }> {
+    
     return this.http.get<any>(`${this.basePoliza}/${id}/movimientos`, {
       headers: this.getAuthHeaders(),
+    });
+  }
+
+  listPolizaConMovimientos(id: number, page: number = 1, pageSize: number = 10): Observable<{ data: Movimiento[]; total: number; page: number; pageSize: number }> {
+    const params: any = {
+      page: String(page),
+      pageSize: String(pageSize),
+    };
+
+    return this.http.get<any>(`${this.basePoliza}/${id}/listmovimientos`, {
+      headers: this.getAuthHeaders(),
+      params,
     });
   }
 

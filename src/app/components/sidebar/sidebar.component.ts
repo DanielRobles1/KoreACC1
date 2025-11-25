@@ -7,7 +7,15 @@ import { UsuariosService } from '@app/services/usuarios.service';
 import { Router, RouterModule } from '@angular/router';
 import { EditProfileModalComponent } from '../edit-profile-modal/edit-profile-modal.component';
 
-type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion' | 'usuarios-permisos' | 'catalogos' | 'empresa';
+type Item =
+  | 'polizas'
+  | 'reportes'
+  | 'dashboard'
+  | 'configuracion'
+  | 'usuarios-permisos'
+  | 'catalogos'
+  | 'empresa'
+  | '';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,18 +28,11 @@ export class SidebarComponent {
   @Input() open = true;
   @Output() openChange = new EventEmitter<boolean>();
 
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-    private users: UsuariosService,
-    private ws: WsService
-  ) { }
-
   user: any = null;
-  active: Item = 'configuracion';
+  active: Item = '';
   reportesOpen = false;
   configOpen = false;
-tempUser: any = {};
+  tempUser: any = {};
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
@@ -39,20 +40,27 @@ tempUser: any = {};
 
   editProfileOpen = false;
 
-  private toggleUsuarios = true;
-
   usuariosPermisosOpen = false;
   catalogosOpen = false;
   empresaOpen = false;
+
+  constructor(
+    private auth: AuthService,
+    public router: Router,
+    private users: UsuariosService,
+    private ws: WsService
+  ) { }
 
   toggleUsuariosPermisos() {
     this.usuariosPermisosOpen = !this.usuariosPermisosOpen;
     this.active = 'usuarios-permisos';
   }
+
   toggleCatalogos() {
     this.catalogosOpen = !this.catalogosOpen;
     this.active = 'catalogos';
   }
+
   toggleEmpresa() {
     this.empresaOpen = !this.empresaOpen;
     this.active = 'empresa';
@@ -89,8 +97,15 @@ tempUser: any = {};
     this.actionToConfirm = () => this.onLogout();
   }
 
-  closeConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
-  cancelConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
+  closeConfirm() {
+    this.confirmOpen = false;
+    this.actionToConfirm = null;
+  }
+
+  cancelConfirm() {
+    this.confirmOpen = false;
+    this.actionToConfirm = null;
+  }
 
   confirmProceed() {
     if (this.actionToConfirm) this.actionToConfirm();
@@ -102,14 +117,21 @@ tempUser: any = {};
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.ws.disconnect();
-    this.auth.logout().subscribe({ next: () => this.router.navigate(['/login']) });
+    this.auth.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: (err) => {
+        console.error('Error al cerrar sesión', err);
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   ngOnInit() {
     this.users.getMe().subscribe({
       next: (data) => {
         console.log('Usuario cargado:', data);
-        const [apellido_p, apellido_m = ''] = data.apellidos.split(' ');
+        const apellidos = (data.apellidos || '').trim();
+        const [apellido_p, apellido_m = ''] = apellidos.split(' ');
 
         this.user = {
           ...data,
@@ -123,24 +145,24 @@ tempUser: any = {};
     });
   }
 
-  openEditProfile() { 
-  if (this.user) {
-    this.tempUser = { ...this.user }; // copia de usuario actual
+  openEditProfile() {
+    if (this.user) {
+      this.tempUser = { ...this.user }; // copia de usuario actual
+    }
+    this.editProfileOpen = true;
   }
-  this.editProfileOpen = true; 
-}
 
-saveProfile(updated: any) {
-  this.users.updateMe(updated).subscribe({
-    next: (res: any) => {
-      this.user = res.usuario; // actualiza usuario real
-      this.editProfileOpen = false;
-    },
-    error: (err) => console.error('Error actualizando perfil', err)
-  });
-}
+  saveProfile(updated: any) {
+    this.users.updateMe(updated).subscribe({
+      next: (res: any) => {
+        this.user = res.usuario; // actualiza usuario real
+        this.editProfileOpen = false;
+      },
+      error: (err) => console.error('Error actualizando perfil', err)
+    });
+  }
 
-  closeEditProfile() { this.editProfileOpen = false; }
-
-  
+  closeEditProfile() {
+    this.editProfileOpen = false;
+  }
 }

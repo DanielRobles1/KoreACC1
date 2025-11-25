@@ -1,65 +1,68 @@
 :root {
-  --content-max: 1600px; /* faltaba ; */
+  --content-max: 1600px;
 }
 
-:host, .layout { height: 100vh; display: block; }
-html, body { height: 100%; }
-body { margin: 0; }
+:host {
+  height: 100vh;
+  display: block;
+}
 
 .layout {
   height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr;
-  margin-left: 280px;
-  transition: margin-left .25s ease;
+  display: flex; 
+  position: relative;
 }
 
-.layout.is-closed {
-  margin-left: 0;   
+
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
 }
 
-/* ---- Sidebar fuera del layout ---- */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  min-width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;
+}
 
 .sidebar-area {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 280px;
+  flex: 0 0 280px;
   height: 100vh;
   overflow: auto;
   background: #1b2a38;
-  border-right: 1px solid rgba(255,255,255,.06);
-  transition: width .25s ease, transform .25s ease;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  transition: margin-left 0.25s ease;
   z-index: 50;
 }
 
-/* Cuando se cierra */
 .sidebar-area.is-closed {
-  transform: translateX(-100%);
+  margin-left: -280px;  
 }
 
-.sidebar-toggle.is-hidden { display: none; }
-
-.sidebar-toggle{
+.layout-backdrop {
   position: fixed;
-  top: 14px;
-  left: 14px;
-  z-index: 100;  
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  border: 1px solid #cce0f0;
-  background: #cce0f0;
-  box-shadow: 0 6px 20px rgba(16,24,40,.12);
-  display: grid; place-items: center;
-  cursor: pointer;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 40; 
 }
-:host-context(.sidebar-open) .sidebar-toggle { display: none; }
+
+@media (min-width: 993px) {
+  .layout-backdrop {
+    display: none;
+  }
+}
 
 .main {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto 1fr; 
+  grid-template-rows: auto auto 1fr;
   min-width: 0;
+  flex: 1 1 auto; 
 }
 
 .empresa-main {
@@ -69,38 +72,69 @@ body { margin: 0; }
 
 /* fondo azul */
 .page-bg {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   background: #203447;
   z-index: 0;
 }
 
-/* ===== Cabecera de empresa SIEMPRE visible ===== */
-.report-header{
-  position: relative; z-index: 1;
+.report-header {
+  position: relative;
+  z-index: 1;
   margin: 12px 1.5rem 0;
   padding: 12px 16px;
   background: #fff;
   border: 1px solid #e7edf5;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  border-bottom: none; 
-  box-shadow: 0 6px 20px rgba(16,24,40,.08);
+  border-bottom: none;
+  box-shadow: 0 6px 20px rgba(16, 24, 40, 0.08);
 
   display: grid;
-  grid-template-columns: 1fr auto; 
+  grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 16px;
 
-  .empresa-main{ display: grid; gap: 6px; min-width: 0; justify-content: center; text-align: center;}
-  .empresa-titulo{ margin:0; font-size:18px; font-weight:800; color:#101828; }
-  .empresa-meta{ display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:#475467; }
-  .empresa-meta span{ white-space:nowrap; }
-  .empresa-logo{ width:56px; height:56px; object-fit:contain; } /* sin margin-left:auto; con grid ya no hace falta */
+  .empresa-main {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+  .empresa-titulo {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #101828;
+  }
+  .empresa-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 13px;
+    color: #475467;
+  }
+  .empresa-meta span {
+    white-space: nowrap;
+  }
+  .empresa-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+  }
 }
 
-.report-header .empresa-main { display: grid; gap: 6px; }
+.report-header .empresa-main {
+  display: grid;
+  gap: 6px;
+}
 .report-header .empresa-titulo {
-  margin: 0; font-size: 18px; font-weight: 800; color: #101828; letter-spacing: .2px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #101828;
+  letter-spacing: 0.2px;
 }
 .report-header .empresa-meta {
   display: flex;
@@ -111,73 +145,120 @@ body { margin: 0; }
   justify-content: center;
   text-align: center;
 }
-.report-header .empresa-meta span { white-space: nowrap; }
+.report-header .empresa-meta span {
+  white-space: nowrap;
+}
 .report-header .empresa-logo {
-  width: 56px; height: 56px; object-fit: contain; margin-left: auto;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-left: auto;
 }
 
 /* toolbar */
-.page-toolbar{
-  position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 1rem;
+.page-toolbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 
-  margin: 0 1.5rem;    
-  padding: 12px 16px;               
+  margin: 0 1.5rem;
+  padding: 12px 16px;
   background: #fff;
-  color: #1f2937;                   
+  color: #1f2937;
 
   border-left: 1px solid #e7edf5;
   border-right: 1px solid #e7edf5;
-  border-top: none;   
+  border-top: none;
   border-bottom: none;
-  border-radius: 0;             
-  .page-title{ margin:0; font-weight:800; font-size:1.75rem; }
-  .page-actions{ margin-left:auto; display:flex; gap:.75rem; }
+  border-radius: 0;
+
+  .page-title {
+    margin: 0;
+    font-weight: 800;
+    font-size: 1.75rem;
+  }
+  .page-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.75rem;
+  }
 }
 
-.page-title { margin: 0; font-weight: 800; font-size: 2.25rem; }
-.page-actions { margin-left: auto; display: flex; gap: .75rem; }
+.page-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 2.25rem;
+}
+.page-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.75rem;
+}
 
-.page-container{
-  position: relative; z-index:1;
+.page-container {
+  position: relative;
+  z-index: 1;
   overflow: auto;
   padding: 0 1.5rem 1.5rem;
 }
 
-.page-card{
-  background:#fff;
-  border:1px solid #e7edf5;
-  border-top:none; /* se une con toolbar */
-  border-bottom-left-radius:16px;
-  border-bottom-right-radius:16px;
-  border-top-left-radius:0;
-  border-top-right-radius:0;
-  box-shadow: 0 6px 20px rgba(16,24,40,.08);
+.page-card {
+  background: #fff;
+  border: 1px solid #e7edf5;
+  border-top: none; /* se une con toolbar */
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: 0 6px 20px rgba(16, 24, 40, 0.08);
 
-  margin:0;   
-  padding:16px;
-  max-width:none; 
+  margin: 0;
+  padding: 16px;
+  max-width: none;
 }
 
-.page-card h2 { text-align: center; color: #4b4b4b; }
+.page-card h2 {
+  text-align: center;
+  color: #4b4b4b;
+}
 
-/* skeletón opcional para evitar “movimiento” perceptible */
+/* skeletón */
 .report-header.is-loading {
-  background: linear-gradient(90deg, #f6f7f8 25%, #edeef1 37%, #f6f7f8 63%);
+  background: linear-gradient(
+    90deg,
+    #f6f7f8 25%,
+    #edeef1 37%,
+    #f6f7f8 63%
+  );
   background-size: 400% 100%;
   animation: shimmer 1.2s ease-in-out infinite;
 }
 @keyframes shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: 0 0; }
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 /* responsive */
 @media (max-width: 992px) {
-  .layout { grid-template-columns: 0 1fr; }
-  .page-title { font-size: 1.6rem; }
+  .layout {
+    grid-template-columns: 1fr; 
+  }
+  .page-title {
+    font-size: 1.6rem;
+  }
 }
 @media (max-width: 640px) {
-  .report-header { flex-direction: column; align-items: flex-start; }
-  .report-header .empresa-logo { margin-left: 0; }
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .report-header .empresa-logo {
+    margin-left: 0;
+  }
 }
