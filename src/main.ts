@@ -4,4 +4,6 @@ import { AppComponent } from './app/app.component';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 bootstrapApplication(AppComponent, appConfig)
+
+
   .catch((err) => console.error(err));

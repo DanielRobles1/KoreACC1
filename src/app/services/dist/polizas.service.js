@@ -88,6 +88,17 @@ var PolizasService = /** @class */ (function () {
             headers: this.getAuthHeaders()
         });
     };
+    PolizasService.prototype.getPolizaByEjercicio = function (id_ejercicio, options) {
+        var params = {};
+        if (options === null || options === void 0 ? void 0 : options.page)
+            params.page = options.page;
+        if (options === null || options === void 0 ? void 0 : options.pageSize)
+            params.pageSize = options.pageSize;
+        return this.http.get(this.basePoliza + "/por-ejercicio/" + id_ejercicio, {
+            headers: this.getAuthHeaders(),
+            params: params
+        });
+    };
     /** POST /api/v1/poliza */
     PolizasService.prototype.createPoliza = function (body) {
         return this.http.post(this.basePoliza, body, {
@@ -95,9 +106,23 @@ var PolizasService = /** @class */ (function () {
         });
     };
     /** GET /api/v1/poliza/:id/movimientos */
-    PolizasService.prototype.getPolizaConMovimientos = function (id) {
+    PolizasService.prototype.getPolizaConMovimientos = function (id, page, pageSize) {
+        if (page === void 0) { page = 1; }
+        if (pageSize === void 0) { pageSize = 10; }
         return this.http.get(this.basePoliza + "/" + id + "/movimientos", {
             headers: this.getAuthHeaders()
+        });
+    };
+    PolizasService.prototype.listPolizaConMovimientos = function (id, page, pageSize) {
+        if (page === void 0) { page = 1; }
+        if (pageSize === void 0) { pageSize = 10; }
+        var params = {
+            page: String(page),
+            pageSize: String(pageSize)
+        };
+        return this.http.get(this.basePoliza + "/" + id + "/listmovimientos", {
+            headers: this.getAuthHeaders(),
+            params: params
         });
     };
     /** PUT /api/v1/poliza/:id */
@@ -231,6 +256,11 @@ var PolizasService = /** @class */ (function () {
     // ---------------- EJERCICIO ----------------
     PolizasService.prototype.selectEjercicio = function (id_ejercicio) {
         return this.http.put(this.api + "/ejercicios/" + id_ejercicio + "/select", {}, {
+            headers: this.getAuthHeaders()
+        });
+    };
+    PolizasService.prototype.createPolizaAjuste = function (payload) {
+        return this.http.post(this.basePoliza + "/ajuste", payload, {
             headers: this.getAuthHeaders()
         });
     };

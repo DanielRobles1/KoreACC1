@@ -7,7 +7,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 exports.__esModule = true;
 exports.LoginComponent = void 0;
-// src/app/pages/login/login.component.ts
 var core_1 = require("@angular/core");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
@@ -15,10 +14,11 @@ var router_1 = require("@angular/router");
 var ng_recaptcha_1 = require("ng-recaptcha");
 var environment_1 = require("@environments/environment");
 var LoginComponent = /** @class */ (function () {
-    function LoginComponent(fb, router, auth) {
+    function LoginComponent(fb, router, auth, ws) {
         this.fb = fb;
         this.router = router;
         this.auth = auth;
+        this.ws = ws;
         this.showPassword = false;
         this.recaptchaToken = null;
         this.loading = false;
@@ -35,7 +35,6 @@ var LoginComponent = /** @class */ (function () {
             remember: [false],
             recaptcha: ['', forms_1.Validators.required]
         });
-        // Al iniciar, si hay username guardado lo cargamos
         var savedUsername = localStorage.getItem('rememberedUsername');
         if (savedUsername) {
             this.loginForm.patchValue({
@@ -59,7 +58,6 @@ var LoginComponent = /** @class */ (function () {
             return;
         }
         var _a = this.loginForm.value, username = _a.username, password = _a.password, remember = _a.remember;
-        // Guardar o limpiar del remember
         if (remember) {
             localStorage.setItem('rememberedUsername', username);
         }
@@ -68,9 +66,29 @@ var LoginComponent = /** @class */ (function () {
         }
         this.loading = true;
         this.auth.login(username, password, this.recaptchaToken).subscribe({
-            next: function () {
+            // 👇 importante: recibir la respuesta
+            next: function (resp) {
+                var _a, _b, _c;
                 _this.loading = false;
-                _this.router.navigate(["/poliza-home"]);
+                // === Guardar usuario con id_usuario en localStorage ===
+                var user = resp === null || resp === void 0 ? void 0 : resp.user;
+                if (user) {
+                    var usuarioLite = {
+                        id_usuario: user.id_usuario,
+                        nombre: user.nombre,
+                        apellido_p: user.apellido_p,
+                        apellido_m: user.apellido_m,
+                        apellidos: user.apellido_p + " " + user.apellido_m,
+                        correo: user.correo,
+                        debe_cambiar_contrasena: user.debe_cambiar_contrasena,
+                        roles: (_c = (_a = user.roles) !== null && _a !== void 0 ? _a : (_b = user.Rols) === null || _b === void 0 ? void 0 : _b.map(function (r) { return r.nombre; })) !== null && _c !== void 0 ? _c : []
+                    };
+                    localStorage.setItem('usuario', JSON.stringify(usuarioLite));
+                    console.log('Usuario guardado en localStorage:', usuarioLite);
+                }
+                // Conectar WS y navegar
+                _this.ws.connect();
+                _this.router.navigate(['/poliza-home']);
             },
             error: function (err) {
                 var _a;

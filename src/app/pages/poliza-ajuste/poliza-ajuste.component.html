@@ -1,0 +1,300 @@
+<app-polizas-layout [open]="sidebarOpen" (openChange)="onSidebarToggle($event)">
+  <div class="polizas-container form-poliza">
+
+    <!-- HEADER -->
+    <div class="poliza-header">
+      <button type="button" class="back-btn" (click)="volver()" aria-label="Volver">
+       <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          width="24"
+          height="24">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+
+      <div class="title-wrap">
+        <h1 class="poliza-title">Ajuste de póliza</h1>
+        <div class="meta-grid">
+          <span *ngIf="polizaOrigen" class="meta-chip">
+            Póliza origen: <strong>{{ polizaOrigen.folio }}</strong>
+          </span>
+
+          <span *ngIf="polizaOrigen?.ejercicio" class="meta-chip muted">
+            Ejercicio: {{ polizaOrigen.ejercicio?.anio || polizaOrigen.ejercicio_label }}
+          </span>
+
+          <span class="meta-chip muted">
+            {{
+              polizaOrigen?.creador
+                ? (polizaOrigen.creador.nombre || '') + ' ' + (polizaOrigen.creador.apellido_p || '')
+                : 'Usuario actual'
+            }}
+          </span>
+
+          <span class="status-badge warn">
+            <span class="dot"></span>
+            Por revisar
+          </span>
+        </div>
+      </div>
+
+      <div class="header-actions"></div>
+    </div>
+
+    <!-- BARRA SUBSECCIÓN -->
+    <div class="subsection-bar">
+      <span>Cabecera de póliza de ajuste</span>
+    </div>
+
+    <!-- FORMULARIO -->
+    <form [formGroup]="encabezadoForm" (ngSubmit)="guardarAjuste()">
+
+      <!-- GRID CABECERA -->
+      <div class="form-grid">
+        <!-- Tipo póliza -->
+        <label>
+          Tipo póliza:
+          <input class="field" [value]="polizaOrigen?.tipo?.descripcion" disabled />
+        </label>
+
+        <!-- Periodo -->
+        <label>
+          Periodo:
+          <input
+            class="field"
+            [value]="
+              polizaOrigen?.periodo
+                ? (polizaOrigen.periodo.tipo_periodo + ' (' + polizaOrigen.periodo.fecha_inicio + ')')
+                : ''
+            "
+            disabled
+          />
+        </label>
+
+        <!-- Centro -->
+        <label>
+          Centro de costo:
+          <input
+            class="field"
+            [value]="
+              polizaOrigen?.centro
+                ? (polizaOrigen.centro.serie_venta + ' — ' + polizaOrigen.centro.nombre_centro)
+                : ''
+            "
+            disabled
+          />
+        </label>
+
+        <!-- Folio ajuste -->
+        <label>
+          Folio (ajuste):
+          <input class="field" type="text" formControlName="folio" placeholder="Folio de ajuste" />
+        </label>
+
+        <!-- Concepto -->
+        <label style="flex: 2 1 280px;">
+          Concepto:
+          <input class="field" type="text" formControlName="concepto" placeholder="Concepto del ajuste" />
+        </label>
+      </div>
+
+      <!-- MOVIMIENTOS -->
+      <div class="movs-header">
+        <h3 class="section-title">Movimientos del ajuste</h3>
+        <button type="button" class="btn ghost pill" (click)="agregarMovimientoVacio()">
+          <span>+ Agregar movimiento</span>
+        </button>
+      </div>
+
+      <div class="tabla-wrapper">
+        <table class="tabla-movimientos">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Ref. Serie venta</th>
+              <th>Operación</th>
+              <th>Monto</th>
+              <th>Concepto / Cliente</th>
+              <th>Fecha</th>
+              <th>Centro costo</th>
+              <th>UUID</th>
+              <th class="actions-cell"></th>
+            </tr>
+          </thead>
+
+          <tbody formArrayName="movimientos">
+            <tr *ngFor="let m of movimientos.controls; let i = index" [formGroupName]="i">
+              <!-- Cuenta -->
+              <td>
+                <button type="button" class="btn small" (click)="abrirModalCuentas(i)">
+                  {{ labelCuenta(m.value.id_cuenta) || 'Seleccionar cuenta…' }}
+                </button>
+              </td>
+
+              <!-- Ref serie venta -->
+              <td>
+                <input type="text" class="cell-input" formControlName="ref_serie_venta" />
+              </td>
+
+              <!-- Operación -->
+              <td>
+                <select class="cell-input select" formControlName="operacion">
+                  <option value="0">Cargo</option>
+                  <option value="1">Abono</option>
+                </select>
+              </td>
+
+              <!-- Monto -->
+              <td>
+                <input type="number" step="0.01" class="cell-input" formControlName="monto" />
+              </td>
+
+              <!-- Cliente / concepto -->
+              <td>
+                <input type="text" class="cell-input" formControlName="cliente" />
+              </td>
+
+              <!-- Fecha -->
+              <td>
+                <input type="date" class="cell-input cell-date" formControlName="fecha" />
+              </td>
+
+              <!-- CC -->
+              <td>
+                <button type="button" class="btn small" (click)="abrirModalCentroCosto(i)">
+                  {{ labelCentroCosto(m.value.cc) || 'Seleccionar centro costo…' }}
+                </button>
+              </td>
+
+              <!-- UUID -->
+             <!-- Columna UUID / XML por movimiento -->
+<td>
+  <div  class="uuid-wrapper">
+    <button
+      type="button"
+      class="icon-btn"
+      (click)="triggerXmlPickerForMovimiento(xmlInput, i)"
+      [disabled]="uploadingXml"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                           width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14m-7-7h14"/>
+                      </svg>
+    </button>
+
+    <input
+      #xmlInput
+      type="file"
+      accept=".xml"
+      style="display: none"
+      (change)="onXmlPickedForMovimiento($event, i)"
+    />
+
+    <div class="uuid-text" *ngIf="m.value.uuid">
+      {{ m.value.uuid }}
+    </div>
+  </div>
+</td>
+
+
+              <!-- Acciones -->
+              <td class="actions-cell">
+                <button type="button" class="icon-btn danger" (click)="eliminarMovimiento(i)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                      <path d="M10 11v6"></path>
+                      <path d="M14 11v6"></path>
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                    </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- RESUMEN / TOTALES -->
+     <div class="totales-panel">
+  <div class="tot-card">
+    <div class="tot-label">TOTAL CARGOS</div>
+    <div class="tot-value">
+      {{ totalCargos | number:'1.2-2' }}
+    </div>
+  </div>
+
+  <div class="tot-card">
+    <div class="tot-label">TOTAL ABONOS</div>
+    <div class="tot-value">
+      {{ totalAbonos | number:'1.2-2' }}
+    </div>
+  </div>
+
+  <div class="tot-card">
+    <div
+      class="tot-label font-semibold"
+      [style.color]="diferencia === 0 ? '#16a34a' : '#dc2626'">
+      DIFERENCIA
+    </div>
+    <div
+      class="tot-value font-bold"
+      [style.color]="diferencia === 0 ? '#16a34a' : '#dc2626'">
+      {{ diferencia | number:'1.2-2' }}
+    </div>
+  </div>
+
+  <div
+    class="pill-status"
+    [ngClass]="{ ok: diferencia === 0, bad: diferencia !== 0 }">
+    <span class="icon" aria-hidden="true">
+      {{ diferencia === 0 ? '✔' : '⚠' }}
+    </span>
+    <span class="text">
+      {{ diferencia === 0 ? 'Póliza cuadrada' : 'No cuadra' }}
+    </span>
+  </div>
+</div>
+
+      <!-- ACCIONES -->
+      <div class="actions">
+        <button type="button" class="btn ghost" (click)="volver()" [disabled]="loading">
+          Cancelar
+        </button>
+
+        <button type="submit" class="btn primary" [disabled]="loading || encabezadoForm.invalid || movimientos.length === 0 || diferencia !== 0">
+          {{ loading ? 'Guardando…' : 'Guardar ajuste' }}
+        </button>
+      </div>
+
+      <div *ngIf="errorMessage" class="hint error" style="margin-top: .75rem;">
+        {{ errorMessage }}
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal Selección Cuenta -->
+  <app-modal-seleccion-cuenta
+    [open]="modalCuentasAbierto"
+    [cuentas]="cuentas"
+    (cuentaConfirmada)="onCuentaSeleccionadaModal($event)"
+    (cerrado)="cerrarModalCuentas()">
+  </app-modal-seleccion-cuenta>
+
+  
+
+  <!-- Toast -->
+  <app-toast-message
+    [open]="toast.open"
+    [title]="toast.title"
+    [message]="toast.message"
+    [type]="toast.type"
+    [position]="toast.position"
+    [autoCloseMs]="toast.autoCloseMs"
+    [showClose]="toast.showClose"
+    (closed)="onToastClosed()">
+  </app-toast-message>
+</app-polizas-layout>

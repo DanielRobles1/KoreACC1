@@ -21,6 +21,7 @@ var estado_res_component_1 = require("./pages/estado-res/estado-res.component");
 var balance_gral_component_1 = require("./pages/balance-gral/balance-gral.component");
 var empresa_principal_component_1 = require("./pages/empresa-principal/empresa-principal.component");
 var dashboard_contable_component_1 = require("./pages/dashboard-contable/dashboard-contable.component");
+var poliza_ajuste_component_1 = require("./pages/poliza-ajuste/poliza-ajuste.component");
 exports.routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: login_component_1.LoginComponent },
@@ -107,5 +108,12 @@ exports.routes = [
     },
     // app.routes.ts
     { path: 'dashboard-contable', component: dashboard_contable_component_1.DashboardContableComponent },
+    // Ruta para el ajuste de póliza
+    {
+        path: 'poliza/ajuste/:id',
+        component: poliza_ajuste_component_1.PolizaAjusteComponent,
+        canActivate: [auth_guard_1.AuthGuard],
+        data: { perms: ['ajustar_poliza'] } // Aquí puedes definir los permisos necesarios para acceder al ajuste
+    },
     { path: '**', redirectTo: 'login' }
 ];

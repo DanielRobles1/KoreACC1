@@ -55,7 +55,7 @@ var core_1 = require("@angular/core");
 var forms_1 = require("@angular/forms");
 var rxjs_1 = require("rxjs");
 var modal_component_1 = require("../modal/modal/modal.component");
-var NATURALEZAS = ['ingreso', 'egreso', 'diario'];
+var NATURALEZAS = ['ingreso', 'egreso', 'diario', 'apertura', 'cierre', "ajuste"];
 var TipoPolizaModalComponent = /** @class */ (function () {
     function TipoPolizaModalComponent(fb, polizas) {
         this.fb = fb;

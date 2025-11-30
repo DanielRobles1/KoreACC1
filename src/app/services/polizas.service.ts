@@ -16,6 +16,7 @@ export interface Movimiento {
 }
 
 export interface Poliza {
+   id_poliza: number; 
   id_tipopoliza: number;
   id_periodo: number;
   id_usuario: number;
@@ -363,6 +364,12 @@ export class PolizasService {
 
   selectEjercicio(id_ejercicio: number) {
     return this.http.put(`${this.api}/ejercicios/${id_ejercicio}/select`, {}, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
+  createPolizaAjuste(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.basePoliza}/ajuste`, payload, {
       headers: this.getAuthHeaders(),
     });
   }

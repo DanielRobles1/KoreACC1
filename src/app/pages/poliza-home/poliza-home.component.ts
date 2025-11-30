@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
+import { OnboardingService } from '@app/services/onboarding.service';
 
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
@@ -11,7 +12,6 @@ import { ModalComponent } from '@app/components/modal/modal/modal.component';
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-
 type CfdiOption = {
   uuid: string;
   folio?: string | null;
@@ -36,26 +36,63 @@ type PolizaRow = Poliza & { id_poliza?: number; id?: number };
   templateUrl: './poliza-home.component.html',
   styleUrls: ['./poliza-home.component.scss'],
 })
-export class PolizaHomeComponent {
+export class PolizaHomeComponent implements OnInit {
+
   sidebarOpen = true;
+  polizaSeleccionada: Poliza | null = null;  // Para almacenar la póliza seleccionada
 
   constructor(
     private location: Location,
     private router: Router,
     private api: PolizasService,
-    private ejercicioSvc: EjercicioContableService
+    private ejercicioSvc: EjercicioContableService,
+    private onboarding: OnboardingService
   ) { }
+
+seleccionarPoliza(p: Poliza) {
+    this.polizaSeleccionada = p;
+  }
+
+  // Método para navegar al formulario de ajuste
+ irACrearAjuste() {
+  // Verificar si la póliza seleccionada existe
+  if (!this.polizaSeleccionada) {
+    this.showToast({
+      type: 'warning',
+      title: 'Póliza no seleccionada',
+      message: 'Por favor, selecciona una póliza antes de crear el ajuste.'
+    });
+    return; // No redirige si no hay póliza seleccionada
+  }
+
+  // Verifica si el ID de la póliza seleccionada existe
+  const idPoliza = this.polizaSeleccionada.id_poliza;
+  if (!idPoliza) {
+    this.showToast({
+      type: 'error',
+      title: 'ID de póliza inválido',
+      message: 'No se ha encontrado el ID de la póliza seleccionada.'
+    });
+    return; // No redirige si el ID de la póliza es inválido
+  }
+
+  // Redirige a la página de ajuste con el ID de la póliza seleccionada
+  this.router.navigate(['/poliza/ajuste', idPoliza]);
+}
 
   ejercicios: Array<{ id_ejercicio: number; etiqueta: string }> = [];
   selectedEjercicioId: number | null = null;
   Math = Math;
 
-  ngOnInit() {
+    ngOnInit() {
+    //this.onboarding.maybeStartGlobalTour();  
+
     this.cargarCatalogos();
     this.cargarCfdiRecientes();
     this.cargarCuentas();
     this.cargarEjercicios();
   }
+
 
   volver() { this.location.back(); }
 

@@ -21,6 +21,7 @@ import { EstadoResComponent } from './pages/estado-res/estado-res.component';
 import { BalanceGralComponent } from './pages/balance-gral/balance-gral.component';
 import { EmpresaPrincipalComponent } from './pages/empresa-principal/empresa-principal.component';
 import { DashboardContableComponent } from './pages/dashboard-contable/dashboard-contable.component';
+import { PolizaAjusteComponent } from './pages/poliza-ajuste/poliza-ajuste.component';
 
 
 export const routes: Routes = [
@@ -112,6 +113,13 @@ export const routes: Routes = [
 // app.routes.ts
 { path: 'dashboard-contable', component: DashboardContableComponent }
 ,
+// Ruta para el ajuste de póliza
+  {
+    path: 'poliza/ajuste/:id',  // :id es el parámetro que representa el ID de la póliza a ajustar
+    component: PolizaAjusteComponent,
+    canActivate: [AuthGuard], // Si quieres que esta ruta esté protegida por autenticación y permisos
+    data: { perms: ['ajustar_poliza'] } // Aquí puedes definir los permisos necesarios para acceder al ajuste
+  },
   { path: '**', redirectTo: 'login' }
 
 ];

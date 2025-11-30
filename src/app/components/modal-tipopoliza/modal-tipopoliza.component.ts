@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { PolizasService, TipoPolizaCreate, TipoPoliza } from '@app/services/polizas.service';
 import { ModalComponent } from "../modal/modal/modal.component";
 
-const NATURALEZAS: Array<'ingreso' | 'egreso' | 'diario' | 'apertura' | 'cierre'> = ['ingreso', 'egreso', 'diario', 'apertura', 'cierre'];
+const NATURALEZAS: Array<'ingreso' | 'egreso' | 'diario' | 'apertura' | 'cierre'| 'ajuste'> = ['ingreso', 'egreso', 'diario', 'apertura', 'cierre',"ajuste"];
 
 @Component({
   selector: 'app-modal-tipopoliza',
