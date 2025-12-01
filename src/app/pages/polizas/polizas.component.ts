@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
+import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { RouterModule } from '@angular/router';
@@ -23,6 +24,7 @@ type Ejercicio = {
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
   activo?: boolean | number | '1' | '0';
+  anio?: number | null;
 };
 type CentroCostoItem = {
   serie_venta: any;
@@ -434,7 +436,7 @@ export class PolizasComponent implements OnInit {
     showClose: true
   };
 
-  constructor(private api: PolizasService) { }
+  constructor(private api: PolizasService, private ejercicioSvc: EjercicioContableService) { }
 
   ngOnInit(): void {
     this.cargarEjercicioActivo();
@@ -523,6 +525,7 @@ export class PolizasComponent implements OnInit {
     const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
 
     this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
+    console.log('USUARIO',this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero)
 
     const idNum = Number(usr.id_usuario);
     if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
@@ -644,72 +647,78 @@ export class PolizasComponent implements OnInit {
 
 
   private cargarEjercicioActivo(): void {
-    const svc: any = this.api as any;
-    const fn =
-      svc.getEjercicioActivo ||
-      svc.fetchEjercicioActivo ||
-      svc.getEjercicio ||
-      svc.fetchEjercicio ||
-      svc.listEjercicios ||
-      svc.getEjercicios;
+    this.ejercicioSvc.listEjerciciosAbiertos({ esta_abierto: true }).subscribe({
+      next: (res: any) => {
+        const raw = Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res ?? []);
+        const hoy = new Date();
+        const anioActual = hoy.getFullYear();
 
-    if (typeof fn !== 'function') {
-      console.warn('⚠ No existe método de API para Ejercicio.');
-      this.ejercicioActual = null;
-      return;
-    }
+        const activos = raw.filter((e: any) => this.isAbierto(e));
 
-    const isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
+        this.ejercicios = activos.map((e: any) => {
+          const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
+          const fi0 = e.fecha_inicio ?? e.inicio ?? e.start_date ?? null;
+          const ff0 = e.fecha_fin ?? e.fin ?? e.end_date ?? null;
+          const anio = Number(
+            e.anio ??
+            e.year ??
+            (fi0 ? new Date(fi0).getFullYear() : NaN)
+          );
 
-    fn.call(this.api).subscribe({
-      next: (r: any) => {
-        console.log('🔍 Resultado de ejercicios:', r);
+          return <Ejercicio>{
+            id_ejercicio: id,
+            nombre: e.nombre ?? e.descripcion ?? null,
+            fecha_inicio: this.fmtDate(fi0),
+            fecha_fin: this.fmtDate(ff0),
+            activo: true,
+            anio: Number.isFinite(anio) ? anio : null
+          };
+        });
 
-        const items = isList ? this.normalizeList(r) : [r];
-
-        // Solo incluir ejercicios abiertos o activos
-        this.ejercicios = items.filter((e: any) => this.isAbierto(e));
-
-        const seleccionado = items.find((e: any) => e.is_selected) ?? items[0];
-        if (seleccionado) this.ejercicioActualId = Number(seleccionado.id_ejercicio ?? seleccionado.id);
-
-        if (!items || !items.length) {
-          console.warn('⚠ No se encontraron ejercicios.');
-          this.ejercicioActual = null;
-          return;
-        }
-
-        const elegido =
-          this.ejercicios.find(e => e.is_selected) ??
-          this.ejercicios[0] ?? null;
-
-        if (!elegido) {
+        if (!this.ejercicios.length) {
+          console.warn('⚠ No se encontraron ejercicios activos.');
           this.ejercicioActual = null;
           this.ejercicioActualId = undefined as any;
-          this.showToast({ type: 'info', title: 'Sin ejercicios abiertos', message: 'No hay ejercicios abiertos para seleccionar.' });
+          this.showToast({
+            type: 'info',
+            title: 'Sin ejercicios abiertos',
+            message: 'No hay ejercicios abiertos para seleccionar.'
+          });
           this.periodos = [];
           return;
         }
 
-        this.ejercicioActual = {
-          id_ejercicio: Number(elegido.id_ejercicio ?? elegido.id ?? 0),
-          nombre: String(elegido.nombre ?? elegido.descripcion ?? `Ejercicio ${elegido.id_ejercicio ?? ''}`).trim(),
-          fecha_inicio: this.fmtDate(elegido.fecha_inicio ?? elegido.inicio),
-          fecha_fin: this.fmtDate(elegido.fecha_fin ?? elegido.fin),
-          activo: true
-        };
-        this.ejercicioActualId = this.ejercicioActual.id_ejercicio;
+        let elegido: Ejercicio | null =
+          (this.ejercicios.find((e: any) => e.is_selected) as Ejercicio | undefined) ??
+          this.ejercicios.find(e => e.anio === anioActual) ??
+          (this.ejercicios.length === 1 ? this.ejercicios[0] : null);
 
-        console.log(' Ejercicio elegido:', this.ejercicioActual);
+        if (!elegido) {
+          elegido =
+            this.ejercicios.find(e => {
+              const fi = e.fecha_inicio ? new Date(e.fecha_inicio) : null;
+              const ff = e.fecha_fin ? new Date(e.fecha_fin) : null;
+              if (!fi && !ff) return false;
+              const t = hoy.getTime();
+              const ti = fi ? fi.getTime() : -Infinity;
+              const tf = ff ? ff.getTime() : Infinity;
+              return t >= ti && t <= tf;
+            }) ?? this.ejercicios[0];
+        }
+
+        this.ejercicioActual = elegido!;
+        this.ejercicioActualId = elegido!.id_ejercicio;
+
+        console.log('✅ Ejercicio elegido (nueva póliza):', this.ejercicioActual);
 
         this.applyPeriodoFilter();
       },
       error: (err: any) => {
-        console.error('❌ Error al cargar ejercicio:', err);
+        console.error('❌ Error al cargar ejercicios:', err);
         this.showToast({
           type: 'error',
           title: 'Error',
-          message: 'No se pudo cargar el ejercicio actual.'
+          message: 'No se pudieron cargar los ejercicios contables.'
         });
         this.ejercicioActual = null;
       }

@@ -1,6 +1,6 @@
 // services/ejercicio-contable.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface EjercicioContableDto {
@@ -10,6 +10,14 @@ export interface EjercicioContableDto {
   fecha_inicio: string;
   fecha_fin: string;
   esta_abierto: boolean;
+}
+
+export interface EjercicioFilters {
+  id_empresa?: number;
+  anio?: number;
+  esta_abierto?: boolean;
+  desde?: string;
+  hasta?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +33,18 @@ export class EjercicioContableService {
   listEjercicios(): Observable<EjercicioContableDto[]> {
     return this.http.get<EjercicioContableDto[]>(this.baseUrl);
   }
+
+  listEjerciciosAbiertos(filters: EjercicioFilters = {}): Observable<EjercicioContableDto[]> {
+  let params = new HttpParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      params = params.set(key, String(value));
+    }
+  });
+
+  return this.http.get<EjercicioContableDto[]>(this.baseUrl, { params });
+}
 
   create(payload: EjercicioContableDto): Observable<EjercicioContableDto> {
     return this.http.post<EjercicioContableDto>(this.baseUrl, payload);

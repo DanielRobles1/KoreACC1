@@ -1,10 +1,33 @@
 <button
-  class="fixed top-4 left-4 z-50 bg-blue-100 border rounded p-2 shadow-md"
+  class="sidebar-toggle"
   type="button"
   (click)="toggleSidebar()"
+  [attr.aria-label]="open ? 'Contraer menú' : 'Expandir menú'"
+  [attr.aria-expanded]="open"
 >
-  <strong><span *ngIf="open">&lt;</span></strong>
-  <strong><span *ngIf="!open">&gt;</span></strong>
+  <svg
+    *ngIf="open"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    width="22"
+    height="22"
+  >
+    <polyline points="15 18 9 12 15 6"></polyline>
+  </svg>
+
+  <svg
+    *ngIf="!open"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    width="22"
+    height="22"
+  >
+    <polyline points="9 6 15 12 9 18"></polyline>
+  </svg>
 </button>
 
 <div

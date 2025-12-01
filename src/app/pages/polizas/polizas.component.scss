@@ -171,6 +171,64 @@
   grid-template-columns: repeat(4, 1fr);
   gap: .5rem .75rem;
 }
+/* ===== Formulario de encabezado en una sola línea ===== */
+.form-grid.form-grid--header {
+  display: flex;
+  flex-wrap: wrap;          /* se apila en pantallas chicas */
+  align-items: flex-end;
+  gap: .75rem;
+}
+
+/* Cada campo con ancho fijo para que quepan todos en fila en desktop */
+.form-grid.form-grid--header label {
+  flex: 0 0 180px;          /* ajusta 170–200px según veas */
+  min-width: 0;
+}
+
+/* En pantallas anchas, fuerza que no haga salto de línea */
+@media (min-width: 1200px) {
+  .form-grid.form-grid--header {
+    flex-wrap: nowrap;
+  }
+}
+
+/* Inputs/ selects un poquito compactos en el header */
+.form-grid.form-grid--header .field,
+.form-grid.form-grid--header .select.field {
+  height: 32px;
+  padding: .3rem .5rem;
+  font-size: .85rem;
+}
+
+/* ===== Estatus inline ===== */
+.form-grid--header .status-label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.form-grid--header .status-label span {
+  font-size: .82rem;
+}
+
+.form-grid--header .status-label .status-chip {
+  margin-top: 0;   /* anula el margin-top anterior */
+}
+
+/* (tu status-chip base) */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .22rem .55rem;
+  border-radius: 9999px;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid var(--line-soft);
+  background: #f9fafb;
+}
 
 @media (max-width: 1200px) {
   .form-grid.compact { grid-template-columns: repeat(3, 1fr); }

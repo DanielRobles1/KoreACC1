@@ -16,18 +16,18 @@
 
     <h3>Nueva póliza</h3>
 
-    <div class="mode-switch">
+    <!-- <div class="mode-switch">
       <label class="mode-switch__check">
-        <!-- <input
+        <input
           type="checkbox"
           [checked]="modoCaptura === 'motor'"
           (change)="modoCaptura = (modoCaptura==='manual' ? 'motor' : 'manual')"
           aria-label="Usar motor" />
-        <span>Usar motor</span> -->
+        <span>Usar motor</span>
       </label>
       <small *ngIf="modoCaptura==='manual'">Captura manual de movimientos</small>
       <small *ngIf="modoCaptura==='motor'">Generación automática (flujo + contrapartida + impuestos)</small>
-    </div>
+    </div> -->
 
     <form
       class="form-poliza"
@@ -64,8 +64,8 @@
       name="ejercicioSeleccionado"
       style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
     >
-      <option *ngFor="let e of ejercicios" [value]="e.id_ejercicio">
-        {{ e.nombre }} ({{ e.fecha_inicio || '—' }} — {{ e.fecha_fin || '—' }})
+      <option *ngFor="let e of ejercicios; trackBy: trackByEjercicioId" [ngValue]="e.id_ejercicio">
+        {{ e.anio || (e.fecha_inicio ? (e.fecha_inicio | date:'yyyy') : '—') }}
       </option>
     </select>
     <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
@@ -93,25 +93,6 @@
   </div>
 
   <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
-
- <div class="status-chip por-revisar">
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="black"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="12" y1="8" x2="12" y2="12"></line>
-    <circle cx="12" cy="16" r="1"></circle>
-  </svg>
-  <span>Por revisar</span>
-</div>
-
 </div>
 
 
@@ -164,6 +145,26 @@
                 required
                 (input)="folioFueEditadoPorUsuario = true" />
         </label>
+
+        <label class="status-label">
+        <span>Estatus de póliza</span>
+        <div class="status-chip por-revisar">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="black"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <circle cx="12" cy="16" r="1"></circle>
+          </svg>
+          <span>Por revisar</span>
+        </div>
+      </label>
 
         <label>
           Concepto:

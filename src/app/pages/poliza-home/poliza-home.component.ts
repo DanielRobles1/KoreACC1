@@ -352,9 +352,10 @@ seleccionarPoliza(p: Poliza) {
   }
 
   cargarEjercicios() {
-    this.ejercicioSvc.listEjercicios().subscribe({
+    this.ejercicioSvc.listEjerciciosAbiertos({ esta_abierto: true }).subscribe({
       next: (res: any) => {
         const arr = Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res ?? []);
+
         this.ejercicios = arr.map((e: any) => {
           const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
           const anio = e.anio ?? e.year ?? null;
@@ -367,7 +368,47 @@ seleccionarPoliza(p: Poliza) {
           else etiqueta = `Ejercicio ${id}`;
 
           return { id_ejercicio: id, etiqueta };
-        })
+        });
+
+        if (!this.selectedEjercicioId && this.ejercicios.length) {
+          const hoy = new Date();
+          const anioActual = hoy.getFullYear();
+          let defaultId: number | null = null;
+
+          const rawPorAnio = arr.find((e: any) => {
+            const anio = Number(
+              e.anio ??
+              e.year ??
+              (e.fecha_inicio ? new Date(e.fecha_inicio).getFullYear() : NaN)
+            );
+            return anio === anioActual;
+          });
+
+          if (rawPorAnio) {
+            defaultId = Number(rawPorAnio.id_ejercicio ?? rawPorAnio.id ?? rawPorAnio.ID);
+          } else if (this.ejercicios.length === 1) {
+            defaultId = this.ejercicios[0].id_ejercicio;
+          } else {
+            const rawPorRango = arr.find((e: any) => {
+              const fi = this.toDate(e.fecha_inicio ?? e.inicio ?? e.start_date);
+              const ff = this.toDate(e.fecha_fin ?? e.fin ?? e.end_date);
+              if (!fi && !ff) return false;
+              const t = hoy.getTime();
+              const ti = fi ? fi.getTime() : -Infinity;
+              const tf = ff ? ff.getTime() : Infinity;
+              return t >= ti && t <= tf;
+            });
+
+            if (rawPorRango) {
+              defaultId = Number(rawPorRango.id_ejercicio ?? rawPorRango.id ?? rawPorRango.ID);
+            }
+          }
+
+          if (defaultId != null) {
+            this.selectedEjercicioId = defaultId;
+            this.cargarPolizas();
+          }
+        }
       },
       error: (err) => {
         console.error('Ejercicios contables:', err);
