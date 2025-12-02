@@ -100,7 +100,7 @@ export class BalanzaComprobacionComponent {
 
   onGenerarBalanza() {
     if (!this.periodoIniId || !this.periodoFinId) {
-      this.showToast({ type: 'warning', title: 'Fallo', message: 'Seleccione un rango de periodos.' });
+      this.showToast({ type: 'warning', title: 'Aviso', message: 'Seleccione un rango de periodos.' });
       return;
     }
     this.loading = true;
@@ -117,10 +117,10 @@ export class BalanzaComprobacionComponent {
             this.computeTotals();
             this.showToast({ type: 'success', title: 'Balanza generada', message: `(${this.totalFilas} cuentas).` });
           } else {
-            this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudo generar la balanza' });
+            this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo generar la balanza' });
           }
         },
-        error: (err) => this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudo generar la balanza' }),
+        error: (err) => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo generar la balanza' }),
       });
   }
 
@@ -144,7 +144,7 @@ export class BalanzaComprobacionComponent {
           .filter(hasPeriodoId)
           .sort(this.comparePeriodo);
       },
-      error: (err) => this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudieron recuperar los periodos' }),
+      error: (err) => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron recuperar los periodos' }),
     });
   }
 

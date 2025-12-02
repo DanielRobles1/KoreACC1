@@ -10,6 +10,8 @@ import { EjercicioContableService } from '@app/services/ejercicio-contable.servi
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
 
+import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta, toDateSafe } from '@app/utils/fecha-utils';
+
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 type CfdiOption = {
@@ -223,52 +225,8 @@ seleccionarPoliza(p: Poliza) {
     return total > 0 ? Math.ceil(total / this.movsPageSize) : 1;
   }
 
-  private readonly MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-  private toDate(v: any): Date | null {
-    if (!v) return null;
-    const s = String(v).trim();
-
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (m) {
-      const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-      return new Date(Date.UTC(y, mo - 1, d));
-    }
-
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
-  }
-
-  private periodoEtiqueta(ini: any, fin: any): string {
-    const di = this.toDate(ini);
-    const df = this.toDate(fin);
-
-    if (di && df) {
-      const yi = di.getUTCFullYear();
-      const yf = df.getUTCFullYear();
-      const mi = di.getUTCMonth();
-      const mf = df.getUTCMonth();
-
-      return (yi === yf)
-        ? `${this.MESES_CORTOS[mi]}–${this.MESES_CORTOS[mf]} ${yi}`
-        : `${this.MESES_CORTOS[mi]} ${yi} — ${this.MESES_CORTOS[mf]} ${yf}`;
-    }
-    if (di) return `${this.MESES_CORTOS[di.getUTCMonth()]} ${di.getUTCFullYear()}`;
-    if (df) return `${this.MESES_CORTOS[df.getUTCMonth()]} ${df.getUTCFullYear()}`;
-    return '—';
-  }
-
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
-  }
-  private pad2(n: number) { return String(n).padStart(2, '0'); }
-  private fmtDate(d: any): string {
-    if (!d) return '—';
-    const s = String(d);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const dt = new Date(s);
-    if (isNaN(dt.getTime())) return s;
-    return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
   }
   private showToast(opts: { type?: ToastType; title?: string; message: string; autoCloseMs?: number; position?: ToastPosition }) {
     this.toast.type = opts.type ?? 'info';
@@ -293,7 +251,7 @@ seleccionarPoliza(p: Poliza) {
       },
       error: err => {
         console.error('Tipos de póliza:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los tipos de póliza.' });
       },
     });
 
@@ -304,14 +262,14 @@ seleccionarPoliza(p: Poliza) {
           const id = Number(p.id_periodo ?? p.id ?? p.ID);
           const fi0 = p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini;
           const ff0 = p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin;
-          return { id_periodo: id, nombre: this.periodoEtiqueta(fi0, ff0) };
+          return { id_periodo: id, nombre: periodoEtiqueta(fi0, ff0) };
         });
         this.mapPeriodos.clear();
         for (const p of this.periodos) this.mapPeriodos.set(p.id_periodo, p.nombre);
       },
       error: err => {
         console.error('Periodos:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los periodos.' });
       },
     });
 
@@ -330,7 +288,7 @@ seleccionarPoliza(p: Poliza) {
       },
       error: err => {
         console.error('Centros:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los centros.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los centros.' });
       },
     });
   }
@@ -364,7 +322,7 @@ seleccionarPoliza(p: Poliza) {
 
           let etiqueta = '';
           if (anio != null) etiqueta = `Ejercicio ${anio}`;
-          else if (fi || ff) etiqueta = `${this.fmtDate(fi)} — ${this.fmtDate(ff)}`;
+          else if (fi || ff) etiqueta = `${fmtDate(fi)} — ${fmtDate(ff)}`;
           else etiqueta = `Ejercicio ${id}`;
 
           return { id_ejercicio: id, etiqueta };
@@ -390,8 +348,8 @@ seleccionarPoliza(p: Poliza) {
             defaultId = this.ejercicios[0].id_ejercicio;
           } else {
             const rawPorRango = arr.find((e: any) => {
-              const fi = this.toDate(e.fecha_inicio ?? e.inicio ?? e.start_date);
-              const ff = this.toDate(e.fecha_fin ?? e.fin ?? e.end_date);
+              const fi = toDateSafe(e.fecha_inicio ?? e.inicio ?? e.start_date);
+              const ff = toDateSafe(e.fecha_fin   ?? e.fin   ?? e.end_date); 
               if (!fi && !ff) return false;
               const t = hoy.getTime();
               const ti = fi ? fi.getTime() : -Infinity;
@@ -435,7 +393,7 @@ seleccionarPoliza(p: Poliza) {
       },
       error: (err) => {
         console.error('getPolizaConMovimientos:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los movimientos.' });
       },
       complete: () => (this.movsLoadingId = null),
     });
@@ -627,7 +585,7 @@ seleccionarPoliza(p: Poliza) {
     const ini = p?.periodo_inicio ?? p?.fecha_inicio ?? p?.inicio;
     const fin = p?.periodo_fin ?? p?.fecha_fin ?? p?.fin;
 
-    const etiqueta = this.periodoEtiqueta(ini, fin);
+    const etiqueta = periodoEtiqueta(ini, fin);
     if (!Number.isNaN(id)) this.mapPeriodos.set(id, etiqueta);
     return etiqueta;
   }
@@ -737,7 +695,7 @@ seleccionarPoliza(p: Poliza) {
         error: err => {
           console.error('Error al eliminar póliza:', err);
           const msg = err?.error?.message || 'No se pudo eliminar la póliza.';
-          this.showToast({ type: 'error', title: 'Error', message: msg });
+          this.showToast({ type: 'warning', title: 'Aviso', message: msg });
         }
       });
     });
@@ -816,7 +774,7 @@ seleccionarPoliza(p: Poliza) {
       error: (err) => {
         console.error('changeEstadoPoliza:', err);
         const msg = err?.error?.message || 'No se pudo cambiar el estado.';
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
       },
       complete: () => (this.loadingId = null),
     });
@@ -874,7 +832,7 @@ seleccionarPoliza(p: Poliza) {
       error: (err) => {
         console.error('Importar XML:', err);
         this.uploadXmlError = err?.error?.message ?? 'Error importando XML';
-        this.showToast({ type: 'error', title: 'Error', message: this.uploadXmlError });
+        this.showToast({ type: 'warning', title: 'Aviso', message: this.uploadXmlError });
       },
       complete: () => (this.uploadingXml = false),
     });

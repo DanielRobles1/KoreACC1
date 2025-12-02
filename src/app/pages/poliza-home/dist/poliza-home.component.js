@@ -285,7 +285,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Tipos de póliza:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los tipos de póliza.' });
             }
         });
         this.api.getPeriodos().subscribe({
@@ -306,7 +306,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Periodos:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los periodos.' });
             }
         });
         this.api.getCentros().subscribe({
@@ -328,7 +328,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Centros:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los centros.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los centros.' });
             }
         });
     };
@@ -399,7 +399,7 @@ var PolizaHomeComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('getPolizaConMovimientos:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los movimientos.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los movimientos.' });
             },
             complete: function () { return (_this.movsLoadingId = null); }
         });
@@ -673,7 +673,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                     var _a;
                     console.error('Error al eliminar póliza:', err);
                     var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo eliminar la póliza.';
-                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
                 }
             });
         });
@@ -744,7 +744,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 var _a;
                 console.error('changeEstadoPoliza:', err);
                 var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || 'No se pudo cambiar el estado.';
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
             },
             complete: function () { return (_this.loadingId = null); }
         });
@@ -801,7 +801,7 @@ var PolizaHomeComponent = /** @class */ (function () {
                 var _a, _b;
                 console.error('Importar XML:', err);
                 _this.uploadXmlError = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'Error importando XML';
-                _this.showToast({ type: 'error', title: 'Error', message: _this.uploadXmlError });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: _this.uploadXmlError });
             },
             complete: function () { return (_this.uploadingXml = false); }
         });

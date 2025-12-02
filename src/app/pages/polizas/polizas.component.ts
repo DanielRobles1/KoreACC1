@@ -9,6 +9,7 @@ import { RouterModule } from '@angular/router';
 import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component';
 import { firstValueFrom } from 'rxjs';
 import { ModalComponent } from "@app/components/modal/modal/modal.component";
+import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta } from '@app/utils/fecha-utils';
 
 type CfdiOption = {
   uuid: string;
@@ -212,8 +213,11 @@ export class PolizasComponent implements OnInit {
     // Normaliza tasa a número o etiqueta
     const tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
     const esExento = (tasa === 'exento');
-    const hoyISO = (new Date()).toISOString().slice(0, 10);
+    const hoyISO = todayISO();
     const refSerie = this.evento?.ref_serie_venta ?? null;
+    const ccHeader = this.toNumOrNull(this.nuevaPoliza.id_centro);
+    const serieHeader = this.getSerieVentaByCcId(ccHeader ?? null);
+    const refSerieEfectiva = serieHeader ?? refSerie;
 
     // Selección de cuenta por MEDIO (cobro/pago) y por TASA
     const cuentaMedioVenta = (): number | null => {
@@ -280,9 +284,9 @@ export class PolizasComponent implements OnInit {
         monto: this.r2(total),
         cliente: concepto || 'Venta',
         fecha: hoyISO,
-        cc: null,
+        cc: ccHeader ?? null,
         uuid: null,
-        ref_serie_venta: refSerie,
+        ref_serie_venta: refSerieEfectiva ?? null
       });
 
       // Abono a Ventas por el subtotal
@@ -292,9 +296,9 @@ export class PolizasComponent implements OnInit {
         monto: this.r2(subtotal),
         cliente: concepto || 'Venta',
         fecha: hoyISO,
-        cc: null,
+        cc: ccHeader ?? null,
         uuid: null,
-        ref_serie_venta: refSerie,
+        ref_serie_venta: refSerieEfectiva ?? null
       });
 
       // Abono a IVA Trasladado (solo si tasa > 0)
@@ -305,9 +309,9 @@ export class PolizasComponent implements OnInit {
           monto: this.r2(iva),
           cliente: concepto || 'IVA Trasladado',
           fecha: hoyISO,
-          cc: null,
+          cc: ccHeader ?? null,
           uuid: null,
-          ref_serie_venta: refSerie,
+          ref_serie_venta: refSerieEfectiva ?? null
         });
       }
 
@@ -323,9 +327,9 @@ export class PolizasComponent implements OnInit {
         monto: this.r2(subtotal),
         cliente: concepto || 'Compra',
         fecha: hoyISO,
-        cc: null,
+        cc: ccHeader ?? null,
         uuid: null,
-        ref_serie_venta: '',
+        ref_serie_venta: refSerieEfectiva ?? null
       });
 
       // Cargo a IVA Acreditable (solo si tasa > 0)
@@ -336,9 +340,9 @@ export class PolizasComponent implements OnInit {
           monto: this.r2(iva),
           cliente: concepto || 'IVA Acreditable',
           fecha: hoyISO,
-          cc: null,
+          cc: ccHeader ?? null,
           uuid: null,
-          ref_serie_venta: '',
+          ref_serie_venta: refSerieEfectiva ?? null
         });
       }
 
@@ -349,9 +353,9 @@ export class PolizasComponent implements OnInit {
         monto: this.r2(total),
         cliente: concepto || (medio === 'proveedores' ? 'Proveedor' : 'Pago'),
         fecha: hoyISO,
-        cc: null,
+        cc: ccHeader ?? null,
         uuid: null,
-        ref_serie_venta: '',
+        ref_serie_venta: refSerieEfectiva ?? null
       });
     }
   }
@@ -380,8 +384,8 @@ export class PolizasComponent implements OnInit {
       return;
     }
     const k = tipoNombre.trim().toLowerCase();
-    const hoy = this.todayISO();
-    const año = this.todayISO().slice(0, 4);
+    const hoy = todayISO();
+    const año = todayISO().slice(0, 4);
 
     let base = '';
     if (k.includes('apertura')) base = `APERTURA EJERCICIO ${año}`;
@@ -440,14 +444,14 @@ export class PolizasComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarEjercicioActivo();
-    this.initUsuarioActual();     // setea id_usuario y nombre forzado
-    this.cargarCatalogos();       // tipos/periodos/centros
-    this.getCentros();            // centros de costo para tabla
-    this.cargarCuentas();         // catálogo de cuentas para select
-    this.cargarPolizas();         // listado
-    this.cargarCfdiRecientes();   // UUIDs
+    this.initUsuarioActual();
+    this.cargarCatalogos(); 
+    this.getCentros(); 
+    this.cargarCuentas();   
+    this.cargarPolizas(); 
+    this.cargarCfdiRecientes();
     if (!this.evento.id_empresa) this.evento.id_empresa = 1;
-    if (!this.evento.fecha_operacion) this.evento.fecha_operacion = this.todayISO();
+    if (!this.evento.fecha_operacion) this.evento.fecha_operacion = todayISO();
   }
 
   modalCuentasAbierto = false;
@@ -485,28 +489,11 @@ export class PolizasComponent implements OnInit {
   private normalizeList(res: any) {
     return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? []);
   }
-  private pad2(n: number) { return String(n).padStart(2, '0'); }
-  private fmtDate(d: any): string {
-    if (!d) return '—';
-    const s = String(d);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const dt = new Date(s);
-    if (isNaN(dt.getTime())) return s;
-    return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
-  }
 
   private toNumOrNull = (v: any): number | null =>
     (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
   private toStrOrNull = (v: any): string | null =>
     (v == null ? null : (String(v).trim() || null));
-  private toDateOrNull = (v: any): string | null => {
-    if (!v) return null;
-    const s = String(v);
-    if (/^\d{4}-\d{2}-\d2$/.test(s)) return s;
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
-  };
   private N(v: any): number | undefined {
     if (v === '' || v === null || v === undefined) return undefined;
     const n = Number(v);
@@ -525,7 +512,7 @@ export class PolizasComponent implements OnInit {
     const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
 
     this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
-    console.log('USUARIO',this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero)
+    console.log('USUARIO', this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero)
 
     const idNum = Number(usr.id_usuario);
     if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
@@ -668,8 +655,8 @@ export class PolizasComponent implements OnInit {
           return <Ejercicio>{
             id_ejercicio: id,
             nombre: e.nombre ?? e.descripcion ?? null,
-            fecha_inicio: this.fmtDate(fi0),
-            fecha_fin: this.fmtDate(ff0),
+            fecha_inicio: fmtDate(fi0),
+            fecha_fin: fmtDate(ff0),
             activo: true,
             anio: Number.isFinite(anio) ? anio : null
           };
@@ -716,8 +703,8 @@ export class PolizasComponent implements OnInit {
       error: (err: any) => {
         console.error('❌ Error al cargar ejercicios:', err);
         this.showToast({
-          type: 'error',
-          title: 'Error',
+          type: 'warning',
+          title: 'Aviso',
           message: 'No se pudieron cargar los ejercicios contables.'
         });
         this.ejercicioActual = null;
@@ -758,7 +745,7 @@ export class PolizasComponent implements OnInit {
       },
       error: (err) => {
         console.error('❌ Error al guardar ejercicio seleccionado:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudo actualizar el ejercicio seleccionado.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
       }
     });
   }
@@ -794,13 +781,6 @@ export class PolizasComponent implements OnInit {
       cc: null
     };
 
-  private todayISO(): string {
-    const d = new Date();
-    const mm = this.pad2(d.getMonth() + 1);
-    const dd = this.pad2(d.getDate());
-    return `${d.getFullYear()}-${mm}-${dd}`;
-  }
-
   // Catálogos
   cargarCatalogos(): void {
     // Tipos de póliza
@@ -813,7 +793,7 @@ export class PolizasComponent implements OnInit {
       },
       error: err => {
         console.error('Tipos de póliza:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los tipos de póliza.' });
       }
     });
 
@@ -823,15 +803,15 @@ export class PolizasComponent implements OnInit {
         this.allPeriodos = items.map((p: any) => ({
           id_periodo: Number(p.id_periodo ?? p.id ?? p.ID),
           id_ejercicio: Number(p.id_ejercicio ?? p.ejercicio_id ?? p.ejercicio ?? p.idEjercicio ?? p.ID_EJERCICIO ?? NaN),
-          fecha_inicio: this.fmtDate(p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini),
-          fecha_fin: this.fmtDate(p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin),
+          fecha_inicio: fmtDate(p.fecha_inicio ?? p.fechaInicio ?? p.inicio ?? p.start_date ?? p.fecha_ini),
+          fecha_fin: fmtDate(p.fecha_fin ?? p.fechaFin ?? p.fin ?? p.end_date ?? p.fecha_fin),
           _raw: p
         }));
         this.applyPeriodoFilter();
       },
       error: err => {
         console.error('Periodos:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los periodos.' });
       }
     });
 
@@ -857,7 +837,7 @@ export class PolizasComponent implements OnInit {
       },
       error: err => {
         console.error('Centros:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los centros.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los centros.' });
       }
     });
 
@@ -871,17 +851,16 @@ export class PolizasComponent implements OnInit {
 
     const ej = this.ejercicioActual;
     if (!ej) {
-      // Si aún no hay ejercicio resuelto, muestra todos
       this.periodos = this.allPeriodos.map(p => ({
         id_periodo: p.id_periodo,
-        nombre: `${p.fecha_inicio ?? '—'} — ${p.fecha_fin ?? '—'}`
+        nombre: periodoEtiqueta(p.fecha_inicio, p.fecha_fin)
       }));
       return;
     }
 
     const idEj = Number(ej.id_ejercicio);
-    const ejIni = this.fmtDate(ej.fecha_inicio ?? ej.inicio);
-    const ejFin = this.fmtDate(ej.fecha_fin ?? ej.fin);
+    const ejIni = fmtDate(ej.fecha_inicio ?? ej.inicio);
+    const ejFin = fmtDate(ej.fecha_fin ?? ej.fin);
 
     let filtrados = this.allPeriodos.filter(p => Number.isFinite(p.id_ejercicio) && p.id_ejercicio === idEj);
 
@@ -895,7 +874,7 @@ export class PolizasComponent implements OnInit {
 
     this.periodos = filtrados.map(p => ({
       id_periodo: p.id_periodo,
-      nombre: `${p.fecha_inicio ?? '—'} — ${p.fecha_fin ?? '—'}`
+      nombre: periodoEtiqueta(p.fecha_inicio, p.fecha_fin)
     }));
   }
 
@@ -996,7 +975,7 @@ export class PolizasComponent implements OnInit {
       },
       error: err => {
         console.error('Pólizas:', err);
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar las pólizas.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar las pólizas.' });
       }
     });
   }
@@ -1123,10 +1102,10 @@ export class PolizasComponent implements OnInit {
     const nuevo: Movimiento & { _cuentaQuery?: string } = {
       id_cuenta: null,
       ref_serie_venta: serie ?? '',
-      operacion: '',          // "0" cargo | "1" abono (string)
+      operacion: '', 
       monto: null,
       cliente: '',
-      fecha: this.todayISO(),
+      fecha: todayISO(),
       cc: this.nuevaPoliza.id_centro ?? null,
       uuid: null as unknown as any,
       _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''
@@ -1288,7 +1267,7 @@ export class PolizasComponent implements OnInit {
           operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
           monto: this.toNumOrNull(m.monto),
           cliente: this.toStrOrNull(m.cliente),
-          fecha: this.toDateOrNull(m.fecha),
+          fecha: toDateOrNull(m.fecha),
           cc: this.toNumOrNull(m.cc),
           uuid: this.toStrOrNull(m.uuid),
         }))
@@ -1303,7 +1282,7 @@ export class PolizasComponent implements OnInit {
         error: err => {
           const msg = err?.error?.message || err?.error?.error || err?.message || 'Error al guardar póliza';
           console.error('Guardar póliza (manual):', err);
-          this.showToast({ type: 'error', title: 'Error', message: msg });
+          this.showToast({ type: 'warning', title: 'Aviso', message: msg });
         }
       });
 
@@ -1341,7 +1320,7 @@ export class PolizasComponent implements OnInit {
 
         tipo_operacion: this.evento.tipo_operacion,
         monto_base: Number(this.evento.monto_base),
-        fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
+        fecha_operacion: toDateOrNull(this.evento.fecha_operacion)!,
         id_empresa: Number(this.evento.id_empresa),
         medio_cobro_pago: this.evento.medio_cobro_pago,
         id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
@@ -1360,7 +1339,7 @@ export class PolizasComponent implements OnInit {
         error: err => {
           const msg = err?.error?.message || err?.message || 'Error al crear póliza con el motor';
           console.error('Guardar póliza (motor):', err);
-          this.showToast({ type: 'error', title: 'Error', message: msg });
+          this.showToast({ type: 'warning', title: 'Aviso', message: msg });
         }
       });
     }
@@ -1381,7 +1360,7 @@ export class PolizasComponent implements OnInit {
     const body = {
       tipo_operacion: this.evento.tipo_operacion,
       monto_base: Number(this.evento.monto_base),
-      fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion)!,
+      fecha_operacion: toDateOrNull(this.evento.fecha_operacion)!,
       id_empresa: Number(this.evento.id_empresa),
       medio_cobro_pago: this.evento.medio_cobro_pago,
       id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
@@ -1397,7 +1376,7 @@ export class PolizasComponent implements OnInit {
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Error al agregar evento';
         console.error('expand-evento:', err);
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
       }
     });
   }
@@ -1493,7 +1472,7 @@ export class PolizasComponent implements OnInit {
       error: (err) => {
         console.error('Importar XML:', err);
         this.uploadXmlError = err?.error?.message ?? 'Error importando XML';
-        this.showToast({ type: 'error', title: 'Error', message: this.uploadXmlError });
+        this.showToast({ type: 'warning', title: 'Aviso', message: this.uploadXmlError });
       },
       complete: () => (this.uploadingXml = false),
     });

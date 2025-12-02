@@ -136,7 +136,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.getCentros(); // Centros de costo
         this.id_poliza = Number(this.route.snapshot.paramMap.get('id'));
         if (!Number.isFinite(this.id_poliza)) {
-            this.showToast({ type: 'error', title: 'Error', message: 'ID de póliza inválido.' });
+            this.showToast({ type: 'warning', title: 'Aviso', message: 'ID de póliza inválido.' });
             this.loading = false;
             return;
         }
@@ -228,7 +228,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 console.error('❌ Error al cargar ejercicio:', err);
                 _this.ejercicioActual = null;
                 _this.ejercicios = [];
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudo cargar el ejercicio actual.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo cargar el ejercicio actual.' });
             }
         });
     };
@@ -267,7 +267,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 }); },
                 error: function (err) {
                     console.error('❌ Error al guardar ejercicio seleccionado:', err);
-                    _this.showToast({ type: 'error', title: 'Error', message: 'No se pudo actualizar el ejercicio seleccionado.' });
+                    _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
                 }
             });
         }
@@ -467,7 +467,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 var _a, _b;
                 console.error('Poliza cargar:', err);
                 _this.errorMsg = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'No se pudo cargar la póliza.';
-                _this.showToast({ type: 'error', title: 'Error', message: _this.errorMsg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: _this.errorMsg });
             },
             complete: function () { return (_this.loading = false); }
         });
@@ -620,7 +620,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 var _a, _b;
                 var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al actualizar póliza/movimientos';
                 console.error('Actualizar:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
             },
             complete: function () { _this.updating = false; }
         });
@@ -783,7 +783,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 var _a, _b;
                 _this.deletingIndexSet["delete"](i);
                 var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || 'No se pudo eliminar el movimiento.';
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
             }
         });
     };
@@ -895,7 +895,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                         err_1 = _l.sent();
                         msg = ((_k = err_1 === null || err_1 === void 0 ? void 0 : err_1.error) === null || _k === void 0 ? void 0 : _k.message) || (err_1 === null || err_1 === void 0 ? void 0 : err_1.message) || 'Error al subir el XML.';
                         this.uploadXmlError = msg;
-                        this.showToast({ title: 'Error', message: msg, type: 'error' });
+                        this.showToast({ title: 'Aviso', message: msg, type: 'warning' });
                         return [3 /*break*/, 5];
                     case 4:
                         this.uploadingXml = false;
@@ -929,7 +929,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 error: function (err) {
                     var _a;
                     var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'No se pudo vincular el UUID en servidor.';
-                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
                 }
             });
         }
@@ -947,7 +947,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             error: function (err) {
                 var _a;
                 var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'No se pudo vincular el UUID en servidor.';
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
             }
         });
     };
@@ -1330,7 +1330,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                         return [3 /*break*/, 3];
                     case 2:
                         e_1 = _h.sent();
-                        this.showToast({ type: 'error', title: 'Error', message: (e_1 === null || e_1 === void 0 ? void 0 : e_1.message) || 'No se pudo exportar PDF.' });
+                        this.showToast({ type: 'warning', title: 'Aviso', message: (e_1 === null || e_1 === void 0 ? void 0 : e_1.message) || 'No se pudo exportar PDF.' });
                         return [3 /*break*/, 3];
                     case 3: return [2 /*return*/];
                 }
@@ -1426,7 +1426,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                         return [3 /*break*/, 3];
                     case 2:
                         e_2 = _d.sent();
-                        this.showToast({ type: 'error', title: 'Error', message: (e_2 === null || e_2 === void 0 ? void 0 : e_2.message) || 'No se pudo exportar Excel.' });
+                        this.showToast({ type: 'warning', title: 'Aviso', message: (e_2 === null || e_2 === void 0 ? void 0 : e_2.message) || 'No se pudo exportar Excel.' });
                         return [3 /*break*/, 3];
                     case 3: return [2 /*return*/];
                 }

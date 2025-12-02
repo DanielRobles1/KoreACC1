@@ -793,7 +793,7 @@ var PolizasComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Tipos de póliza:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los tipos de póliza.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los tipos de póliza.' });
             }
         });
         this.api.getPeriodos().subscribe({
@@ -814,7 +814,7 @@ var PolizasComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Periodos:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los periodos.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los periodos.' });
             }
         });
         // Centros (encabezado)
@@ -834,7 +834,7 @@ var PolizasComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Centros:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar los centros.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los centros.' });
             }
         });
     };
@@ -967,7 +967,7 @@ var PolizasComponent = /** @class */ (function () {
             },
             error: function (err) {
                 console.error('Pólizas:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar las pólizas.' });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar las pólizas.' });
             }
         });
     };
@@ -1293,7 +1293,7 @@ var PolizasComponent = /** @class */ (function () {
                     var _a, _b;
                     var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al guardar póliza';
                     console.error('Guardar póliza (manual):', err);
-                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
                 }
             });
         }
@@ -1339,7 +1339,7 @@ var PolizasComponent = /** @class */ (function () {
                     var _a;
                     var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al crear póliza con el motor';
                     console.error('Guardar póliza (motor):', err);
-                    _this.showToast({ type: 'error', title: 'Error', message: msg });
+                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
                 }
             });
         }
@@ -1375,7 +1375,7 @@ var PolizasComponent = /** @class */ (function () {
                 var _a;
                 var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al agregar evento';
                 console.error('expand-evento:', err);
-                _this.showToast({ type: 'error', title: 'Error', message: msg });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
             }
         });
     };
@@ -1481,7 +1481,7 @@ var PolizasComponent = /** @class */ (function () {
                 var _a, _b;
                 console.error('Importar XML:', err);
                 _this.uploadXmlError = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'Error importando XML';
-                _this.showToast({ type: 'error', title: 'Error', message: _this.uploadXmlError });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: _this.uploadXmlError });
             },
             complete: function () { return (_this.uploadingXml = false); }
         });

@@ -29,7 +29,7 @@ export class ToastService {
 
   info(m: string, t = '') { this.show(m, 'info', t); }
   success(m: string, t = 'Éxito', ms = 3000) { this.show(m, 'success', t, ms); }
-  warning(m: string, t = 'Aviso') { this.show(m, 'warning', t); }
+  warning(m: string, t = 'Aviso', ms = 3000) { this.show(m, 'warning', t); }
   error(m: string, t = 'Error', ms = 0) { this.show(m, 'error', t, ms); }
 
   close() {

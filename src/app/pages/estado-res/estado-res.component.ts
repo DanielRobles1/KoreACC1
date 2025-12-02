@@ -92,7 +92,7 @@ export class EstadoResComponent {
     if (!this.periodoIniId || !this.periodoFinId) {
       this.showToast({
         type: 'warning',
-        title: 'Fallo',
+        title: 'Aviso',
         message: 'Seleccione un rango de periodos.'
       });
       return;
@@ -119,8 +119,8 @@ export class EstadoResComponent {
         error: () => {
           this.estadoResultados = null;
           this.showToast({
-            type: 'error',
-            title: 'Error',
+            type: 'warning',
+            title: 'Aviso',
             message: 'No se pudo generar el estado de resultados.'
           });
         },
@@ -144,7 +144,7 @@ export class EstadoResComponent {
           .filter(hasPeriodoId)
           .sort(this.comparePeriodo);
       },
-      error: (err) => this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudieron recuperar los periodos' }),
+      error: (err) => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron recuperar los periodos' }),
     });
   }
 

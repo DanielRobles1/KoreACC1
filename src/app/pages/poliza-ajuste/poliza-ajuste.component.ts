@@ -547,8 +547,8 @@ get centroCostoOrigenLabel(): string {
         console.error('Error al subir XML:', err);
         this.uploadXmlError = err?.error?.message ?? 'Error al subir el XML.';
         this.showToast({
-          type: 'error',
-          title: 'Error',
+          type: 'warning',
+          title: 'Aviso',
           message: this.uploadXmlError,
         });
       },

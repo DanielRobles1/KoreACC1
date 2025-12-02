@@ -160,7 +160,7 @@ export class PolizaEditarComponent implements OnInit {
 
     this.id_poliza = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isFinite(this.id_poliza)) {
-      this.showToast({ type: 'error', title: 'Error', message: 'ID de póliza inválido.' });
+      this.showToast({ type: 'warning', title: 'Aviso', message: 'ID de póliza inválido.' });
       this.loading = false;
       return;
     }
@@ -260,7 +260,7 @@ export class PolizaEditarComponent implements OnInit {
         console.error('❌ Error al cargar ejercicio:', err);
         this.ejercicioActual = null;
         this.ejercicios = [];
-        this.showToast({ type: 'error', title: 'Error', message: 'No se pudo cargar el ejercicio actual.' });
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo cargar el ejercicio actual.' });
       }
     });
   }
@@ -298,7 +298,7 @@ export class PolizaEditarComponent implements OnInit {
         }),
         error: (err: any) => {
           console.error('❌ Error al guardar ejercicio seleccionado:', err);
-          this.showToast({ type: 'error', title: 'Error', message: 'No se pudo actualizar el ejercicio seleccionado.' });
+          this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
         }
       });
     }
@@ -488,7 +488,7 @@ export class PolizaEditarComponent implements OnInit {
       error: (err) => {
         console.error('Poliza cargar:', err);
         this.errorMsg = err?.error?.message ?? 'No se pudo cargar la póliza.';
-        this.showToast({ type: 'error', title: 'Error', message: this.errorMsg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: this.errorMsg });
       },
       complete: () => (this.loading = false)
     });
@@ -673,7 +673,7 @@ export class PolizaEditarComponent implements OnInit {
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Error al actualizar póliza/movimientos';
         console.error('Actualizar:', err);
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
       }
     });
   }
@@ -833,7 +833,7 @@ export class PolizaEditarComponent implements OnInit {
       error: (err) => {
         this.deletingIndexSet.delete(i);
         const msg = err?.error?.message || err?.error?.error || 'No se pudo eliminar el movimiento.';
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
       }
     });
   }
@@ -935,7 +935,7 @@ export class PolizaEditarComponent implements OnInit {
     } catch (err: any) {
       const msg = err?.error?.message || err?.message || 'Error al subir el XML.';
       this.uploadXmlError = msg;
-      this.showToast({ title: 'Error', message: msg, type: 'error' });
+      this.showToast({ title: 'Aviso', message: msg, type: 'warning' });
     } finally {
       this.uploadingXml = false;
       event.target.value = '';
@@ -964,7 +964,7 @@ export class PolizaEditarComponent implements OnInit {
         },
         error: (err) => {
           const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
-          this.showToast({ type: 'error', title: 'Error', message: msg });
+          this.showToast({ type: 'warning', title: 'Aviso', message: msg });
         }
       });
     } else {
@@ -978,7 +978,7 @@ export class PolizaEditarComponent implements OnInit {
       next: () => this.showToast({ type: 'success', title: 'UUID vinculado', message: `Se vinculó ${uuid} a ${movimientoIds.length} movimientos.` }),
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
-        this.showToast({ type: 'error', title: 'Error', message: msg });
+        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
       }
     });
   }
@@ -1366,7 +1366,7 @@ export class PolizaEditarComponent implements OnInit {
       doc.save(`Poliza-${folio || 'sin_folio'}.pdf`);
       this.showToast({ type: 'success', title: 'PDF', message: 'PDF exportado correctamente.' });
     } catch (e: any) {
-      this.showToast({ type: 'error', title: 'Error', message: e?.message || 'No se pudo exportar PDF.' });
+      this.showToast({ type: 'warning', title: 'Aviso', message: e?.message || 'No se pudo exportar PDF.' });
     }
   }
 
@@ -1460,7 +1460,7 @@ export class PolizaEditarComponent implements OnInit {
 
       this.showToast({ type: 'success', title: 'Excel', message: 'Excel exportado correctamente.' });
     } catch (e: any) {
-      this.showToast({ type: 'error', title: 'Error', message: e?.message || 'No se pudo exportar Excel.' });
+      this.showToast({ type: 'warning', title: 'Aviso', message: e?.message || 'No se pudo exportar Excel.' });
     }
   }
 

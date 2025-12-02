@@ -465,8 +465,8 @@ var PolizaAjusteComponent = /** @class */ (function () {
                 console.error('Error al subir XML:', err);
                 _this.uploadXmlError = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'Error al subir el XML.';
                 _this.showToast({
-                    type: 'error',
-                    title: 'Error',
+                    type: 'warning',
+                    title: 'Aviso',
                     message: _this.uploadXmlError
                 });
             },

@@ -266,7 +266,7 @@ export class EmpresaPrincipalComponent implements OnInit {
   }
 
   openSuccess(message: string) { this.toast.success(message, 'Éxito', 3000); }
-  openError(message: string, err?: unknown) { if (err) console.error('[EmpresaComponent] Error:', err); this.toast.error(message, 'Error', 0); }
+  openError(message: string, err?: unknown) { if (err) console.error('[EmpresaComponent] Aviso:', err); this.toast.warning(message, 'Aviso', 0); }
 
   private extractErrorMessage(err: any): string | null {
     return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
@@ -283,16 +283,15 @@ export class EmpresaPrincipalComponent implements OnInit {
           this.loadPeriodos();
         }
       },
-      error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
+      error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Fallo al cargar los datos de la empresa.', 'Aviso', 0),
     });
   }
 
   onTabChange(id: string) {
 
-  // ✅ Si el usuario da clic en "Tipo póliza" → abrir modal
   if (id === 'tipo-poliza') {
-    this.tpOpen = true;      // abre el modal
-    return;                  // evitar cambiar la pestaña activa
+    this.tpOpen = true; 
+    return;  
   }
 
   // ✅ Lógica existente (no se modifica)

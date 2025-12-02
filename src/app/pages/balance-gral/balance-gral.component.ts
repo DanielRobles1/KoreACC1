@@ -131,11 +131,11 @@ export class BalanceGralComponent {
 
             this.showToast({ type: 'success', title: 'Balance general', message: `(${this.totalFilas} filas).` });
           } else {
-            this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudo generar el balance general' });
+            this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo generar el balance general' });
           }
         }
         ,
-        error: () => this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudo generar el balance general' }),
+        error: () => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo generar el balance general' }),
       });
   }
 
@@ -158,7 +158,7 @@ export class BalanceGralComponent {
           .filter(hasPeriodoId)
           .sort(this.comparePeriodo);
       },
-      error: (err) => this.showToast({ type: 'warning', title: 'Fallo', message: 'No se pudieron recuperar los periodos' }),
+      error: (err) => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron recuperar los periodos' }),
     });
   }
 
