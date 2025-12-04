@@ -90,18 +90,37 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         this.polizasService = polizasService;
         // Layout
         this.sidebarOpen = true;
-        // tablas
+        // Tabs
         this.title = 'Configuración de la Empresa';
         this.tabs = [
-            { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
-            { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
-            { id: 'empresa', label: 'empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresas' },
+            {
+                id: 'datos',
+                label: 'Ejercicios',
+                icon: 'assets/svgs/poliza.svg',
+                iconAlt: 'Empresa',
+                route: '/empresa'
+            },
+            {
+                id: 'periodos',
+                label: 'Impuestos',
+                icon: 'assets/svgs/poliza.svg',
+                iconAlt: 'Períodos',
+                route: '/impuestos'
+            },
+            {
+                id: 'empresa',
+                label: 'empresa',
+                icon: 'assets/svgs/poliza.svg',
+                iconAlt: 'Períodos',
+                route: '/empresas'
+            },
             {
                 id: 'tipo-poliza',
                 label: '+ Tipo póliza'
             },
         ];
         this.activeTabId = 'datos';
+        // Datos de empresa
         this.rows = [];
         this.columns = [
             { key: 'id', header: '#', width: '64px' },
@@ -152,10 +171,11 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             esta_abierto: true
         };
         this.editPeriodoId = null;
-        // controles de creación automática dentro del modal de período
+        // creación automática
         this.autoCreate = false;
         this.autoCreateTipo = 'MENSUAL';
         this.currentUserId = null;
+        // EJERCICIOS
         this.primaryActionLabel3 = 'Nuevo ejercicio';
         this.columns3 = [
             { key: 'id_ejercicio', header: '#', width: '72px' },
@@ -170,7 +190,11 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
             { id: 'abrir', label: 'Abrir', tooltip: 'Marcar como abierto' },
             { id: 'cerrar', label: 'Cerrar', tooltip: 'Marcar como cerrado' },
-            { id: 'select', label: 'Seleccionar', tooltip: 'Seleccionar ejercicio actual' },
+            {
+                id: 'select',
+                label: 'Seleccionar',
+                tooltip: 'Seleccionar ejercicio actual'
+            },
         ];
         // Modal ejercicio
         this.modalEjercicioOpen = false;
@@ -185,13 +209,13 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         // Selección actual para periodos
         this.ejercicioSeleccionado = null;
         this.tpOpen = false;
-        // Modal confirm
+        // Modal confirm genérico
         this.confirmOpen = false;
         this.confirmTitle = 'Confirmar acción';
         this.confirmMessage = '';
         this.confirmKind = null;
         this.confirmPayload = null;
-        // PARA FECHAS
+        // FECHAS
         this.minDate = '';
         // GENERACIÓN AUTOMÁTICA DE PERÍODOS
         this.genModalOpen = false;
@@ -224,17 +248,14 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(EmpresaPrincipalComponent.prototype, "primaryActionLabel", {
-        /** Etiqueta del botón principal para el CrudPanel:
-         *  - Si no hay empresa → "Registrar empresa"
-         *  - Si hay empresa → "Editar datos"
-         */
+        /** Etiqueta del botón principal del CrudPanel */
         get: function () {
             return this.hasEmpresa ? 'Editar datos' : 'Registrar empresa';
         },
         enumerable: false,
         configurable: true
     });
-    // FECHAS helpers
+    // Helpers fechas
     EmpresaPrincipalComponent.prototype.pad = function (n) {
         return n < 10 ? "0" + n : "" + n;
     };
@@ -273,7 +294,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         return r;
     };
     EmpresaPrincipalComponent.prototype.startOfWeek = function (d) {
-        var wd = d.getDay(); // 0=Dom, 1=Lun,----6=Sáb
+        var wd = d.getDay(); // 0=Dom, 1=Lun,... 6=Sáb
         var diff = wd === 0 ? -6 : 1 - wd; // llevar a lunes
         var res = new Date(d);
         res.setDate(d.getDate() + diff);
@@ -285,9 +306,15 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         var base = ref !== null && ref !== void 0 ? ref : this.todayLocal();
         switch (type) {
             case 'SEMANAL':
-                return { start: this.startOfWeek(base), end: this.addDays(this.startOfWeek(base), 6) };
+                return {
+                    start: this.startOfWeek(base),
+                    end: this.addDays(this.startOfWeek(base), 6)
+                };
             case 'MENSUAL':
-                return { start: this.startOfMonth(base), end: this.endOfMonth(base) };
+                return {
+                    start: this.startOfMonth(base),
+                    end: this.endOfMonth(base)
+                };
             case 'ANUAL':
                 return { start: this.startOfYear(base), end: this.endOfYear(base) };
         }
@@ -319,14 +346,18 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         this.canDelete = this.auth.hasPermission('eliminar_empresa');
         this.currentUserId = this.getCurrentUserId();
         this.actions = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Empresa' }] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Empresa' }] : []));
-        this.actions2 = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []), (this.canEdit ? [{ id: 'cerrar', tooltip: 'Cerrar Periodo' }] : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }] : []));
+        this.actions2 = __spreadArrays((this.canEdit ? [{ id: 'edit', tooltip: 'Editar Periodo' }] : []), (this.canEdit ? [{ id: 'cerrar', tooltip: 'Cerrar Periodo' }] : []), (this.canDelete
+            ? [{ id: 'delete', tooltip: 'Eliminar Periodo' }]
+            : []));
         this.actions3 = __spreadArrays((this.canEdit
             ? [
                 { id: 'edit', tooltip: 'Editar Ejercicio' },
                 { id: 'abrir', tooltip: 'Marcar como abierto' },
                 { id: 'cerrar', tooltip: 'Marcar como cerrado' },
             ]
-            : []), (this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Ejercicio' }] : []));
+            : []), (this.canDelete
+            ? [{ id: 'delete', tooltip: 'Eliminar Ejercicio' }]
+            : []));
         this.minDate = this.toISO(this.todayLocal());
         this.loadDataEmpresa();
     };
@@ -340,7 +371,8 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
     };
     EmpresaPrincipalComponent.prototype.extractErrorMessage = function (err) {
         var _a;
-        return ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || (typeof err === 'string' ? err : null);
+        return (((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) ||
+            (typeof err === 'string' ? err : null));
     };
     EmpresaPrincipalComponent.prototype.loadDataEmpresa = function () {
         var _this = this;
@@ -354,13 +386,16 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     _this.loadPeriodos();
                 }
                 else {
-                    // Si NO hay empresa, también limpiamos selección de ejercicio/periodos
+                    // Sin empresa → limpia todo lo demás
                     _this.ejercicios = [];
                     _this.ejercicioSeleccionado = null;
                     _this.periodos = [];
                 }
             },
-            error: function (err) { var _a; return _this.toast.warning((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Fallo al cargar los datos de la empresa.', 'Aviso', 0); }
+            error: function (err) {
+                var _a;
+                return _this.toast.warning((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Fallo al cargar los datos de la empresa.', 'Aviso', 0);
+            }
         });
     };
     EmpresaPrincipalComponent.prototype.onTabChange = function (id) {
@@ -375,13 +410,13 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             this.loadPeriodos();
         }
     };
-    // Editar / Registrar empresa (botón principal)
+    // Botón principal: Registrar / Editar empresa
     EmpresaPrincipalComponent.prototype.onPrimary = function () {
         if (!this.canEdit)
             return this.openError('No tienes permisos para editar la empresa');
         var empresa = this.rows[0];
         if (!empresa) {
-            // 🔹 No hay empresa: modo REGISTRO
+            // Modo REGISTRO
             this.formEmpresa = {
                 razon_social: '',
                 rfc: '',
@@ -393,7 +428,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             this.editOpen = true;
             return;
         }
-        // 🔹 Sí hay empresa: modo EDICIÓN
+        // Modo EDICIÓN
         this.formEmpresa = __assign({}, empresa);
         this.modalTitle = 'Editar Empresa';
         this.editOpen = true;
@@ -418,13 +453,14 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         this.confirmPayload = null;
         this.confirmOpen = true;
     };
-    // PERI
+    // EmpresaId
     EmpresaPrincipalComponent.prototype.empresaId = function () {
         var _a;
         var e = this.rows[0];
         var id = ((_a = e === null || e === void 0 ? void 0 : e.id_empresa) !== null && _a !== void 0 ? _a : e === null || e === void 0 ? void 0 : e.id);
         return id !== null && id !== void 0 ? id : null;
     };
+    // PERÍODOS
     EmpresaPrincipalComponent.prototype.loadPeriodos = function () {
         var _this = this;
         var _a;
@@ -507,11 +543,14 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         }
         this.modalPeriodoTitle = 'Crear período';
         this.editPeriodoId = null;
-        // Reset flags de auto
         this.autoCreate = false;
         this.autoCreateTipo = 'MENSUAL';
-        // Valores por defecto para modo manual
-        this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
+        this.formPeriodo = {
+            tipo_periodo: 'MENSUAL',
+            fecha_inicio: '',
+            fecha_fin: '',
+            esta_abierto: true
+        };
         this.setDatesByType('MENSUAL', this.todayLocal());
         this.modalPeriodoOpen = true;
     };
@@ -523,7 +562,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     return this.openError('No tienes permisos para editar períodos');
                 this.modalPeriodoTitle = 'Editar período';
                 this.editPeriodoId = (_a = evt.row.id_periodo) !== null && _a !== void 0 ? _a : null;
-                this.autoCreate = false; // edición siempre manual
+                this.autoCreate = false;
                 this.formPeriodo = __assign({}, evt.row);
                 this.modalPeriodoOpen = true;
                 break;
@@ -567,19 +606,25 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             this.generatePeriodsForSelectedExercise(this.autoCreateTipo);
             return;
         }
-        if (!this.formPeriodo.tipo_periodo || !this.formPeriodo.fecha_inicio || !this.formPeriodo.fecha_fin) {
+        if (!this.formPeriodo.tipo_periodo ||
+            !this.formPeriodo.fecha_inicio ||
+            !this.formPeriodo.fecha_fin) {
             return this.openError('Completa tipo de período, fecha de inicio y fin.');
         }
         var t = this.formPeriodo.tipo_periodo;
         if (t === 'PERSONALIZADO' &&
-            (this.isPast(this.formPeriodo.fecha_inicio) || this.isPast(this.formPeriodo.fecha_fin))) {
+            (this.isPast(this.formPeriodo.fecha_inicio) ||
+                this.isPast(this.formPeriodo.fecha_fin))) {
             return this.openError('Las fechas no pueden ser pasadas.');
         }
-        if (this.parseISODateLocal(this.formPeriodo.fecha_fin) < this.parseISODateLocal(this.formPeriodo.fecha_inicio)) {
+        if (this.parseISODateLocal(this.formPeriodo.fecha_fin) <
+            this.parseISODateLocal(this.formPeriodo.fecha_inicio)) {
             return this.openError('La fecha de fin no puede ser anterior a la de inicio.');
         }
         var creando = !this.editPeriodoId;
-        this.confirmTitle = creando ? 'Confirmar creación' : 'Confirmar actualización';
+        this.confirmTitle = creando
+            ? 'Confirmar creación'
+            : 'Confirmar actualización';
         this.confirmMessage = creando
             ? "\u00BFCrear el per\u00EDodo " + this.formPeriodo.tipo_periodo + " del " + this.formPeriodo.fecha_inicio + " al " + this.formPeriodo.fecha_fin + "?"
             : "\u00BFGuardar los cambios del per\u00EDodo del " + this.formPeriodo.fecha_inicio + " al " + this.formPeriodo.fecha_fin + "?";
@@ -606,7 +651,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         if (!key)
             return;
         var raw = localStorage.getItem(key);
-        this.ejercicioSeleccionado = raw ? JSON.parse(raw) : null;
+        this.ejercicioSeleccionado = raw
+            ? JSON.parse(raw)
+            : null;
     };
     Object.defineProperty(EmpresaPrincipalComponent.prototype, "ejercicioSeleccionadoLabel", {
         get: function () {
@@ -623,7 +670,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             return;
         this.ejerciciosService.listByEmpresa(idEmp).subscribe({
             next: function (items) { return (_this.ejercicios = items !== null && items !== void 0 ? items : []); },
-            error: function (err) { return _this.openError('Error al cargar los ejercicios', err); }
+            error: function (err) {
+                return _this.openError('Error al cargar los ejercicios', err);
+            }
         });
     };
     // Abrir creación de ejercicio
@@ -719,7 +768,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         if (ff < fi)
             return this.openError('La fecha de fin no puede ser anterior a la de inicio.');
         var creando = !this.editEjercicioId;
-        this.confirmTitle = creando ? 'Confirmar creación' : 'Confirmar actualización';
+        this.confirmTitle = creando
+            ? 'Confirmar creación'
+            : 'Confirmar actualización';
         this.confirmMessage = creando
             ? "\u00BFCrear el ejercicio " + f.anio + " (" + f.fecha_inicio + " a " + f.fecha_fin + ")?"
             : "\u00BFGuardar cambios del ejercicio " + f.anio + "?";
@@ -734,6 +785,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
     EmpresaPrincipalComponent.prototype.cancelEjercicioModal = function () {
         this.modalEjercicioOpen = false;
     };
+    // Confirm genérico
     EmpresaPrincipalComponent.prototype.closeConfirm = function () {
         this.confirmOpen = false;
         this.confirmKind = null;
@@ -757,11 +809,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                 var req$ = tieneId_1
                     ? this.empresaService.updateEmpresa(id, payloadEmpresa)
                     : this.empresaService.createEmpresa(payloadEmpresa);
-                if (!req$) {
-                    return this.openError('No se pudo determinar la acción para guardar la empresa.');
-                }
                 req$.subscribe({
                     next: function (saved) {
+                        // dejamos la empresa recién guardada como la única de rows
                         _this.rows = [saved];
                         _this.editOpen = false;
                         _this.openSuccess(tieneId_1
@@ -821,7 +871,10 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                         });
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.message) || 'Período cerrado correctamente.');
                     },
-                    error: function (err) { return _this.openError('No se pudo cerrar el período', err); }
+                    error: function (err) {
+                        var _a;
+                        return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0);
+                    }
                 });
                 break;
             }
@@ -870,6 +923,17 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                             _this.ejercicios = __spreadArrays(_this.ejercicios, [saved]);
                             _this.setEjercicioSeleccionado(saved);
                             _this.openSuccess('Ejercicio creado.');
+                            _this.modalPeriodoTitle = 'Crear período';
+                            _this.editPeriodoId = null;
+                            _this.autoCreate = true;
+                            _this.autoCreateTipo = 'MENSUAL';
+                            _this.formPeriodo = {
+                                tipo_periodo: 'MENSUAL',
+                                fecha_inicio: '',
+                                fecha_fin: '',
+                                esta_abierto: true
+                            };
+                            Promise.resolve().then(function () { return (_this.modalPeriodoOpen = true); });
                         }
                     },
                     error: function (err) { return _this.openError('No se pudo guardar el ejercicio', err); }
@@ -915,7 +979,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                 var id_3 = payload === null || payload === void 0 ? void 0 : payload.id_ejercicio;
                 if (!id_3)
                     return this.openError('No se encontró el identificador del ejercicio.');
-                var userId = this.currentUserId;
+                var userId = 1;
                 if (!userId) {
                     return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
                 }
@@ -923,9 +987,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                 if (!centroId) {
                     return this.openError('No se pudo determinar el centro de costo (id_centro).');
                 }
-                var cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
+                var cuentaResultadosId = 53;
                 var traspasarACapital = false;
-                var cuentaCapitalId = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
+                var cuentaCapitalId = traspasarACapital ? 51 : null;
                 this.ejerciciosService.cerrar(id_3, {
                     cuentaResultadosId: cuentaResultadosId,
                     traspasarACapital: traspasarACapital,
@@ -944,7 +1008,10 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.mensaje) ||
                             'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).');
                     },
-                    error: function (err) { return _this.openError('No se pudo cerrar el ejercicio', err); }
+                    error: function (err) {
+                        var _a;
+                        return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0);
+                    }
                 });
                 break;
             }
@@ -996,11 +1063,18 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
                     return [2 /*return*/];
                 }
-                this.periodosService.generate(ej.id_ejercicio, tipo, userId, centroId).subscribe({
+                this.periodosService
+                    .generate(ej.id_ejercicio, tipo, userId, centroId)
+                    .subscribe({
                     next: function (periodosGenerados) {
                         _this.loadPeriodos();
-                        var n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
-                        _this.openSuccess(n != null ? "Per\u00EDodos " + tipo.toLowerCase() + " generados: " + n + "." : "Per\u00EDodos " + tipo.toLowerCase() + " generados correctamente.");
+                        var n = Array.isArray(periodosGenerados)
+                            ? periodosGenerados.length
+                            : undefined;
+                        _this.openSuccess(n != null
+                            ? "Per\u00EDodos " + tipo.toLowerCase() + " generados: " + n + "."
+                            : "Per\u00EDodos " + tipo
+                                .toLowerCase() + " generados correctamente.");
                     },
                     error: function (err) {
                         _this.openError('No se pudieron generar los períodos.', err);
@@ -1019,7 +1093,9 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
             var json = decodeURIComponent(atob(base64)
                 .split('')
-                .map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); })
+                .map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
                 .join(''));
             return JSON.parse(json);
         }

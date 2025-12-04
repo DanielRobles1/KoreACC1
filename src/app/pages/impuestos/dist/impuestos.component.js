@@ -44,9 +44,9 @@ var ImpuestosComponent = /** @class */ (function () {
         // CRUD PANEL
         this.title = 'Impuestos';
         this.tabs = [
-            { id: 'empresa', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+            { id: 'empresa', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
             {
                 id: 'tipo-poliza',
                 label: '+ Tipo póliza'
