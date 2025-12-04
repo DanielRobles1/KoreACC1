@@ -251,6 +251,12 @@ export class PolizasService {
     });
   }
 
+  getNaturalezasPoliza() {
+    return this.http.get<any>(`${this.api}/tipo-poliza/naturalezas`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
   // ---------------- CFDI ----------------
 
   /** POST /api/v1/cfdi/import (subir XML) */

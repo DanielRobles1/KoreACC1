@@ -802,11 +802,11 @@ export class EmpresaPrincipalComponent implements OnInit {
     if (ej?.id_ejercicio) {
       this.polizasService.selectEjercicio(ej.id_ejercicio).subscribe({
         next: () => {
-          console.log('✅ Ejercicio seleccionado reflejado en base de datos');
+          console.log('Ejercicio seleccionado reflejado en base de datos');
         },
         error: (err: any) => {
           console.error(
-            '❌ Error al actualizar el ejercicio en la base de datos:',
+            'Falla al actualizar el ejercicio en la base de datos:',
             err
           );
         },
@@ -889,7 +889,7 @@ export class EmpresaPrincipalComponent implements OnInit {
             this.saveEjercicioSeleccionado(null);
             this.openSuccess('Empresa eliminada correctamente.');
           },
-          error: (err) => this.openError('No se pudo eliminar la empresa', err),
+          error: (err) => this.openError('No se pudo eliminar la empresa, verifica que no exista información registrada', err),
         });
         break;
       }
@@ -980,8 +980,8 @@ export class EmpresaPrincipalComponent implements OnInit {
           error: (err) =>
             this.toast.error(
               this.extractErrorMessage(err) ??
-                'Error al cargar los datos de la empresa.',
-              'Error',
+                'Falla al cargar los datos de la empresa.',
+              'Aviso',
               0
             ),
         });
@@ -1147,8 +1147,8 @@ export class EmpresaPrincipalComponent implements OnInit {
             error: (err) =>
               this.toast.error(
                 this.extractErrorMessage(err) ??
-                  'Error al cargar los datos de la empresa.',
-                'Error',
+                  'Falla al cargar los datos de la empresa.',
+                'Aviso',
                 0
               ),
           });

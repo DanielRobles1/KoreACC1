@@ -216,7 +216,7 @@
           required
           [min]="minDate"
           (ngModelChange)="onFechaInicioChange($event)"
-          [readonly]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+          [disabled]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
       </div>
       <div>
         <label class="field-label required">Fecha fin</label>
@@ -228,7 +228,7 @@
           required
           [min]="minDate"
           (ngModelChange)="onFechaFinChange($event)"
-          [readonly]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
+          [disabled]="autoCreate || formPeriodo.tipo_periodo !== 'PERSONALIZADO'" />
       </div>
     </div>
 

@@ -445,7 +445,7 @@
   [showClose]="true"
   (closed)="cerrarModalIva()"
   (canceled)="cerrarModalIva()"
-  (confirmed)="agregarMovimientosDesdeIVA()">
+  (confirmed)="onConfirmarIva()">
 
   <form style="display:grid; gap:12px; padding-top:.25rem;">
     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
@@ -459,7 +459,11 @@
 
       <label>
         Base
-        <select class="field select" [(ngModel)]="iva.baseTipo" name="iva_base">
+        <select
+          class="field select"
+          [(ngModel)]="iva.baseTipo"
+          name="iva_base"
+          (ngModelChange)="onBaseTipoChange($event)">
           <option [ngValue]="'sin'">Importe SIN IVA</option>
           <option [ngValue]="'con'">Precio CON IVA</option>
         </select>
@@ -467,7 +471,11 @@
 
       <label>
         Tasa
-        <select class="field select" [(ngModel)]="iva.tasa" name="iva_tasa">
+        <select
+          class="field select"
+          [(ngModel)]="iva.tasa"
+          name="iva_tasa"
+          (ngModelChange)="onTasaChange($event)">
           <option [ngValue]="0.16">16%</option>
           <option [ngValue]="0.08">8%</option>
           <option [ngValue]="0.00">0% (gravado 0)</option>
@@ -477,8 +485,14 @@
 
       <label>
         Monto
-        <input class="field" type="number" min="0" step="0.01"
-               [(ngModel)]="iva.monto" name="iva_monto">
+        <input
+          class="field"
+          type="number"
+          min="0"
+          step="0.01"
+          [(ngModel)]="iva.monto"
+          name="iva_monto"
+          (ngModelChange)="onMontoChange($event)" />
       </label>
 
       <label>
@@ -498,9 +512,9 @@
       </label>
     </div>
 
-    <div style="display:flex; gap:10px; margin-top:4px;">
+    <!-- <div style="display:flex; gap:10px; margin-top:4px;">
       <button type="button" class="btn" (click)="recalcularIVA()">Calcular</button>
-    </div>
+    </div> -->
 
     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
       <div class="tot-card">

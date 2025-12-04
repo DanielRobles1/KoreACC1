@@ -24,6 +24,7 @@ type UiEmpresa = {
   domicilio_fiscal: string;
   telefono: string;
   correo_contacto: string;
+  razon_comercial: string;
 };
 
 type ConfirmKind =
@@ -108,6 +109,7 @@ export class EmpresaComponent implements OnInit {
     domicilio_fiscal: '',
     telefono: '',
     correo_contacto: '',
+    razon_comercial: '',
   };
 
   // PERIODOS 
@@ -265,7 +267,7 @@ export class EmpresaComponent implements OnInit {
   }
 
   openSuccess(message: string) { this.toast.success(message, 'Éxito', 3000); }
-  openError(message: string, err?: unknown) { if (err) console.error('[EmpresaComponent] Error:', err); this.toast.error(message, 'Error', 0); }
+  openError(message: string, err?: unknown) { if (err) console.error('[EmpresaComponent] Aviso:', err); this.toast.warning(message, 'Aviso', 0); }
 
   private extractErrorMessage(err: any): string | null {
     return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
@@ -351,7 +353,7 @@ export class EmpresaComponent implements OnInit {
 
     this.periodosService.getPeriodosByEjercicio(idEj).subscribe({
       next: (items) => this.periodos = items ?? [],
-      error: (err) => this.openError('Error al cargar los períodos', err),
+      error: (err) => this.openError('Fallo al cargar los períodos', err),
     });
   }
 

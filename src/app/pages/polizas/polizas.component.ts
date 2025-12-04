@@ -123,6 +123,35 @@ export class PolizasComponent implements OnInit {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
+  onBaseTipoChange(value: 'sin' | 'con'): void {
+    this.iva.baseTipo = value;
+
+    if (value === 'sin') {
+      this.iva.tasa = 0.00;
+    } else {
+      this.iva.tasa = 0.16;
+    }
+
+    this.recalcularIVA();
+  }
+
+  onTasaChange(value: 0.16 | 0.08 | 0.00 | 'exento'): void {
+    this.iva.tasa = value;
+    this.recalcularIVA();
+  }
+
+  onMontoChange(value: any): void {
+    const n = Number(value);
+    this.iva.monto = Number.isFinite(n) ? n : 0;
+    this.recalcularIVA();
+  }
+
+  onConfirmarIva(): void {
+    this.agregarMovimientosDesdeIVA();
+    this.cerrarModalIva(); 
+  }
+
+
   /** Recalcula subtotal/IVA/total según base y tasa */
   recalcularIVA(): void {
     const { baseTipo, tasa, monto } = this.iva;
@@ -445,10 +474,10 @@ export class PolizasComponent implements OnInit {
   ngOnInit(): void {
     this.cargarEjercicioActivo();
     this.initUsuarioActual();
-    this.cargarCatalogos(); 
-    this.getCentros(); 
-    this.cargarCuentas();   
-    this.cargarPolizas(); 
+    this.cargarCatalogos();
+    this.getCentros();
+    this.cargarCuentas();
+    this.cargarPolizas();
     this.cargarCfdiRecientes();
     if (!this.evento.id_empresa) this.evento.id_empresa = 1;
     if (!this.evento.fecha_operacion) this.evento.fecha_operacion = todayISO();
@@ -1102,7 +1131,7 @@ export class PolizasComponent implements OnInit {
     const nuevo: Movimiento & { _cuentaQuery?: string } = {
       id_cuenta: null,
       ref_serie_venta: serie ?? '',
-      operacion: '', 
+      operacion: '',
       monto: null,
       cliente: '',
       fecha: todayISO(),

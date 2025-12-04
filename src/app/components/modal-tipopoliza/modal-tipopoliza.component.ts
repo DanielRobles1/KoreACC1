@@ -5,8 +5,6 @@ import { firstValueFrom } from 'rxjs';
 import { PolizasService, TipoPolizaCreate, TipoPoliza } from '@app/services/polizas.service';
 import { ModalComponent } from "../modal/modal/modal.component";
 
-const NATURALEZAS: Array<'ingreso' | 'egreso' | 'diario' | 'apertura' | 'cierre'| 'ajuste'> = ['ingreso', 'egreso', 'diario', 'apertura', 'cierre',"ajuste"];
-
 @Component({
   selector: 'app-modal-tipopoliza',
   standalone: true,
@@ -22,7 +20,7 @@ export class TipoPolizaModalComponent implements OnChanges {
   form: FormGroup;
   loading = false;
   submitted = false;
-  naturalezas = [...NATURALEZAS];
+  naturalezas: string[] = [];
 
   tipos: TipoPoliza[] = [];
 
@@ -55,9 +53,19 @@ export class TipoPolizaModalComponent implements OnChanges {
   async loadTipos(): Promise<void> {
     try {
       this.loading = true;
-      this.tipos = await firstValueFrom(this.polizas.getTiposPoliza());
+
+      const [tipos, naturalezas] = await Promise.all([
+        firstValueFrom(this.polizas.getTiposPoliza()),
+        firstValueFrom(this.polizas.getNaturalezasPoliza()),
+      ]);
+
+      this.tipos = tipos;
+      this.naturalezas = naturalezas ?? [];
+
+      console.log('NATURALEZAS', this.naturalezas);
     } catch (err) {
       this.tipos = [];
+      this.naturalezas = [];
     } finally {
       this.loading = false;
     }
