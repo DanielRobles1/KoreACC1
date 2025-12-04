@@ -45,7 +45,12 @@ var ImpuestosComponent = /** @class */ (function () {
         this.title = 'Impuestos';
         this.tabs = [
             { id: 'empresa', label: 'Empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
-            { id: 'impuestos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Impuestos', route: '/impuestos' }
+            { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
+            { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
+            {
+                id: 'tipo-poliza',
+                label: '+ Tipo póliza'
+            }
         ];
         this.activeTabId = 'impuestos';
         this.primaryActionLabel = 'Nuevo impuesto';

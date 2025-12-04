@@ -11,8 +11,6 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 import { EmpresaServiceTsService } from '@app/services/empresa.service.ts.service';
 import { AuthService } from '@app/services/auth.service';
 import { PeriodoContableService, PeriodoContableDto, PeriodoTipo } from '@app/services/periodo-contable.service';
-
-
 import { EjercicioContableService, EjercicioContableDto } from '@app/services/ejercicio-contable.service';
 import { PolizasService } from '@app/services/polizas.service';
 
@@ -40,7 +38,15 @@ type ConfirmKind =
 @Component({
   selector: 'app-empresa',
   standalone: true,
-  imports: [CommonModule, FormsModule, CrudPanelComponent, SidebarComponent, ModalComponent, ToastMessageComponent, TipoPolizaModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CrudPanelComponent,
+    SidebarComponent,
+    ModalComponent,
+    ToastMessageComponent,
+    TipoPolizaModalComponent,
+  ],
   templateUrl: './empresa-principal.component.html',
   styleUrls: ['./empresa-principal.component.scss'],
 })
@@ -52,9 +58,9 @@ export class EmpresaPrincipalComponent implements OnInit {
     public toast: ToastService,
     private ejerciciosService: EjercicioContableService,
     private polizasService: PolizasService
-  ) { }
+  ) {}
 
-  // }Layout
+  // Layout
   sidebarOpen = true;
 
   // tablas
@@ -62,23 +68,39 @@ export class EmpresaPrincipalComponent implements OnInit {
   tabs: CrudTab[] = [
     { id: 'datos', label: 'Ejercicios', icon: 'assets/svgs/poliza.svg', iconAlt: 'Empresa', route: '/empresa' },
     { id: 'periodos', label: 'Impuestos', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/impuestos' },
-
-
-
     { id: 'empresa', label: 'empresa', icon: 'assets/svgs/poliza.svg', iconAlt: 'Períodos', route: '/empresas' },
-
     {
       id: 'tipo-poliza',
       label: '+ Tipo póliza',
-    }
-
+    },
   ];
+
   activeTabId: 'datos' | 'periodos' = 'datos';
-  get currentEmpresa() {
+
+  rows: UiEmpresa[] = [];
+
+  get currentEmpresa(): UiEmpresa | null {
     return this.rows?.[0] ?? null;
   }
-  // Empresa
-  primaryActionLabel = 'Editar datos';
+
+  /** Hay empresa registrada si existe al menos una fila */
+  get hasEmpresa(): boolean {
+    return !!this.currentEmpresa;
+  }
+
+  /** Mostrar botón de "Registrar empresa" solo cuando NO hay empresa */
+  get showRegistrarEmpresaButton(): boolean {
+    return !this.hasEmpresa && this.canEdit;
+  }
+
+  /** Etiqueta del botón principal para el CrudPanel:
+   *  - Si no hay empresa → "Registrar empresa"
+   *  - Si hay empresa → "Editar datos"
+   */
+  get primaryActionLabel(): string {
+    return this.hasEmpresa ? 'Editar datos' : 'Registrar empresa';
+  }
+
   columns: CrudColumn[] = [
     { key: 'id', header: '#', width: '64px' },
     { key: 'razon_social', header: 'Razón social' },
@@ -87,7 +109,7 @@ export class EmpresaPrincipalComponent implements OnInit {
     { key: 'telefono', header: 'Teléfono' },
     { key: 'correo_contacto', header: 'Correo de contacto' },
   ];
-  rows: UiEmpresa[] = [];
+
   actions: CrudAction[] = [{ id: 'edit', label: 'Editar', tooltip: 'Editar' }];
 
   // Permisos
@@ -111,7 +133,7 @@ export class EmpresaPrincipalComponent implements OnInit {
     correo_contacto: '',
   };
 
-  // PERIODOS 
+  // PERIODOS
   primaryActionLabel2 = 'Nuevo período';
   columns2: CrudColumn[] = [
     { key: 'id_periodo', header: '#', width: '72px' },
@@ -175,6 +197,7 @@ export class EmpresaPrincipalComponent implements OnInit {
   // Selección actual para periodos
   ejercicioSeleccionado: EjercicioContableDto | null = null;
   tpOpen = false;
+
   // Modal confirm
   confirmOpen = false;
   confirmTitle = 'Confirmar acción';
@@ -185,22 +208,48 @@ export class EmpresaPrincipalComponent implements OnInit {
   // PARA FECHAS
   minDate: string = '';
 
-  // FECHAS 
-  private pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
-  private toISO(d: Date) { return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`; }
-  private todayLocal(): Date { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
-  private parseISODateLocal(iso: string): Date { const [y, m, d] = iso.split('-').map(Number); return new Date(y, (m ?? 1) - 1, d ?? 1); }
-  private isPast(dateStr: string): boolean { if (!dateStr) return false; const d = this.parseISODateLocal(dateStr); return d < this.todayLocal(); }
+  // FECHAS helpers
+  private pad(n: number) {
+    return n < 10 ? `0${n}` : `${n}`;
+  }
+  private toISO(d: Date) {
+    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
+  }
+  private todayLocal(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  private parseISODateLocal(iso: string): Date {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, (m ?? 1) - 1, d ?? 1);
+  }
+  private isPast(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const d = this.parseISODateLocal(dateStr);
+    return d < this.todayLocal();
+  }
 
-  private startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-  private endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-  private startOfYear(d: Date) { return new Date(d.getFullYear(), 0, 1); }
-  private endOfYear(d: Date) { return new Date(d.getFullYear(), 12, 0); }
-  private addDays(d: Date, days: number) { const r = new Date(d); r.setDate(r.getDate() + days); return r; }
+  private startOfMonth(d: Date) {
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+  private endOfMonth(d: Date) {
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  }
+  private startOfYear(d: Date) {
+    return new Date(d.getFullYear(), 0, 1);
+  }
+  private endOfYear(d: Date) {
+    return new Date(d.getFullYear(), 12, 0);
+  }
+  private addDays(d: Date, days: number) {
+    const r = new Date(d);
+    r.setDate(r.getDate() + days);
+    return r;
+  }
 
   private startOfWeek(d: Date) {
-    const wd = d.getDay();                 // 0=Dom, 1=Lun,----6=Sáb
-    const diff = (wd === 0 ? -6 : 1 - wd); // llevar a lunes
+    const wd = d.getDay(); // 0=Dom, 1=Lun,----6=Sáb
+    const diff = wd === 0 ? -6 : 1 - wd; // llevar a lunes
     const res = new Date(d);
     res.setDate(d.getDate() + diff);
     return new Date(res.getFullYear(), res.getMonth(), res.getDate());
@@ -210,23 +259,24 @@ export class EmpresaPrincipalComponent implements OnInit {
     if (type === 'PERSONALIZADO') return null;
     const base = ref ?? this.todayLocal();
     switch (type) {
-      case 'SEMANAL': return { start: this.startOfWeek(base), end: this.addDays(this.startOfWeek(base), 6) };
-      case 'MENSUAL': return { start: this.startOfMonth(base), end: this.endOfMonth(base) };
-      case 'ANUAL': return { start: this.startOfYear(base), end: this.endOfYear(base) };
+      case 'SEMANAL':
+        return { start: this.startOfWeek(base), end: this.addDays(this.startOfWeek(base), 6) };
+      case 'MENSUAL':
+        return { start: this.startOfMonth(base), end: this.endOfMonth(base) };
+      case 'ANUAL':
+        return { start: this.startOfYear(base), end: this.endOfYear(base) };
     }
     return null;
   }
+
   onTipoPolizaCreado(_nuevo: any) {
-    // Aquí puedes refrescar catálogos si aplica
     this.vm = {
       open: true,
       title: 'Guardado',
       message: 'Tipo de póliza creado correctamente.',
       type: 'success',
-      autoCloseMs: 3000
+      autoCloseMs: 3000,
     };
-    // Si prefieres cerrar el modal desde el padre:
-    // this.closeTipoPolizaModal();
   }
 
   private setDatesByType(type: PeriodoTipo, referenceDate?: Date) {
@@ -239,7 +289,7 @@ export class EmpresaPrincipalComponent implements OnInit {
 
   // CICLO DE VIDA
   ngOnInit() {
-    this.toast.state$.subscribe(s => this.vm = s);
+    this.toast.state$.subscribe((s) => (this.vm = s));
     this.canEdit = this.auth.hasPermission('editar_empresa');
     this.canDelete = this.auth.hasPermission('eliminar_empresa');
 
@@ -256,11 +306,13 @@ export class EmpresaPrincipalComponent implements OnInit {
     ];
 
     this.actions3 = [
-      ...(this.canEdit ? [
-        { id: 'edit', tooltip: 'Editar Ejercicio' },
-        { id: 'abrir', tooltip: 'Marcar como abierto' },
-        { id: 'cerrar', tooltip: 'Marcar como cerrado' },
-      ] : []),
+      ...(this.canEdit
+        ? [
+            { id: 'edit', tooltip: 'Editar Ejercicio' },
+            { id: 'abrir', tooltip: 'Marcar como abierto' },
+            { id: 'cerrar', tooltip: 'Marcar como cerrado' },
+          ]
+        : []),
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar Ejercicio' }] : []),
     ];
 
@@ -268,8 +320,13 @@ export class EmpresaPrincipalComponent implements OnInit {
     this.loadDataEmpresa();
   }
 
-  openSuccess(message: string) { this.toast.success(message, 'Éxito', 3000); }
-  openError(message: string, err?: unknown) { if (err) console.error('[EmpresaComponent] Aviso:', err); this.toast.warning(message, 'Aviso', 0); }
+  openSuccess(message: string) {
+    this.toast.success(message, 'Éxito', 3000);
+  }
+  openError(message: string, err?: unknown) {
+    if (err) console.error('[EmpresaComponent] Aviso:', err);
+    this.toast.warning(message, 'Aviso', 0);
+  }
 
   private extractErrorMessage(err: any): string | null {
     return err?.error?.message || err?.message || (typeof err === 'string' ? err : null);
@@ -277,27 +334,31 @@ export class EmpresaPrincipalComponent implements OnInit {
 
   loadDataEmpresa() {
     this.empresaService.getEmpresa().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         const one = Array.isArray(data) ? data[0] : data;
         this.rows = one ? [one as UiEmpresa] : [];
         if (this.rows[0]) {
           this.restoreEjercicioSeleccionado();
           this.loadEjercicios();
           this.loadPeriodos();
+        } else {
+          // Si NO hay empresa, también limpiamos selección de ejercicio/periodos
+          this.ejercicios = [];
+          this.ejercicioSeleccionado = null;
+          this.periodos = [];
         }
       },
-      error: (err) => this.toast.warning(this.extractErrorMessage(err) ?? 'Fallo al cargar los datos de la empresa.', 'Aviso', 0),
+      error: (err: any) =>
+        this.toast.warning(this.extractErrorMessage(err) ?? 'Fallo al cargar los datos de la empresa.', 'Aviso', 0),
     });
   }
 
   onTabChange(id: string) {
-
     if (id === 'tipo-poliza') {
       this.tpOpen = true;
       return;
     }
 
-    // ✅ Lógica existente (no se modifica)
     if (id === 'datos' || id === 'periodos') {
       this.activeTabId = id;
     }
@@ -307,25 +368,48 @@ export class EmpresaPrincipalComponent implements OnInit {
     }
   }
 
-
-  // Editar empresa
+  // Editar / Registrar empresa (botón principal)
   onPrimary() {
     if (!this.canEdit) return this.openError('No tienes permisos para editar la empresa');
     const empresa = this.rows[0];
-    if (!empresa) return this.openError('No hay datos de empresa para editar');
+
+    if (!empresa) {
+      // 🔹 No hay empresa: modo REGISTRO
+      this.formEmpresa = {
+        razon_social: '',
+        rfc: '',
+        domicilio_fiscal: '',
+        telefono: '',
+        correo_contacto: '',
+      };
+      this.modalTitle = 'Registrar Empresa';
+      this.editOpen = true;
+      return;
+    }
+
+    // 🔹 Sí hay empresa: modo EDICIÓN
     this.formEmpresa = { ...empresa };
+    this.modalTitle = 'Editar Empresa';
     this.editOpen = true;
   }
+
   onEdit(row: UiEmpresa) {
     if (!this.canEdit) return this.openError('No tienes permisos para editar');
     this.formEmpresa = { ...row };
+    this.modalTitle = 'Editar Empresa';
     this.editOpen = true;
   }
-  closeModal() { this.editOpen = false; }
-  cancelModal() { this.editOpen = false; }
+
+  closeModal() {
+    this.editOpen = false;
+  }
+  cancelModal() {
+    this.editOpen = false;
+  }
+
   confirmModal() {
     this.confirmTitle = 'Confirmar guardado';
-    this.confirmMessage = '¿Deseas guardar los cambios de la empresa?';
+    this.confirmMessage = '¿Deseas guardar los datos de la empresa?';
     this.confirmKind = 'empresa-save';
     this.confirmPayload = null;
     this.confirmOpen = true;
@@ -346,15 +430,14 @@ export class EmpresaPrincipalComponent implements OnInit {
     }
 
     const idEj = this.ejercicioSeleccionado?.id_ejercicio;
-
     if (!idEj) {
       this.periodos = [];
       return;
     }
 
     this.periodosService.getPeriodosByEjercicio(idEj).subscribe({
-      next: (items) => this.periodos = items ?? [],
-      error: (err) => this.openError('Error al cargar los períodos', err),
+      next: (items: PeriodoContableDto[]) => (this.periodos = items ?? []),
+      error: (err: any) => this.openError('Error al cargar los períodos', err),
     });
   }
 
@@ -470,34 +553,38 @@ export class EmpresaPrincipalComponent implements OnInit {
   }
 
   // Cierre modal período
-  closePeriodoModal() { this.modalPeriodoOpen = false; }
-  cancelPeriodoModal() { this.modalPeriodoOpen = false; }
+  closePeriodoModal() {
+    this.modalPeriodoOpen = false;
+  }
+  cancelPeriodoModal() {
+    this.modalPeriodoOpen = false;
+  }
 
   // Confirmación antes de guardar período
   confirmPeriodoModal() {
-    // Flujo especial: crear automáticamente todos los periodos del ejercicio
     if (this.autoCreate && !this.editPeriodoId) {
       if (!this.ejercicioSeleccionado?.id_ejercicio) {
         return this.openError('Selecciona un ejercicio contable.');
       }
-      this.modalPeriodoOpen = false;             // cerrar el modal
-      this.generatePeriodsForSelectedExercise(this.autoCreateTipo); // disparar generación
+      this.modalPeriodoOpen = false;
+      this.generatePeriodsForSelectedExercise(this.autoCreateTipo);
       return;
     }
 
-    // Validación modo manual
     if (!this.formPeriodo.tipo_periodo || !this.formPeriodo.fecha_inicio || !this.formPeriodo.fecha_fin) {
       return this.openError('Completa tipo de período, fecha de inicio y fin.');
     }
 
     const t = this.formPeriodo.tipo_periodo as PeriodoTipo;
 
-    if (t === 'PERSONALIZADO' &&
-      (this.isPast(this.formPeriodo.fecha_inicio) || this.isPast(this.formPeriodo.fecha_fin))) {
+    if (
+      t === 'PERSONALIZADO' &&
+      (this.isPast(this.formPeriodo.fecha_inicio!) || this.isPast(this.formPeriodo.fecha_fin!))
+    ) {
       return this.openError('Las fechas no pueden ser pasadas.');
     }
 
-    if (this.parseISODateLocal(this.formPeriodo.fecha_fin) < this.parseISODateLocal(this.formPeriodo.fecha_inicio)) {
+    if (this.parseISODateLocal(this.formPeriodo.fecha_fin!) < this.parseISODateLocal(this.formPeriodo.fecha_inicio!)) {
       return this.openError('La fecha de fin no puede ser anterior a la de inicio.');
     }
 
@@ -528,7 +615,7 @@ export class EmpresaPrincipalComponent implements OnInit {
     const key = this.storageKey();
     if (!key) return;
     const raw = localStorage.getItem(key);
-    this.ejercicioSeleccionado = raw ? JSON.parse(raw) as EjercicioContableDto : null;
+    this.ejercicioSeleccionado = raw ? (JSON.parse(raw) as EjercicioContableDto) : null;
   }
 
   get ejercicioSeleccionadoLabel(): string {
@@ -540,8 +627,8 @@ export class EmpresaPrincipalComponent implements OnInit {
     const idEmp = this.empresaId();
     if (!idEmp) return;
     this.ejerciciosService.listByEmpresa(idEmp).subscribe({
-      next: (items) => this.ejercicios = items ?? [],
-      error: (err) => this.openError('Error al cargar los ejercicios', err),
+      next: (items: EjercicioContableDto[]) => (this.ejercicios = items ?? []),
+      error: (err: any) => this.openError('Error al cargar los ejercicios', err),
     });
   }
 
@@ -624,12 +711,10 @@ export class EmpresaPrincipalComponent implements OnInit {
         },
         error: (err: any) => {
           console.error('❌ Error al actualizar el ejercicio en la base de datos:', err);
-        }
+        },
       });
     }
   }
-
-
 
   // Guardar ejercicio desde modal
   confirmEjercicioModal() {
@@ -655,12 +740,21 @@ export class EmpresaPrincipalComponent implements OnInit {
   }
 
   // Cierre modal ejercicio
-  closeEjercicioModal() { this.modalEjercicioOpen = false; }
-  cancelEjercicioModal() { this.modalEjercicioOpen = false; }
+  closeEjercicioModal() {
+    this.modalEjercicioOpen = false;
+  }
+  cancelEjercicioModal() {
+    this.modalEjercicioOpen = false;
+  }
 
-
-  closeConfirm() { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; }
-  cancelConfirm() { this.closeConfirm(); }
+  closeConfirm() {
+    this.confirmOpen = false;
+    this.confirmKind = null;
+    this.confirmPayload = null;
+  }
+  cancelConfirm() {
+    this.closeConfirm();
+  }
 
   confirmProceed() {
     const kind = this.confirmKind;
@@ -669,16 +763,30 @@ export class EmpresaPrincipalComponent implements OnInit {
 
     switch (kind) {
       case 'empresa-save': {
+        // Si hay id → actualizar, si no → crear
         const id = this.formEmpresa.id_empresa ?? this.formEmpresa.id;
-        if (id == null) return this.openError('No se encontró el identificador de la empresa');
         const { id: _omit1, id_empresa: _omit2, ...payloadEmpresa } = this.formEmpresa;
-        this.empresaService.updateEmpresa(id as number, payloadEmpresa).subscribe({
-          next: () => {
-            this.rows = [{ ...(this.rows[0] ?? {}), ...this.formEmpresa }];
+        const tieneId = id != null;
+
+        const req$ = tieneId
+          ? this.empresaService.updateEmpresa(id as number, payloadEmpresa)
+          : (this.empresaService as any).createEmpresa(payloadEmpresa);
+
+        if (!req$) {
+          return this.openError('No se pudo determinar la acción para guardar la empresa.');
+        }
+
+        req$.subscribe({
+          next: (saved: UiEmpresa) => {
+            this.rows = [saved as UiEmpresa];
             this.editOpen = false;
-            this.openSuccess('Datos de la empresa actualizados correctamente.');
+            this.openSuccess(
+              tieneId
+                ? 'Datos de la empresa actualizados correctamente.'
+                : 'Empresa registrada correctamente.'
+            );
           },
-          error: (err) => this.openError('No se pudo actualizar la empresa', err),
+          error: (err: any) => this.openError('No se pudo guardar la empresa', err),
         });
         break;
       }
@@ -694,7 +802,6 @@ export class EmpresaPrincipalComponent implements OnInit {
 
         const payloadPeriodo: PeriodoContableDto = {
           id_empresa: idEmp,
-
           id_ejercicio: ejSel.id_ejercicio!,
           tipo_periodo: this.formPeriodo.tipo_periodo as PeriodoTipo,
           fecha_inicio: this.formPeriodo.fecha_inicio!,
@@ -708,17 +815,19 @@ export class EmpresaPrincipalComponent implements OnInit {
           : this.periodosService.create(payloadPeriodo);
 
         req$.subscribe({
-          next: (saved) => {
+          next: (saved: PeriodoContableDto) => {
             this.modalPeriodoOpen = false;
             if (this.editPeriodoId) {
-              this.periodos = this.periodos.map(p => p.id_periodo === this.editPeriodoId ? { ...p, ...saved } : p);
+              this.periodos = this.periodos.map((p) =>
+                p.id_periodo === this.editPeriodoId ? { ...p, ...saved } : p
+              );
               this.openSuccess('Período actualizado.');
             } else {
               this.periodos = [...this.periodos, saved];
               this.openSuccess('Período creado.');
             }
           },
-          error: (err) => this.openError('No se pudo guardar el período', err),
+          error: (err: any) => this.openError('No se pudo guardar el período', err),
         });
         break;
       }
@@ -728,14 +837,13 @@ export class EmpresaPrincipalComponent implements OnInit {
         if (!idp) return this.openError('No se encontró el identificador del período.');
 
         this.periodosService.cerrar(idp).subscribe({
-          next: (res) => {
-            // Actualiza el registro localmente a cerrado
-            this.periodos = this.periodos.map(p =>
+          next: (res: any) => {
+            this.periodos = this.periodos.map((p) =>
               p.id_periodo === idp ? { ...p, esta_abierto: false } : p
             );
             this.openSuccess(res?.message || 'Período cerrado correctamente.');
           },
-          error: (err) => this.openError('No se pudo cerrar el período', err),
+          error: (err: any) => this.openError('No se pudo cerrar el período', err),
         });
         break;
       }
@@ -746,14 +854,13 @@ export class EmpresaPrincipalComponent implements OnInit {
 
         this.periodosService.delete(idp).subscribe({
           next: () => {
-            this.periodos = this.periodos.filter(p => p.id_periodo !== idp);
+            this.periodos = this.periodos.filter((p) => p.id_periodo !== idp);
             this.openSuccess('Período eliminado.');
           },
-          error: (err) => this.openError('No se pudo eliminar el período', err),
+          error: (err: any) => this.openError('No se pudo eliminar el período', err),
         });
         break;
       }
-
 
       case 'ejercicio-save': {
         const idEmp = this.empresaId();
@@ -772,10 +879,12 @@ export class EmpresaPrincipalComponent implements OnInit {
           : this.ejerciciosService.create(payloadEj);
 
         req$.subscribe({
-          next: (saved) => {
+          next: (saved: EjercicioContableDto) => {
             this.modalEjercicioOpen = false;
             if (this.editEjercicioId) {
-              this.ejercicios = this.ejercicios.map(e => e.id_ejercicio === this.editEjercicioId ? { ...e, ...saved } : e);
+              this.ejercicios = this.ejercicios.map((e) =>
+                e.id_ejercicio === this.editEjercicioId ? { ...e, ...saved } : e
+              );
               if (this.ejercicioSeleccionado?.id_ejercicio === this.editEjercicioId) {
                 this.setEjercicioSeleccionado(saved);
               }
@@ -786,7 +895,7 @@ export class EmpresaPrincipalComponent implements OnInit {
               this.openSuccess('Ejercicio creado.');
             }
           },
-          error: (err) => this.openError('No se pudo guardar el ejercicio', err),
+          error: (err: any) => this.openError('No se pudo guardar el ejercicio', err),
         });
         break;
       }
@@ -796,12 +905,12 @@ export class EmpresaPrincipalComponent implements OnInit {
         if (!id) return this.openError('No se encontró el identificador del ejercicio.');
         this.ejerciciosService.delete(id).subscribe({
           next: () => {
-            this.ejercicios = this.ejercicios.filter(e => e.id_ejercicio !== id);
+            this.ejercicios = this.ejercicios.filter((e) => e.id_ejercicio !== id);
             if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(null);
             this.loadPeriodos();
             this.openSuccess('Ejercicio eliminado.');
           },
-          error: (err) => this.openError('No se pudo eliminar el ejercicio', err),
+          error: (err: any) => this.openError('No se pudo eliminar el ejercicio', err),
         });
         break;
       }
@@ -810,12 +919,14 @@ export class EmpresaPrincipalComponent implements OnInit {
         const id = payload?.id_ejercicio as number | undefined;
         if (!id) return this.openError('No se encontró el identificador del ejercicio.');
         this.ejerciciosService.abrir(id).subscribe({
-          next: (res) => {
-            this.ejercicios = this.ejercicios.map(e => e.id_ejercicio === id ? { ...e, ...res } : e);
+          next: (res: EjercicioContableDto) => {
+            this.ejercicios = this.ejercicios.map((e) =>
+              e.id_ejercicio === id ? { ...e, ...res } : e
+            );
             if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(res);
             this.openSuccess('Ejercicio marcado como ABIERTO.');
           },
-          error: (err) => this.openError('No se pudo abrir el ejercicio', err),
+          error: (err: any) => this.openError('No se pudo abrir el ejercicio', err),
         });
         break;
       }
@@ -828,7 +939,6 @@ export class EmpresaPrincipalComponent implements OnInit {
         if (!userId) {
           return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
         }
-        // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
         const centroId = 300;
         if (!centroId) {
           return this.openError('No se pudo determinar el centro de costo (id_centro).');
@@ -845,38 +955,43 @@ export class EmpresaPrincipalComponent implements OnInit {
           id_usuario: userId,
           id_centro: centroId,
         }).subscribe({
-          next: (res) => {
-            this.ejercicios = this.ejercicios.map(e =>
+          next: (res: any) => {
+            this.ejercicios = this.ejercicios.map((e) =>
               e.id_ejercicio === id ? { ...e, esta_abierto: false } : e
             );
             if (this.ejercicioSeleccionado?.id_ejercicio === id) {
-              this.setEjercicioSeleccionado({ ...this.ejercicioSeleccionado, esta_abierto: false } as any);
+              this.setEjercicioSeleccionado({
+                ...this.ejercicioSeleccionado,
+                esta_abierto: false,
+              } as any);
             }
             this.openSuccess(
               res?.mensaje ||
-              'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
+                'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
             );
           },
-          error: (err) => this.openError('No se pudo cerrar el ejercicio', err),
+          error: (err: any) => this.openError('No se pudo cerrar el ejercicio', err),
         });
         break;
       }
     }
   }
 
-
   onRowAction(evt: { action: string; row: UiEmpresa }) {
     if (evt.action === 'edit') return this.onEdit(evt.row);
     this.openError(`Acción no soportada: ${evt.action}`);
   }
-  onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
+
+  onSidebarToggle(open: boolean) {
+    this.sidebarOpen = open;
+  }
 
   // Abrir gestor de ejercicios
   onOpenEjercicioManager() {
     this.onPrimaryEjercicio();
   }
 
-  // GENERACIÓN AUTOMÁTICA DE PERÍODOS 
+  // GENERACIÓN AUTOMÁTICA DE PERÍODOS
   genModalOpen = false;
   genTipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL';
   genIncluirCerrados = false;
@@ -890,6 +1005,7 @@ export class EmpresaPrincipalComponent implements OnInit {
     }
     return ej;
   }
+
   async generatePeriodsForSelectedExercise(tipo: Exclude<PeriodoTipo, 'PERSONALIZADO'> = 'MENSUAL') {
     let ej: EjercicioContableDto;
     try {
@@ -915,16 +1031,14 @@ export class EmpresaPrincipalComponent implements OnInit {
     }
 
     this.periodosService.generate(ej.id_ejercicio!, tipo, userId, centroId).subscribe({
-      next: (periodosGenerados) => {
+      next: (periodosGenerados: PeriodoContableDto[]) => {
         this.loadPeriodos();
         const n = Array.isArray(periodosGenerados) ? periodosGenerados.length : undefined;
         this.openSuccess(
-          n != null
-            ? `Períodos ${tipo.toLowerCase()} generados: ${n}.`
-            : `Períodos ${tipo.toLowerCase()} generados correctamente.`
+          n != null ? `Períodos ${tipo.toLowerCase()} generados: ${n}.` : `Períodos ${tipo.toLowerCase()} generados correctamente.`
         );
       },
-      error: (err) => {
+      error: (err: any) => {
         this.openError('No se pudieron generar los períodos.', err);
       },
       complete: () => {
@@ -938,10 +1052,15 @@ export class EmpresaPrincipalComponent implements OnInit {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const json = decodeURIComponent(
-        atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
       );
       return JSON.parse(json);
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   private asNumOrNull(v: any): number | null {
@@ -951,13 +1070,11 @@ export class EmpresaPrincipalComponent implements OnInit {
 
   private resolveUserIdFrom(src: any): number | null {
     if (!src) return null;
-    // campos típicos: id_usuario, id, sub, uid
     return this.asNumOrNull(src.id_usuario ?? src.id ?? src.sub ?? src.uid);
   }
 
   /** Intenta obtener el id del usuario autenticado desde varias fuentes */
   private getCurrentUserId(): number | null {
-    // 1) AuthService (posibles convenciones)
     try {
       const fromAuth =
         (this as any)?.auth?.currentUser?.() ??
@@ -967,9 +1084,8 @@ export class EmpresaPrincipalComponent implements OnInit {
         null;
       const idFromAuth = this.resolveUserIdFrom(fromAuth);
       if (idFromAuth) return idFromAuth;
-    } catch { }
+    } catch {}
 
-    // 2) Local/session storage objetos
     const keys = ['usuario', 'user', 'currentUser'];
     for (const k of keys) {
       try {
@@ -978,10 +1094,9 @@ export class EmpresaPrincipalComponent implements OnInit {
         const obj = JSON.parse(raw);
         const id = this.resolveUserIdFrom(obj);
         if (id) return id;
-      } catch { }
+      } catch {}
     }
 
-    // 3) JWT
     const tok =
       localStorage.getItem('token') ||
       localStorage.getItem('access_token') ||
