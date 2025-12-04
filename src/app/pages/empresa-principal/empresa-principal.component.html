@@ -8,14 +8,7 @@
   <div class="content">
     <div class="crud-wrapper">
 
-      <div class="empresa-actions" *ngIf="showRegistrarEmpresaButton">
-        <button
-          type="button"
-          class="btn btn-primary"
-          (click)="onPrimary()">
-          Registrar empresa
-        </button>
-      </div>
+    
 
       <app-crud-panel
         *ngIf="activeTabId === 'datos'"
@@ -32,7 +25,10 @@
         [data]="rows"
         [actions]="actions"
         [showSearch]="false"
-        [hidePrimary]="true"   
+
+      
+        [hidePrimary]="!showRegistrarEmpresaButton"
+
         (edit)="onEdit($event)"
         (action)="onRowAction($event)">
 
