@@ -50,12 +50,14 @@ export function periodoEtiqueta(ini: unknown, fin: unknown): string {
     const di = toDateUTC(ini);
     const df = toDateUTC(fin);
 
+    const d2 = (d: Date) => pad2(d.getUTCDate());
+
     if (di && df) {
         const yi = di.getUTCFullYear(), yf = df.getUTCFullYear();
         const mi = di.getUTCMonth(), mf = df.getUTCMonth();
         return (yi === yf)
-            ? `${MESES_CORTOS[mi]}–${MESES_CORTOS[mf]} ${yi}`
-            : `${MESES_CORTOS[mi]} ${yi} — ${MESES_CORTOS[mf]} ${yf}`;
+            ? `${MESES_CORTOS[mi]} ${d2(di)}–${MESES_CORTOS[mf]} ${d2(df)} ${yi}`
+            : `${MESES_CORTOS[mi]} ${d2(di)} ${yi} — ${MESES_CORTOS[mf]} ${d2(df)} ${yf}`;
     }
     if (di) return `${MESES_CORTOS[di.getUTCMonth()]} ${di.getUTCFullYear()}`;
     if (df) return `${MESES_CORTOS[df.getUTCMonth()]} ${df.getUTCFullYear()}`;

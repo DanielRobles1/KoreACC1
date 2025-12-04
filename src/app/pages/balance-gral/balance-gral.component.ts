@@ -12,6 +12,10 @@ import { BalanceResp, BalanceRow } from '@app/models/balance-gral';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Empresa } from '@app/models/empresa';
+import { periodoEtiqueta, todayISO } from '@app/utils/fecha-utils';
+import { AuthService } from '@app/services/auth.service';
+import { WsService } from '@app/services/ws.service';
+import { PermissionWatcher } from '@app/utils/permissions.util';
 
 type BalanceNivel = 'DETALLE' | 'SUBTOTAL' | 'TOTAL';
 type TipoGrupo = 'ACTIVO' | 'PASIVO' | 'CAPITAL';
@@ -27,15 +31,6 @@ function inferTipoFromCodigo(codigo?: string | null): TipoGrupo | null {
 
 function isAlreadyBalanceGeneralRow(r: any): boolean {
   return 'nivel' in r && ('saldo_deudor' in r || 'saldo_acreedor' in r);
-}
-
-function parseYMDLocal(s?: string | null): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const y = +m[1], mo = +m[2] - 1, d = +m[3];
-  const dt = new Date(y, mo, d);
-  return isNaN(dt.getTime()) ? null : dt;
 }
 
 // === Tipo estrecho con id_periodo requerido
@@ -58,11 +53,13 @@ export class BalanceGralComponent {
   constructor(
     private polizaService: PolizasService,
     private periodoService: PeriodoContableService,
-    private reportesService: ReportesService
+    private reportesService: ReportesService,
+    private auth: AuthService,
+    private ws: WsService
   ) {
     this.reportesService.getEmpresaInfo(this.miEmpresaId).subscribe({
       next: (emp) => this.empresaInfo = emp,
-      error: () => {}
+      error: () => { }
     });
   }
 
@@ -78,6 +75,10 @@ export class BalanceGralComponent {
   totDeudor = 0;
   totAcreedor = 0;
   empresaInfo?: Empresa;
+
+  // Permisos
+  canGenerateReport = false;
+  private permWatcher?: PermissionWatcher;
 
   // --- UI/Toast
   toast = {
@@ -105,6 +106,10 @@ export class BalanceGralComponent {
   }
 
   onGenerarBalance() {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     if (!this.periodoIniId || !this.periodoFinId) {
       this.showToast({ type: 'warning', title: 'Fallo', message: 'Seleccione un rango de periodos.' });
       return;
@@ -142,6 +147,10 @@ export class BalanceGralComponent {
   trackFila = (_: number, r: BalanceRow) => r.codigo ?? `${r.nivel}-${r.tipo ?? 'TOTAL'}`;
 
   onEjercicioChange(value: string) {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     const id = value ? Number(value) : null;
     this.ejercicioId = Number.isFinite(id) ? id : null;
 
@@ -185,35 +194,8 @@ export class BalanceGralComponent {
   trackPeriodo = (_: number, p: PeriodoConId) => p.id_periodo;
 
   getPeriodoLabel(p: PeriodoContableDto | PeriodoConId): string {
-    const fi = parseYMDLocal(p?.fecha_inicio);
-    const ff = parseYMDLocal(p?.fecha_fin);
-
-    if (!fi || !ff) {
-      return p?.id_periodo != null ? `Periodo ${p.id_periodo}` : 'Periodo';
-    }
-
-    const mesCorto = (d: Date) =>
-      d.toLocaleDateString('es-MX', { month: 'short' })
-        .replace(/\.$/, '')
-        .replace(/^./, c => c.toUpperCase());
-
-    const ultimoDiaMes = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-
-    const mesIni = mesCorto(fi);
-    const mesFin = mesCorto(ff);
-    const anioIni = fi.getFullYear();
-    const anioFin = ff.getFullYear();
-
-    const diaIniPrimero = 1;
-    const diaIniUltimo = ultimoDiaMes(fi);
-    const diaFinPrimero = 1;
-    const diaFinUltimo = ultimoDiaMes(ff);
-
-    if (fi.getMonth() === ff.getMonth() && anioIni === anioFin) {
-      return `${mesIni} (${diaIniPrimero}-${diaFinUltimo}) ${anioIni}`;
-    }
-
-    return `${mesIni} (${diaIniPrimero}-${diaIniUltimo}) ${anioIni} a ${mesFin} (${diaFinPrimero}-${diaFinUltimo}) ${anioFin}`;
+    const lbl = periodoEtiqueta(p?.fecha_inicio, p?.fecha_fin);
+    return (lbl === '—' && p?.id_periodo != null) ? `Periodo ${p.id_periodo}` : lbl;
   }
 
   private getRangoPeriodosLabel(): string {
@@ -245,10 +227,6 @@ export class BalanceGralComponent {
   private toNum(v: any): number {
     const n = Number((v ?? '').toString().replace(/,/g, '').trim());
     return Number.isFinite(n) ? n : 0;
-  }
-
-  private fmtDateISO(d = new Date()): string {
-    return d.toISOString().split('T')[0];
   }
 
   private adaptToBalanceGeneral(data: any[]): BalanceRow[] {
@@ -329,7 +307,36 @@ export class BalanceGralComponent {
     });
   }
 
+  ngOnInit(): void {
+    this.permWatcher = new PermissionWatcher(
+      this.auth,
+      this.ws,
+      {
+        toastOk: (m) => this.showToast({ type: 'success', message: m }),
+        toastWarn: (m) => this.showToast({ type: 'warning', message: m }),
+        toastError: (m) => this.showToast({ type: 'error', message: m }),
+      },
+      (flags) => {
+        this.canGenerateReport = !!flags.canCreate;
+      },
+      {
+        keys: { create: 'crear_reporte', edit: 'crear_reporte', delete: 'crear_reporte' },
+        socketEvent: ['permissions:changed', 'role-permissions:changed'],
+        contextLabel: 'Reportes',
+      }
+    );
+    this.permWatcher.start();
+  }
+
+  ngOnDestroy(): void {
+    this.permWatcher?.stop();
+  }
+
   exportToExcel(allRows = false): void {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     const rows = (allRows ? this.balance : this.filteredRows) ?? [];
 
     const headerRows: any[][] = [];
@@ -355,7 +362,7 @@ export class BalanceGralComponent {
     }
 
     const rangoLabel = this.getRangoPeriodosLabel();
-    const fechaLabel = `Fecha de generación: ${this.fmtDateISO()}`;
+    const fechaLabel = `Fecha de generación: ${todayISO()}`;
 
     headerRows.push(['Balance general']);
     headerRows.push([rangoLabel]);
@@ -511,7 +518,7 @@ export class BalanceGralComponent {
 
     const rangoSlug =
       (this.periodoIniId && this.periodoFinId) ? `_p${this.periodoIniId}-p${this.periodoFinId}` : '';
-    const fecha = this.fmtDateISO();
+    const fecha = todayISO();
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
     const blob = new Blob(

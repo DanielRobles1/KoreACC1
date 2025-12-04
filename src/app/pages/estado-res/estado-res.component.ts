@@ -12,6 +12,10 @@ import { finalize, Observable } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Empresa } from '@app/models/empresa';
+import { periodoEtiqueta, todayISO } from '@app/utils/fecha-utils';
+import { AuthService } from '@app/services/auth.service';
+import { WsService } from '@app/services/ws.service';
+import { PermissionWatcher } from '@app/utils/permissions.util';
 
 // === Tipo estrecho con id_periodo requerido
 type PeriodoConId = PeriodoContableDto & { id_periodo: number };
@@ -19,15 +23,6 @@ type PeriodoConId = PeriodoContableDto & { id_periodo: number };
 // === Type-guard para estrechar PeriodoContableDto -> PeriodoConId
 function hasPeriodoId(p: PeriodoContableDto): p is PeriodoConId {
   return typeof p.id_periodo === 'number';
-}
-
-function parseYMDLocal(s?: string | null): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-  if (!m) return null;
-  const y = +m[1], mo = +m[2] - 1, d = +m[3];
-  const dt = new Date(y, mo, d);
-  return isNaN(dt.getTime()) ? null : dt;
 }
 
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -44,7 +39,9 @@ export class EstadoResComponent {
   constructor(
     private polizaService: PolizasService,
     private periodoService: PeriodoContableService,
-    private reportesService: ReportesService
+    private reportesService: ReportesService,
+    private auth: AuthService,
+    private ws: WsService
   ) {
     this.reportesService.getEmpresaInfo(this.miEmpresaId).subscribe({
       next: (emp) => this.empresaInfo = emp,
@@ -88,7 +85,15 @@ export class EstadoResComponent {
   loading = false;
   estadoResultados: EstadoResultadosData | null = null;
 
+  // Permisos
+  canGenerateReport = false;
+  private permWatcher?: PermissionWatcher;
+
   onGenerarEstadoResultados() {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     if (!this.periodoIniId || !this.periodoFinId) {
       this.showToast({
         type: 'warning',
@@ -128,6 +133,10 @@ export class EstadoResComponent {
   }
 
   onEjercicioChange(value: string) {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     const id = value ? Number(value) : null;
     this.ejercicioId = Number.isFinite(id) ? id : null;
 
@@ -170,35 +179,8 @@ export class EstadoResComponent {
   trackPeriodo = (_: number, p: PeriodoConId) => p.id_periodo;
 
   getPeriodoLabel(p: PeriodoContableDto | PeriodoConId): string {
-    const fi = parseYMDLocal(p?.fecha_inicio);
-    const ff = parseYMDLocal(p?.fecha_fin);
-
-    if (!fi || !ff) {
-      return p?.id_periodo != null ? `Periodo ${p.id_periodo}` : 'Periodo';
-    }
-
-    const mesCorto = (d: Date) =>
-      d.toLocaleDateString('es-MX', { month: 'short' })
-        .replace(/\.$/, '')
-        .replace(/^./, c => c.toUpperCase());
-
-    const ultimoDiaMes = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-
-    const mesIni = mesCorto(fi);
-    const mesFin = mesCorto(ff);
-    const anioIni = fi.getFullYear();
-    const anioFin = ff.getFullYear();
-
-    const diaIniPrimero = 1;
-    const diaIniUltimo = ultimoDiaMes(fi);
-    const diaFinPrimero = 1;
-    const diaFinUltimo = ultimoDiaMes(ff);
-
-    if (fi.getMonth() === ff.getMonth() && anioIni === anioFin) {
-      return `${mesIni} (${diaIniPrimero}-${diaFinUltimo}) ${anioIni}`;
-    }
-
-    return `${mesIni} (${diaIniPrimero}-${diaIniUltimo}) ${anioIni} a ${mesFin} (${diaFinPrimero}-${diaFinUltimo}) ${anioFin}`;
+    const lbl = periodoEtiqueta(p?.fecha_inicio, p?.fecha_fin);
+    return (lbl === '—' && p?.id_periodo != null) ? `Periodo ${p.id_periodo}` : lbl;
   }
 
   private getRangoPeriodosLabel(): string {
@@ -239,10 +221,6 @@ export class EstadoResComponent {
     return a.id_periodo - b.id_periodo;
   };
 
-  private fmtDateISO(d = new Date()): string {
-    return d.toISOString().split('T')[0];
-  }
-
   private numFmtCell(ws: XLSX.WorkSheet, c0: number, c1: number, r0: number, r1: number, fmt = '#,##0.00') {
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
@@ -271,7 +249,36 @@ export class EstadoResComponent {
     (ws as any)['!cols'] = cols;
   }
 
+  ngOnInit(): void {
+    this.permWatcher = new PermissionWatcher(
+      this.auth,
+      this.ws,
+      {
+        toastOk: (m) => this.showToast({ type: 'success', message: m }),
+        toastWarn: (m) => this.showToast({ type: 'warning', message: m }),
+        toastError: (m) => this.showToast({ type: 'error', message: m }),
+      },
+      (flags) => {
+        this.canGenerateReport = !!flags.canCreate;
+      },
+      {
+        keys: { create: 'crear_reporte', edit: 'crear_reporte', delete: 'crear_reporte' },
+        socketEvent: ['permissions:changed', 'role-permissions:changed'],
+        contextLabel: 'Reportes',
+      }
+    );
+    this.permWatcher.start();
+  }
+
+  ngOnDestroy(): void {
+    this.permWatcher?.stop();
+  }
+
   exportToExcel(includeSplitSheets = true): void {
+    if (!this.canGenerateReport) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
+      return;
+    }
     const er = this.estadoResultados;
     if (!er) {
       this.showToast({
@@ -300,11 +307,11 @@ export class EstadoResComponent {
           rows.push([contactoParts.join('   ')]);
         }
 
-        rows.push([]); 
+        rows.push([]);
       }
 
       const rangoLabel = this.getRangoPeriodosLabel();
-      const fechaLabel = `Fecha de generación: ${this.fmtDateISO()}`;
+      const fechaLabel = `Fecha de generación: ${todayISO()}`;
 
       const title = subtitle
         ? `Estado de resultados - ${subtitle}`
@@ -313,7 +320,7 @@ export class EstadoResComponent {
       rows.push([title]);
       rows.push([rangoLabel]);
       rows.push([fechaLabel]);
-      rows.push([]); 
+      rows.push([]);
 
       return rows;
     };
@@ -341,8 +348,8 @@ export class EstadoResComponent {
     const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
 
     // Índices 0-based
-    const headRowResumenIdx = headerLinesResumen;          
-    const firstDataRowResumenIdx = headerLinesResumen + 1; 
+    const headRowResumenIdx = headerLinesResumen;
+    const firstDataRowResumenIdx = headerLinesResumen + 1;
     const lastDataRowResumenIdx = firstDataRowResumenIdx + resumenBody.length - 1;
 
     this.numFmtCell(wsResumen, 1, 1, firstDataRowResumenIdx, lastDataRowResumenIdx);
@@ -404,7 +411,7 @@ export class EstadoResComponent {
       this.toNum(d.importe),
     ]));
 
-    const firstDataRowDet = headerLinesDet + 2; 
+    const firstDataRowDet = headerLinesDet + 2;
     const lastDataRowDet = body.length ? firstDataRowDet + body.length - 1 : firstDataRowDet - 1;
 
     const totalsRow = body.length ? [
@@ -423,8 +430,8 @@ export class EstadoResComponent {
 
     const wsDetalle = XLSX.utils.aoa_to_sheet(aoaDetalle);
 
-    const headRowDetIdx = headerLinesDet;               
-    const firstDataRowDetIdx = headerLinesDet + 1;    
+    const headRowDetIdx = headerLinesDet;
+    const firstDataRowDetIdx = headerLinesDet + 1;
     const totalsRowDetIdx = headerLinesDet + 1 + body.length;
 
     this.numFmtCell(wsDetalle, 4, 6, firstDataRowDetIdx, totalsRowDetIdx);
@@ -571,7 +578,7 @@ export class EstadoResComponent {
       (this.periodoIniId && this.periodoFinId)
         ? `_p${this.periodoIniId}-p${this.periodoFinId}`
         : '';
-    const fecha = this.fmtDateISO();
+    const fecha = todayISO();
 
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 

@@ -67,13 +67,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/catalogocuentas/catalogocuentas.component').then(m => m.CatalogoCuentasComponent),
      canActivate: [AuthGuard, PermissionGuard],
-     data: { perms: ['consultar_empresa']}
+     data: { perms: ['consultar_cat_Contable']}
   },
   {
    path: 'centros-costo',
     component: CatalogCentrosComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_cat_Centros']}
 },
  {
    path: 'polizas',
@@ -96,19 +96,19 @@ export const routes: Routes = [
    path: 'balanza-comprobacion',
     component: BalanzaComprobacionComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_reporte']}
 },
 {
    path: 'estado-resultados',
     component: EstadoResComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_reporte']}
 },
 {
    path: 'balance-general',
     component: BalanceGralComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_reporte']}
 },
 // app.routes.ts
 { path: 'dashboard-contable', component: DashboardContableComponent }

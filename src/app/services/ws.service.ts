@@ -54,6 +54,34 @@ export class WsService implements OnDestroy {
 
   }
 
+  on(event: string, cb: (...args: any[]) => void): () => void {
+    if (!this.socket) this.connect();
+
+    if (!this.socket) {
+      console.warn('[WS] on(): no hay socket, devolviendo unsubscribe no-op');
+      return () => { };
+    }
+
+    const handler = (...args: any[]) => cb(...args);
+
+    if (this.socket.connected) {
+      this.socket.on(event, handler);
+    } else {
+      const attach = () => {
+        this.socket?.off('connect', attach);
+        this.socket?.on(event, handler);
+      };
+      this.socket.on('connect', attach);
+    }
+
+    const unsubscribe = () => {
+      try {
+        this.socket?.off(event, handler);
+      } catch { }
+    };
+    return unsubscribe;
+  }
+
   private handlePermissionsChangeEvent(source: string, payload: any) {
     console.log(`[WS] Manejar evento ${source}`, payload);
 
