@@ -232,7 +232,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(EmpresaPrincipalComponent.prototype, "hasEmpresa", {
-        /** Hay empresa registrada si existe al menos una fila */
         get: function () {
             return !!this.currentEmpresa;
         },
@@ -240,7 +239,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(EmpresaPrincipalComponent.prototype, "showRegistrarEmpresaButton", {
-        /** Mostrar botón de "Registrar empresa" solo cuando NO hay empresa */
         get: function () {
             return !this.hasEmpresa && this.canEdit;
         },
@@ -248,7 +246,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(EmpresaPrincipalComponent.prototype, "primaryActionLabel", {
-        /** Etiqueta del botón principal del CrudPanel */
         get: function () {
             return this.hasEmpresa ? 'Editar datos' : 'Registrar empresa';
         },
@@ -386,7 +383,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     _this.loadPeriodos();
                 }
                 else {
-                    // Sin empresa → limpia todo lo demás
                     _this.ejercicios = [];
                     _this.ejercicioSeleccionado = null;
                     _this.periodos = [];
@@ -416,7 +412,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             return this.openError('No tienes permisos para editar la empresa');
         var empresa = this.rows[0];
         if (!empresa) {
-            // Modo REGISTRO
             this.formEmpresa = {
                 razon_social: '',
                 rfc: '',
@@ -428,7 +423,6 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
             this.editOpen = true;
             return;
         }
-        // Modo EDICIÓN
         this.formEmpresa = __assign({}, empresa);
         this.modalTitle = 'Editar Empresa';
         this.editOpen = true;
@@ -796,22 +790,40 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
     };
     EmpresaPrincipalComponent.prototype.confirmProceed = function () {
         var _this = this;
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
         var kind = this.confirmKind;
         var payload = this.confirmPayload;
         this.closeConfirm();
         switch (kind) {
+            case 'empresa-delete': {
+                var id = (_b = (_a = payload === null || payload === void 0 ? void 0 : payload.id_empresa) !== null && _a !== void 0 ? _a : this.formEmpresa.id_empresa) !== null && _b !== void 0 ? _b : this.formEmpresa.id;
+                if (!id) {
+                    return this.openError('No se encontró el identificador de la empresa a eliminar.');
+                }
+                this.empresaService.deleteEmpresa(id).subscribe({
+                    next: function () {
+                        // limpia todo lo relacionado en el front
+                        _this.rows = [];
+                        _this.periodos = [];
+                        _this.ejercicios = [];
+                        _this.ejercicioSeleccionado = null;
+                        _this.saveEjercicioSeleccionado(null);
+                        _this.openSuccess('Empresa eliminada correctamente.');
+                    },
+                    error: function (err) { return _this.openError('No se pudo eliminar la empresa', err); }
+                });
+                break;
+            }
             case 'empresa-save': {
                 // Si hay id → actualizar, si no → crear
-                var id = (_a = this.formEmpresa.id_empresa) !== null && _a !== void 0 ? _a : this.formEmpresa.id;
-                var _e = this.formEmpresa, _omit1 = _e.id, _omit2 = _e.id_empresa, payloadEmpresa = __rest(_e, ["id", "id_empresa"]);
+                var id = (_c = this.formEmpresa.id_empresa) !== null && _c !== void 0 ? _c : this.formEmpresa.id;
+                var _g = this.formEmpresa, _omit1 = _g.id, _omit2 = _g.id_empresa, payloadEmpresa = __rest(_g, ["id", "id_empresa"]);
                 var tieneId_1 = id != null;
                 var req$ = tieneId_1
                     ? this.empresaService.updateEmpresa(id, payloadEmpresa)
-                    : this.empresaService.createEmpresa(payloadEmpresa);
+                    : this.empresaService.createEmpresa(payloadEmpresa); // Asegúrate de tener este método en el servicio
                 req$.subscribe({
                     next: function (saved) {
-                        // dejamos la empresa recién guardada como la única de rows
                         _this.rows = [saved];
                         _this.editOpen = false;
                         _this.openSuccess(tieneId_1
@@ -836,7 +848,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     tipo_periodo: this.formPeriodo.tipo_periodo,
                     fecha_inicio: this.formPeriodo.fecha_inicio,
                     fecha_fin: this.formPeriodo.fecha_fin,
-                    esta_abierto: (_b = this.formPeriodo.esta_abierto) !== null && _b !== void 0 ? _b : true,
+                    esta_abierto: (_d = this.formPeriodo.esta_abierto) !== null && _d !== void 0 ? _d : true,
                     periodo_daterange: undefined
                 };
                 var req$ = this.editPeriodoId
@@ -900,8 +912,8 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                     anio: Number(this.formEjercicio.anio),
                     fecha_inicio: this.formEjercicio.fecha_inicio,
                     fecha_fin: this.formEjercicio.fecha_fin,
-                    esta_abierto: (_c = this.formEjercicio.esta_abierto) !== null && _c !== void 0 ? _c : true,
-                    id_ejercicio: (_d = this.editEjercicioId) !== null && _d !== void 0 ? _d : undefined
+                    esta_abierto: (_e = this.formEjercicio.esta_abierto) !== null && _e !== void 0 ? _e : true,
+                    id_ejercicio: (_f = this.editEjercicioId) !== null && _f !== void 0 ? _f : undefined
                 };
                 var req$ = this.editEjercicioId
                     ? this.ejerciciosService.update(this.editEjercicioId, payloadEj)
@@ -990,13 +1002,15 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                 var cuentaResultadosId = 53;
                 var traspasarACapital = false;
                 var cuentaCapitalId = traspasarACapital ? 51 : null;
-                this.ejerciciosService.cerrar(id_3, {
+                this.ejerciciosService
+                    .cerrar(id_3, {
                     cuentaResultadosId: cuentaResultadosId,
                     traspasarACapital: traspasarACapital,
                     cuentaCapitalId: cuentaCapitalId,
                     id_usuario: userId,
                     id_centro: centroId
-                }).subscribe({
+                })
+                    .subscribe({
                     next: function (res) {
                         var _a;
                         _this.ejercicios = _this.ejercicios.map(function (e) {
@@ -1018,9 +1032,29 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
         }
     };
     EmpresaPrincipalComponent.prototype.onRowAction = function (evt) {
-        if (evt.action === 'edit')
-            return this.onEdit(evt.row);
-        this.openError("Acci\u00F3n no soportada: " + evt.action);
+        var _a;
+        switch (evt.action) {
+            case 'edit':
+                return this.onEdit(evt.row);
+            case 'delete': {
+                if (!this.canDelete) {
+                    return this.openError('No tienes permisos para eliminar empresa.');
+                }
+                var id = (_a = evt.row.id_empresa) !== null && _a !== void 0 ? _a : evt.row.id;
+                if (!id) {
+                    return this.openError('No se encontró el identificador de la empresa.');
+                }
+                this.confirmTitle = 'Eliminar empresa';
+                this.confirmMessage =
+                    '¿Seguro que deseas eliminar esta empresa? Esta acción no se puede deshacer.';
+                this.confirmKind = 'empresa-delete';
+                this.confirmPayload = { id_empresa: id };
+                this.confirmOpen = true;
+                return;
+            }
+            default:
+                this.openError("Acci\u00F3n no soportada: " + evt.action);
+        }
     };
     EmpresaPrincipalComponent.prototype.onSidebarToggle = function (open) {
         this.sidebarOpen = open;
@@ -1073,8 +1107,7 @@ var EmpresaPrincipalComponent = /** @class */ (function () {
                             : undefined;
                         _this.openSuccess(n != null
                             ? "Per\u00EDodos " + tipo.toLowerCase() + " generados: " + n + "."
-                            : "Per\u00EDodos " + tipo
-                                .toLowerCase() + " generados correctamente.");
+                            : "Per\u00EDodos " + tipo.toLowerCase() + " generados correctamente.");
                     },
                     error: function (err) {
                         _this.openError('No se pudieron generar los períodos.', err);

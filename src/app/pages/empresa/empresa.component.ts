@@ -28,6 +28,7 @@ type UiEmpresa = {
 
 type ConfirmKind =
   | 'empresa-save'
+  | 'empresa-delete'   
   | 'periodo-save'
   | 'periodo-delete'
   | 'periodo-cerrar'
@@ -759,220 +760,300 @@ export class EmpresaComponent implements OnInit {
   closeConfirm() { this.confirmOpen = false; this.confirmKind = null; this.confirmPayload = null; }
   cancelConfirm() { this.closeConfirm(); }
 
-  confirmProceed() {
-    const kind = this.confirmKind;
-    const payload = this.confirmPayload;
-    this.closeConfirm();
+ confirmProceed() {
+  const kind = this.confirmKind;
+  const payload = this.confirmPayload;
+  this.closeConfirm();
 
-    switch (kind) {
-      case 'empresa-save': {
-        const id = this.formEmpresa.id_empresa ?? this.formEmpresa.id;
-        if (id == null) return this.openError('No se encontró el identificador de la empresa');
-        const { id: _omit1, id_empresa: _omit2, ...payloadEmpresa } = this.formEmpresa;
-        this.empresaService.updateEmpresa(id as number, payloadEmpresa).subscribe({
-          next: () => {
-            this.rows = [{ ...(this.rows[0] ?? {}), ...this.formEmpresa }];
-            this.editOpen = false;
-            this.openSuccess('Datos de la empresa actualizados correctamente.');
-          },
-          error: (err) => this.openError('No se pudo actualizar la empresa', err),
-        });
-        break;
+  switch (kind) {
+
+    // 🔴 ELIMINAR EMPRESA
+    case 'empresa-delete': {
+      const id = payload?.id_empresa as number | undefined;
+      if (!id) {
+        return this.openError('No se encontró el identificador de la empresa.');
       }
 
-      case 'periodo-save': {
-        const idEmp = this.empresaId();
-        if (!idEmp) return this.openError('No hay empresa seleccionada.');
+      this.empresaService.deleteEmpresa(id).subscribe({
+        next: () => {
+          // Limpia la UI: ya no hay empresa
+          this.rows = [];
+          this.periodos = [];
+          this.ejercicios = [];
+          this.ejercicioSeleccionado = null;
 
-        const ejSel = this.ejercicioSeleccionado;
-        if (!ejSel?.id_ejercicio) {
-          return this.openError('Selecciona un ejercicio contable antes de crear/editar períodos.');
+          // Limpia selección de ejercicio en localStorage (si existía)
+          const key = this.storageKey?.();
+          if (key) {
+            localStorage.removeItem(key);
+          }
+
+          this.openSuccess('Empresa eliminada correctamente.');
+        },
+        error: (err) => {
+          this.openError('No se pudo eliminar la empresa.', err);
         }
+      });
+      break;
+    }
 
-        const payloadPeriodo: PeriodoContableDto = {
-          id_empresa: idEmp,
+    // 💾 GUARDAR / ACTUALIZAR EMPRESA
+    case 'empresa-save': {
+      const id = this.formEmpresa.id_empresa ?? this.formEmpresa.id;
+      if (id == null) return this.openError('No se encontró el identificador de la empresa');
+      const { id: _omit1, id_empresa: _omit2, ...payloadEmpresa } = this.formEmpresa;
 
-          id_ejercicio: ejSel.id_ejercicio!,
-          tipo_periodo: this.formPeriodo.tipo_periodo as PeriodoTipo,
-          fecha_inicio: this.formPeriodo.fecha_inicio!,
-          fecha_fin: this.formPeriodo.fecha_fin!,
-          esta_abierto: this.formPeriodo.esta_abierto ?? true,
-          periodo_daterange: undefined,
-        } as any;
+      this.empresaService.updateEmpresa(id as number, payloadEmpresa).subscribe({
+        next: () => {
+          this.rows = [{ ...(this.rows[0] ?? {}), ...this.formEmpresa }];
+          this.editOpen = false;
+          this.openSuccess('Datos de la empresa actualizados correctamente.');
+        },
+        error: (err) => this.openError('No se pudo actualizar la empresa', err),
+      });
+      break;
+    }
 
-        const req$ = this.editPeriodoId
-          ? this.periodosService.update(this.editPeriodoId, payloadPeriodo)
-          : this.periodosService.create(payloadPeriodo);
+    case 'periodo-save': {
+      const idEmp = this.empresaId();
+      if (!idEmp) return this.openError('No hay empresa seleccionada.');
 
-        req$.subscribe({
-          next: (saved) => {
-            this.modalPeriodoOpen = false;
-            if (this.editPeriodoId) {
-              this.periodos = this.periodos.map(p => p.id_periodo === this.editPeriodoId ? { ...p, ...saved } : p);
-              this.openSuccess('Período actualizado.');
-            } else {
-              this.periodos = [...this.periodos, saved];
-              this.openSuccess('Período creado.');
-            }
-          },
-          error: (err) => this.openError('No se pudo guardar el período', err),
-        });
-        break;
+      const ejSel = this.ejercicioSeleccionado;
+      if (!ejSel?.id_ejercicio) {
+        return this.openError('Selecciona un ejercicio contable antes de crear/editar períodos.');
       }
 
-      case 'periodo-cerrar': {
-        const idp = payload?.id_periodo as number | undefined;
-        if (!idp) return this.openError('No se encontró el identificador del período.');
+      const payloadPeriodo: PeriodoContableDto = {
+        id_empresa: idEmp,
+        id_ejercicio: ejSel.id_ejercicio!,
+        tipo_periodo: this.formPeriodo.tipo_periodo as PeriodoTipo,
+        fecha_inicio: this.formPeriodo.fecha_inicio!,
+        fecha_fin: this.formPeriodo.fecha_fin!,
+        esta_abierto: this.formPeriodo.esta_abierto ?? true,
+        periodo_daterange: undefined,
+      } as any;
 
-        this.periodosService.cerrar(idp).subscribe({
-          next: (res) => {
+      const req$ = this.editPeriodoId
+        ? this.periodosService.update(this.editPeriodoId, payloadPeriodo)
+        : this.periodosService.create(payloadPeriodo);
+
+      req$.subscribe({
+        next: (saved) => {
+          this.modalPeriodoOpen = false;
+          if (this.editPeriodoId) {
             this.periodos = this.periodos.map(p =>
-              p.id_periodo === idp ? { ...p, esta_abierto: false } : p
+              p.id_periodo === this.editPeriodoId ? { ...p, ...saved } : p
             );
-            this.openSuccess(res?.message || 'Período cerrado correctamente.');
-          },
-          error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
-        });
-        break;
-      }
+            this.openSuccess('Período actualizado.');
+          } else {
+            this.periodos = [...this.periodos, saved];
+            this.openSuccess('Período creado.');
+          }
+        },
+        error: (err) => this.openError('No se pudo guardar el período', err),
+      });
+      break;
+    }
 
-      case 'periodo-delete': {
-        const idp = payload?.id_periodo as number | undefined;
-        if (!idp) return this.openError('No se encontró el identificador del período.');
+    case 'periodo-cerrar': {
+      const idp = payload?.id_periodo as number | undefined;
+      if (!idp) return this.openError('No se encontró el identificador del período.');
 
-        this.periodosService.delete(idp).subscribe({
-          next: () => {
-            this.periodos = this.periodos.filter(p => p.id_periodo !== idp);
-            this.openSuccess('Período eliminado.');
-          },
-          error: (err) => this.openError('No se pudo eliminar el período', err),
-        });
-        break;
-      }
+      this.periodosService.cerrar(idp).subscribe({
+        next: (res) => {
+          this.periodos = this.periodos.map(p =>
+            p.id_periodo === idp ? { ...p, esta_abierto: false } : p
+          );
+          this.openSuccess(res?.message || 'Período cerrado correctamente.');
+        },
+        error: (err) =>
+          this.toast.error(
+            this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.',
+            'Error',
+            0
+          ),
+      });
+      break;
+    }
 
+    case 'periodo-delete': {
+      const idp = payload?.id_periodo as number | undefined;
+      if (!idp) return this.openError('No se encontró el identificador del período.');
 
-      case 'ejercicio-save': {
-        const idEmp = this.empresaId();
-        if (!idEmp) return this.openError('No hay empresa seleccionada.');
-        const payloadEj: EjercicioContableDto = {
-          id_empresa: idEmp,
-          anio: Number(this.formEjercicio.anio),
-          fecha_inicio: this.formEjercicio.fecha_inicio!,
-          fecha_fin: this.formEjercicio.fecha_fin!,
-          esta_abierto: this.formEjercicio.esta_abierto ?? true,
-          id_ejercicio: this.editEjercicioId ?? undefined,
-        };
+      this.periodosService.delete(idp).subscribe({
+        next: () => {
+          this.periodos = this.periodos.filter(p => p.id_periodo !== idp);
+          this.openSuccess('Período eliminado.');
+        },
+        error: (err) => this.openError('No se pudo eliminar el período', err),
+      });
+      break;
+    }
 
-        const req$ = this.editEjercicioId
-          ? this.ejerciciosService.update(this.editEjercicioId, payloadEj)
-          : this.ejerciciosService.create(payloadEj);
+    case 'ejercicio-save': {
+      const idEmp = this.empresaId();
+      if (!idEmp) return this.openError('No hay empresa seleccionada.');
 
-        req$.subscribe({
-          next: (saved) => {
-            this.modalEjercicioOpen = false;
-            if (this.editEjercicioId) {
-              this.ejercicios = this.ejercicios.map(e => e.id_ejercicio === this.editEjercicioId ? { ...e, ...saved } : e);
-              if (this.ejercicioSeleccionado?.id_ejercicio === this.editEjercicioId) {
-                this.setEjercicioSeleccionado(saved);
-              }
-              this.openSuccess('Ejercicio actualizado.');
-            } else {
-              this.ejercicios = [...this.ejercicios, saved];
-              this.setEjercicioSeleccionado(saved);
-              this.openSuccess('Ejercicio creado.');
+      const payloadEj: EjercicioContableDto = {
+        id_empresa: idEmp,
+        anio: Number(this.formEjercicio.anio),
+        fecha_inicio: this.formEjercicio.fecha_inicio!,
+        fecha_fin: this.formEjercicio.fecha_fin!,
+        esta_abierto: this.formEjercicio.esta_abierto ?? true,
+        id_ejercicio: this.editEjercicioId ?? undefined,
+      };
 
-              this.modalPeriodoTitle = 'Crear período';
-              this.editPeriodoId = null;
-              this.autoCreate = true;
-              this.autoCreateTipo = 'MENSUAL';
-              this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
-              Promise.resolve().then(() => this.modalPeriodoOpen = true);
-            }
-          },
-          error: (err) => this.openError('No se pudo guardar el ejercicio', err),
-        });
-        break;
-      }
+      const req$ = this.editEjercicioId
+        ? this.ejerciciosService.update(this.editEjercicioId, payloadEj)
+        : this.ejerciciosService.create(payloadEj);
 
-      case 'ejercicio-delete': {
-        const id = payload?.id_ejercicio as number | undefined;
-        if (!id) return this.openError('No se encontró el identificador del ejercicio.');
-        this.ejerciciosService.delete(id).subscribe({
-          next: () => {
-            this.ejercicios = this.ejercicios.filter(e => e.id_ejercicio !== id);
-            if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(null);
-            this.loadPeriodos();
-            this.openSuccess('Ejercicio eliminado.');
-          },
-          error: (err) => this.openError('No se pudo eliminar el ejercicio', err),
-        });
-        break;
-      }
-
-      case 'ejercicio-abrir': {
-        const id = payload?.id_ejercicio as number | undefined;
-        if (!id) return this.openError('No se encontró el identificador del ejercicio.');
-        this.ejerciciosService.abrir(id).subscribe({
-          next: (res) => {
-            this.ejercicios = this.ejercicios.map(e => e.id_ejercicio === id ? { ...e, ...res } : e);
-            if (this.ejercicioSeleccionado?.id_ejercicio === id) this.setEjercicioSeleccionado(res);
-            this.openSuccess('Ejercicio marcado como ABIERTO.');
-          },
-          error: (err) => this.openError('No se pudo abrir el ejercicio', err),
-        });
-        break;
-      }
-
-      case 'ejercicio-cerrar': {
-        const id = payload?.id_ejercicio as number | undefined;
-        if (!id) return this.openError('No se encontró el identificador del ejercicio.');
-
-        // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
-        const userId = 1;
-        if (!userId) {
-          return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
-        }
-        // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
-        const centroId = 300;
-        if (!centroId) {
-          return this.openError('No se pudo determinar el centro de costo (id_centro).');
-        }
-
-        const cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
-        const traspasarACapital = false;
-        const cuentaCapitalId = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
-
-        this.ejerciciosService.cerrar(id, {
-          cuentaResultadosId,
-          traspasarACapital,
-          cuentaCapitalId,
-          id_usuario: userId,
-          id_centro: centroId,
-        }).subscribe({
-          next: (res) => {
+      req$.subscribe({
+        next: (saved) => {
+          this.modalEjercicioOpen = false;
+          if (this.editEjercicioId) {
             this.ejercicios = this.ejercicios.map(e =>
-              e.id_ejercicio === id ? { ...e, esta_abierto: false } : e
+              e.id_ejercicio === this.editEjercicioId ? { ...e, ...saved } : e
             );
-            if (this.ejercicioSeleccionado?.id_ejercicio === id) {
-              this.setEjercicioSeleccionado({ ...this.ejercicioSeleccionado, esta_abierto: false } as any);
+            if (this.ejercicioSeleccionado?.id_ejercicio === this.editEjercicioId) {
+              this.setEjercicioSeleccionado(saved);
             }
-            this.openSuccess(
-              res?.mensaje ||
-              'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
-            );
-          },
-          error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.', 'Error', 0),
-        });
-        break;
+            this.openSuccess('Ejercicio actualizado.');
+          } else {
+            this.ejercicios = [...this.ejercicios, saved];
+            this.setEjercicioSeleccionado(saved);
+            this.openSuccess('Ejercicio creado.');
+
+            this.modalPeriodoTitle = 'Crear período';
+            this.editPeriodoId = null;
+            this.autoCreate = true;
+            this.autoCreateTipo = 'MENSUAL';
+            this.formPeriodo = {
+              tipo_periodo: 'MENSUAL',
+              fecha_inicio: '',
+              fecha_fin: '',
+              esta_abierto: true,
+            };
+            Promise.resolve().then(() => (this.modalPeriodoOpen = true));
+          }
+        },
+        error: (err) => this.openError('No se pudo guardar el ejercicio', err),
+      });
+      break;
+    }
+
+    case 'ejercicio-delete': {
+      const id = payload?.id_ejercicio as number | undefined;
+      if (!id) return this.openError('No se encontró el identificador del ejercicio.');
+      this.ejerciciosService.delete(id).subscribe({
+        next: () => {
+          this.ejercicios = this.ejercicios.filter(e => e.id_ejercicio !== id);
+          if (this.ejercicioSeleccionado?.id_ejercicio === id) {
+            this.setEjercicioSeleccionado(null);
+          }
+          this.loadPeriodos();
+          this.openSuccess('Ejercicio eliminado.');
+        },
+        error: (err) => this.openError('No se pudo eliminar el ejercicio', err),
+      });
+      break;
+    }
+
+    case 'ejercicio-abrir': {
+      const id = payload?.id_ejercicio as number | undefined;
+      if (!id) return this.openError('No se encontró el identificador del ejercicio.');
+      this.ejerciciosService.abrir(id).subscribe({
+        next: (res) => {
+          this.ejercicios = this.ejercicios.map(e =>
+            e.id_ejercicio === id ? { ...e, ...res } : e
+          );
+          if (this.ejercicioSeleccionado?.id_ejercicio === id) {
+            this.setEjercicioSeleccionado(res);
+          }
+          this.openSuccess('Ejercicio marcado como ABIERTO.');
+        },
+        error: (err) => this.openError('No se pudo abrir el ejercicio', err),
+      });
+      break;
+    }
+
+    case 'ejercicio-cerrar': {
+      const id = payload?.id_ejercicio as number | undefined;
+      if (!id) return this.openError('No se encontró el identificador del ejercicio.');
+
+      const userId = 1; // ⚠️ pendiente de amarrar al usuario real
+      if (!userId) {
+        return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
       }
+      const centroId = 300;
+      if (!centroId) {
+        return this.openError('No se pudo determinar el centro de costo (id_centro).');
+      }
+
+      const cuentaResultadosId = 53;
+      const traspasarACapital = false;
+      const cuentaCapitalId = traspasarACapital ? 51 : null;
+
+      this.ejerciciosService.cerrar(id, {
+        cuentaResultadosId,
+        traspasarACapital,
+        cuentaCapitalId,
+        id_usuario: userId,
+        id_centro: centroId,
+      }).subscribe({
+        next: (res) => {
+          this.ejercicios = this.ejercicios.map(e =>
+            e.id_ejercicio === id ? { ...e, esta_abierto: false } : e
+          );
+          if (this.ejercicioSeleccionado?.id_ejercicio === id) {
+            this.setEjercicioSeleccionado({
+              ...this.ejercicioSeleccionado,
+              esta_abierto: false,
+            } as any);
+          }
+          this.openSuccess(
+            res?.mensaje ||
+              'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).'
+          );
+        },
+        error: (err) =>
+          this.toast.error(
+            this.extractErrorMessage(err) ?? 'Error al cargar los datos de la empresa.',
+            'Error',
+            0
+          ),
+      });
+      break;
     }
   }
+}
 
 
   onRowAction(evt: { action: string; row: UiEmpresa }) {
-    if (evt.action === 'edit') return this.onEdit(evt.row);
-    this.openError(`Acción no soportada: ${evt.action}`);
+  if (evt.action === 'edit') {
+    return this.onEdit(evt.row);
   }
+
+  if (evt.action === 'delete') {
+    if (!this.canDelete) {
+      return this.openError('No tienes permisos para eliminar la empresa');
+    }
+
+    const id = evt.row.id_empresa ?? evt.row.id;
+    if (!id) {
+      return this.openError('No se encontró el identificador de la empresa.');
+    }
+
+    this.confirmTitle = 'Confirmar eliminación';
+    this.confirmMessage = `¿Eliminar la empresa "${evt.row.razon_social}"? Esta acción no se puede deshacer.`;
+    this.confirmKind = 'empresa-delete';
+    this.confirmPayload = { id_empresa: id };
+    this.confirmOpen = true;
+    return;
+  }
+
+  this.openError(`Acción no soportada: ${evt.action}`);
+}
+
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }
 
   // Abrir gestor de ejercicios

@@ -737,6 +737,34 @@ var EmpresaComponent = /** @class */ (function () {
         var payload = this.confirmPayload;
         this.closeConfirm();
         switch (kind) {
+            // 🔴 ELIMINAR EMPRESA
+            case 'empresa-delete': {
+                var id = payload === null || payload === void 0 ? void 0 : payload.id_empresa;
+                if (!id) {
+                    return this.openError('No se encontró el identificador de la empresa.');
+                }
+                this.empresaService.deleteEmpresa(id).subscribe({
+                    next: function () {
+                        var _a;
+                        // Limpia la UI: ya no hay empresa
+                        _this.rows = [];
+                        _this.periodos = [];
+                        _this.ejercicios = [];
+                        _this.ejercicioSeleccionado = null;
+                        // Limpia selección de ejercicio en localStorage (si existía)
+                        var key = (_a = _this.storageKey) === null || _a === void 0 ? void 0 : _a.call(_this);
+                        if (key) {
+                            localStorage.removeItem(key);
+                        }
+                        _this.openSuccess('Empresa eliminada correctamente.');
+                    },
+                    error: function (err) {
+                        _this.openError('No se pudo eliminar la empresa.', err);
+                    }
+                });
+                break;
+            }
+            // 💾 GUARDAR / ACTUALIZAR EMPRESA
             case 'empresa-save': {
                 var id = (_a = this.formEmpresa.id_empresa) !== null && _a !== void 0 ? _a : this.formEmpresa.id;
                 if (id == null)
@@ -777,7 +805,9 @@ var EmpresaComponent = /** @class */ (function () {
                     next: function (saved) {
                         _this.modalPeriodoOpen = false;
                         if (_this.editPeriodoId) {
-                            _this.periodos = _this.periodos.map(function (p) { return p.id_periodo === _this.editPeriodoId ? __assign(__assign({}, p), saved) : p; });
+                            _this.periodos = _this.periodos.map(function (p) {
+                                return p.id_periodo === _this.editPeriodoId ? __assign(__assign({}, p), saved) : p;
+                            });
                             _this.openSuccess('Período actualizado.');
                         }
                         else {
@@ -800,7 +830,10 @@ var EmpresaComponent = /** @class */ (function () {
                         });
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.message) || 'Período cerrado correctamente.');
                     },
-                    error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
+                    error: function (err) {
+                        var _a;
+                        return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0);
+                    }
                 });
                 break;
             }
@@ -837,7 +870,9 @@ var EmpresaComponent = /** @class */ (function () {
                         var _a;
                         _this.modalEjercicioOpen = false;
                         if (_this.editEjercicioId) {
-                            _this.ejercicios = _this.ejercicios.map(function (e) { return e.id_ejercicio === _this.editEjercicioId ? __assign(__assign({}, e), saved) : e; });
+                            _this.ejercicios = _this.ejercicios.map(function (e) {
+                                return e.id_ejercicio === _this.editEjercicioId ? __assign(__assign({}, e), saved) : e;
+                            });
                             if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === _this.editEjercicioId) {
                                 _this.setEjercicioSeleccionado(saved);
                             }
@@ -851,8 +886,13 @@ var EmpresaComponent = /** @class */ (function () {
                             _this.editPeriodoId = null;
                             _this.autoCreate = true;
                             _this.autoCreateTipo = 'MENSUAL';
-                            _this.formPeriodo = { tipo_periodo: 'MENSUAL', fecha_inicio: '', fecha_fin: '', esta_abierto: true };
-                            Promise.resolve().then(function () { return _this.modalPeriodoOpen = true; });
+                            _this.formPeriodo = {
+                                tipo_periodo: 'MENSUAL',
+                                fecha_inicio: '',
+                                fecha_fin: '',
+                                esta_abierto: true
+                            };
+                            Promise.resolve().then(function () { return (_this.modalPeriodoOpen = true); });
                         }
                     },
                     error: function (err) { return _this.openError('No se pudo guardar el ejercicio', err); }
@@ -867,8 +907,9 @@ var EmpresaComponent = /** @class */ (function () {
                     next: function () {
                         var _a;
                         _this.ejercicios = _this.ejercicios.filter(function (e) { return e.id_ejercicio !== id_1; });
-                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_1)
+                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_1) {
                             _this.setEjercicioSeleccionado(null);
+                        }
                         _this.loadPeriodos();
                         _this.openSuccess('Ejercicio eliminado.');
                     },
@@ -883,9 +924,12 @@ var EmpresaComponent = /** @class */ (function () {
                 this.ejerciciosService.abrir(id_2).subscribe({
                     next: function (res) {
                         var _a;
-                        _this.ejercicios = _this.ejercicios.map(function (e) { return e.id_ejercicio === id_2 ? __assign(__assign({}, e), res) : e; });
-                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_2)
+                        _this.ejercicios = _this.ejercicios.map(function (e) {
+                            return e.id_ejercicio === id_2 ? __assign(__assign({}, e), res) : e;
+                        });
+                        if (((_a = _this.ejercicioSeleccionado) === null || _a === void 0 ? void 0 : _a.id_ejercicio) === id_2) {
                             _this.setEjercicioSeleccionado(res);
+                        }
                         _this.openSuccess('Ejercicio marcado como ABIERTO.');
                     },
                     error: function (err) { return _this.openError('No se pudo abrir el ejercicio', err); }
@@ -896,19 +940,17 @@ var EmpresaComponent = /** @class */ (function () {
                 var id_3 = payload === null || payload === void 0 ? void 0 : payload.id_ejercicio;
                 if (!id_3)
                     return this.openError('No se encontró el identificador del ejercicio.');
-                // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
-                var userId = 1;
+                var userId = 1; // ⚠️ pendiente de amarrar al usuario real
                 if (!userId) {
                     return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
                 }
-                // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
                 var centroId = 300;
                 if (!centroId) {
                     return this.openError('No se pudo determinar el centro de costo (id_centro).');
                 }
-                var cuentaResultadosId = 53; // ID de "Resultados del ejercicio"
+                var cuentaResultadosId = 53;
                 var traspasarACapital = false;
-                var cuentaCapitalId = traspasarACapital ? 51 : null; // ID de Utilidad de ejercicios anteriores
+                var cuentaCapitalId = traspasarACapital ? 51 : null;
                 this.ejerciciosService.cerrar(id_3, {
                     cuentaResultadosId: cuentaResultadosId,
                     traspasarACapital: traspasarACapital,
@@ -927,15 +969,35 @@ var EmpresaComponent = /** @class */ (function () {
                         _this.openSuccess((res === null || res === void 0 ? void 0 : res.mensaje) ||
                             'Ejercicio marcado como CERRADO. Se generó póliza de cierre y se recalculó la apertura del siguiente ejercicio (si aplica).');
                     },
-                    error: function (err) { var _a; return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0); }
+                    error: function (err) {
+                        var _a;
+                        return _this.toast.error((_a = _this.extractErrorMessage(err)) !== null && _a !== void 0 ? _a : 'Error al cargar los datos de la empresa.', 'Error', 0);
+                    }
                 });
                 break;
             }
         }
     };
     EmpresaComponent.prototype.onRowAction = function (evt) {
-        if (evt.action === 'edit')
+        var _a;
+        if (evt.action === 'edit') {
             return this.onEdit(evt.row);
+        }
+        if (evt.action === 'delete') {
+            if (!this.canDelete) {
+                return this.openError('No tienes permisos para eliminar la empresa');
+            }
+            var id = (_a = evt.row.id_empresa) !== null && _a !== void 0 ? _a : evt.row.id;
+            if (!id) {
+                return this.openError('No se encontró el identificador de la empresa.');
+            }
+            this.confirmTitle = 'Confirmar eliminación';
+            this.confirmMessage = "\u00BFEliminar la empresa \"" + evt.row.razon_social + "\"? Esta acci\u00F3n no se puede deshacer.";
+            this.confirmKind = 'empresa-delete';
+            this.confirmPayload = { id_empresa: id };
+            this.confirmOpen = true;
+            return;
+        }
         this.openError("Acci\u00F3n no soportada: " + evt.action);
     };
     EmpresaComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
