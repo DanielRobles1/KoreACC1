@@ -17,16 +17,17 @@
           />
         </div>
 
-        <nav class="tabs" *ngIf="tabs?.length">
+      <nav class="tabs" *ngIf="tabs?.length">
   <button
     *ngFor="let t of tabs; trackBy: trackByIndex"
     type="button"
     class="tab-btn"
-    [routerLink]="t.route || []"
+    [routerLink]="t.route ? t.route : null"
     routerLinkActive="active"
     [routerLinkActiveOptions]="{ exact: true }"
+    [class.active]="!t.route && t.id === activeTabId"
     (click)="onTabClick(t.id)">
-
+    
     <img
       *ngIf="t.icon"
       class="tab-icon"
@@ -37,6 +38,7 @@
     <span>{{ t.label }}</span>
   </button>
 </nav>
+
 
       </div>
 
