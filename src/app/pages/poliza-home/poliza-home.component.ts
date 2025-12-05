@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, CurrencyPipe, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -9,6 +9,10 @@ import { PolizasService, Poliza, Movimiento } from '../../services/polizas.servi
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
+
+import { AuthService } from '@app/services/auth.service';
+import { WsService } from '@app/services/ws.service';
+import { PermissionWatcher } from '@app/utils/permissions.util';
 
 import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta, toDateSafe } from '@app/utils/fecha-utils';
 
@@ -38,56 +42,88 @@ type PolizaRow = Poliza & { id_poliza?: number; id?: number };
   templateUrl: './poliza-home.component.html',
   styleUrls: ['./poliza-home.component.scss'],
 })
-export class PolizaHomeComponent implements OnInit {
+export class PolizaHomeComponent implements OnInit, OnDestroy {
 
   sidebarOpen = true;
-  polizaSeleccionada: Poliza | null = null;  // Para almacenar la póliza seleccionada
+  polizaSeleccionada: Poliza | null = null;
 
   constructor(
     private location: Location,
     private router: Router,
     private api: PolizasService,
     private ejercicioSvc: EjercicioContableService,
-    private onboarding: OnboardingService
+    private onboarding: OnboardingService,
+    private auth: AuthService,
+    private ws: WsService,
   ) { }
 
-seleccionarPoliza(p: Poliza) {
+  canCreate = false;
+  canEdit = false;
+  canDelete = false;
+
+  private permWatcher?: PermissionWatcher;
+
+  seleccionarPoliza(p: Poliza) {
     this.polizaSeleccionada = p;
   }
 
-  // Método para navegar al formulario de ajuste
- irACrearAjuste() {
-  // Verificar si la póliza seleccionada existe
-  if (!this.polizaSeleccionada) {
-    this.showToast({
-      type: 'warning',
-      title: 'Póliza no seleccionada',
-      message: 'Por favor, selecciona una póliza antes de crear el ajuste.'
-    });
-    return; // No redirige si no hay póliza seleccionada
-  }
+  irACrearAjuste() {
+    if (!this.canCreate) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para crear pólizas.' });
+      return;
+    }
+    if (!this.polizaSeleccionada) {
+      this.showToast({
+        type: 'warning',
+        title: 'Póliza no seleccionada',
+        message: 'Por favor, selecciona una póliza antes de crear el ajuste.'
+      });
+      return;
+    }
 
-  // Verifica si el ID de la póliza seleccionada existe
-  const idPoliza = this.polizaSeleccionada.id_poliza;
-  if (!idPoliza) {
-    this.showToast({
-      type: 'error',
-      title: 'ID de póliza inválido',
-      message: 'No se ha encontrado el ID de la póliza seleccionada.'
-    });
-    return; // No redirige si el ID de la póliza es inválido
-  }
+    const idPoliza = this.polizaSeleccionada.id_poliza;
+    if (!idPoliza) {
+      this.showToast({
+        type: 'error',
+        title: 'ID de póliza inválido',
+        message: 'No se ha encontrado el ID de la póliza seleccionada.'
+      });
+      return; // No redirige si el ID de la póliza es inválido
+    }
 
-  // Redirige a la página de ajuste con el ID de la póliza seleccionada
-  this.router.navigate(['/poliza/ajuste', idPoliza]);
-}
+    // Redirige a la página de ajuste con el ID de la póliza seleccionada
+    this.router.navigate(['/poliza/ajuste', idPoliza]);
+  }
 
   ejercicios: Array<{ id_ejercicio: number; etiqueta: string }> = [];
   selectedEjercicioId: number | null = null;
   Math = Math;
 
-    ngOnInit() {
-    //this.onboarding.maybeStartGlobalTour();  
+  ngOnInit() {
+    this.permWatcher = new PermissionWatcher(
+      this.auth,
+      this.ws,
+      {
+        toastOk: (m) => this.showToast({ type: 'success', message: m }),
+        toastWarn: (m) => this.showToast({ type: 'warning', message: m }),
+        toastError: (m) => this.showToast({ type: 'error', message: m }),
+      },
+      (flags) => {
+        this.canCreate = flags.canCreate;
+        this.canEdit = flags.canEdit;
+        this.canDelete = flags.canDelete;
+      },
+      {
+        keys: {
+          create: 'crear_poliza',
+          edit: 'editar_poliza',
+          delete: 'eliminar_poliza',
+        },
+        socketEvent: ['permissions:changed', 'role-permissions:changed'],
+        contextLabel: 'Pólizas',
+      }
+    );
+    this.permWatcher.start();
 
     this.cargarCatalogos();
     this.cargarCfdiRecientes();
@@ -95,6 +131,9 @@ seleccionarPoliza(p: Poliza) {
     this.cargarEjercicios();
   }
 
+  ngOnDestroy(): void {
+    this.permWatcher?.stop();
+  }
 
   volver() { this.location.back(); }
 
@@ -349,7 +388,7 @@ seleccionarPoliza(p: Poliza) {
           } else {
             const rawPorRango = arr.find((e: any) => {
               const fi = toDateSafe(e.fecha_inicio ?? e.inicio ?? e.start_date);
-              const ff = toDateSafe(e.fecha_fin   ?? e.fin   ?? e.end_date); 
+              const ff = toDateSafe(e.fecha_fin ?? e.fin ?? e.end_date);
               if (!fi && !ff) return false;
               const t = hoy.getTime();
               const ti = fi ? fi.getTime() : -Infinity;
@@ -624,12 +663,20 @@ seleccionarPoliza(p: Poliza) {
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
   editarPoliza(p: PolizaRow) {
+    if (!this.canEdit) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para editar pólizas.' });
+      return;
+    }
     const id = (p as any)?.id_poliza ?? (p as any)?.id;
     if (!id) { console.warn('No se encontró id_poliza en la fila seleccionada'); return; }
     this.router.navigate(['/polizas', 'editar', String(id)]);
   }
 
   eliminarPolizaDeFila(p: PolizaRow) {
+    if (!this.canDelete) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para eliminar pólizas.' });
+      return;
+    }
     const id = this.getIdPoliza(p);
     if (!id) { this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' }); return; }
     this.eliminarPoliza(id);
@@ -681,6 +728,10 @@ seleccionarPoliza(p: Poliza) {
   }
 
   eliminarPoliza(id_poliza?: number): void {
+    if (!this.canDelete) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para eliminar pólizas.' });
+      return;
+    }
     if (id_poliza == null) {
       this.showToast({ type: 'warning', title: 'Atención', message: 'ID de póliza inválido.' });
       return;
@@ -701,7 +752,13 @@ seleccionarPoliza(p: Poliza) {
     });
   }
 
-  irANueva() { this.router.navigate(['/polizas', 'nueva']); }
+  irANueva() {
+    if (!this.canCreate) {
+      this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para crear pólizas.' });
+      return;
+    }
+    this.router.navigate(['/polizas']);
+  }
 
   private isAllowedEstadoUI(e: any): e is 'Por revisar' | 'Revisada' | 'Aprobada' | 'Contabilizada' {
     return e === 'Por revisar' || e === 'Revisada' || e === 'Aprobada' || e === 'Contabilizada';

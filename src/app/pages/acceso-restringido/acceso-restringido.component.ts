@@ -22,7 +22,7 @@ export class AccesoRestringidoComponent {
   }
 
   goHome() {
-    this.router.navigateByUrl('/empresa');
+    this.router.navigateByUrl('/poliza-home');
   }
 sidebarOpen = true;
   onSidebarToggle(open: boolean) { this.sidebarOpen = open; }

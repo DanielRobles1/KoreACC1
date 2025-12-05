@@ -79,7 +79,7 @@ export const routes: Routes = [
    path: 'polizas',
     component: PolizasComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_poliza']}
 },
 {
   path: 'polizas/editar/:id',
@@ -90,7 +90,7 @@ export const routes: Routes = [
    path: 'poliza-home',
     component: PolizaHomeComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_empresa']}
+    data: {perms: ['consultar_poliza']}
 },
 {
    path: 'balanza-comprobacion',
