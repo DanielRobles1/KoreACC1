@@ -1,11 +1,10 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { firstValueFrom } from 'rxjs';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,7 +39,6 @@ interface Cuenta {
   icon?: string;
 }
 
-
 interface ToastVM {
   open: boolean;
   title: string;
@@ -70,16 +68,26 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private subs: Subscription[] = [];
 
-  // Añade arriba en el componente
   TIPO_OPTS: CuentaTipo[] = ['ACTIVO', 'PASIVO', 'CAPITAL', 'INGRESO', 'GASTO'];
   NAT_OPTS: Naturaleza[] = ['DEUDORA', 'ACREEDORA'];
-
 
   sidebarOpen = true;
   title = 'Catálogo de Cuentas';
   tabs: CrudTab[] = [
-    { id: 'Cuentas', label: 'Cuentas', icon: 'assets/svgs/catalog-cuentas.svg', iconAlt: 'Cuentas', route: '/catalogos/cuentas' },
-    { id: 'Centros de costo', label: 'Centros de costo', icon: 'assets/svgs/catalogue-catalog.svg', iconAlt: 'centros-costo', route: '/centros-costo' },
+    {
+      id: 'Cuentas',
+      label: 'Cuentas',
+      icon: 'assets/svgs/catalog-cuentas.svg',
+      iconAlt: 'Cuentas',
+      route: '/catalogos/cuentas',
+    },
+    {
+      id: 'Centros de costo',
+      label: 'Centros de costo',
+      icon: 'assets/svgs/catalogue-catalog.svg',
+      iconAlt: 'centros-costo',
+      route: '/centros-costo',
+    },
   ];
   activeTabId: 'datos' = 'datos';
 
@@ -104,7 +112,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     if (this.canDelete) acts.push({ id: 'delete', label: 'Eliminar', icon: 'trash', kind: 'danger' });
     this.actions = acts;
   }
-
 
   rows: Cuenta[] = [];
   allCuentas: Cuenta[] = [];
@@ -133,23 +140,23 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     parentId: null,
   };
 
-
   errors: { codigo?: string; nombre?: string } = {};
   touched: { codigo: boolean; nombre: boolean } = { codigo: false, nombre: false };
 
   get canSave(): boolean {
-
     return !!this.formCuenta.codigo?.trim() && !!this.formCuenta.nombre?.trim();
   }
-
 
   confirmOpen = false;
   confirmTitle = 'Confirmación';
   confirmMessage = '';
   confirmPayload: { type: 'delete'; id: number } | null = null;
 
-
   vm: ToastVM = { open: false, title: '', message: '', type: 'info', autoCloseMs: 3500 };
+
+  expandedIds = new Set<number>();
+
+  searchTerm = '';
 
   ngOnInit(): void {
     this.loadCuentas();
@@ -157,7 +164,11 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.permWatcher = new PermissionWatcher(
       this.auth,
       this.ws,
-      { toastOk: (m) => this.toastOk(m), toastWarn: (m) => this.toastWarn(m), toastError: (m, e) => this.toastError(m, e) },
+      {
+        toastOk: (m) => this.toastOk(m),
+        toastWarn: (m) => this.toastWarn(m),
+        toastError: (m, e) => this.toastError(m, e),
+      },
       (flags) => {
         this.canCreate = flags.canCreate;
         this.canEdit = flags.canEdit;
@@ -175,11 +186,10 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       }
     );
     this.permWatcher.start();
-
   }
 
   ngOnDestroy(): void {
-    this.subs.forEach(s => s.unsubscribe());
+    this.subs.forEach((s) => s.unsubscribe());
     if (this.permWatcher) this.permWatcher.stop();
   }
 
@@ -187,13 +197,20 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     const s = this.http.get<Cuenta[]>(API).subscribe({
       next: (data) => {
         const byId = new Map<number, Cuenta>();
-        data.forEach(c => byId.set(c.id, c));
+        data.forEach((c) => byId.set(c.id, c));
+
         this.allCuentas = data;
-        this.rows = data.map(c => ({
+        this.rows = data.map((c) => ({
           ...c,
           padreCodigo: c.parentId ? byId.get(c.parentId)?.codigo ?? null : null,
           padreNombre: c.parentId ? byId.get(c.parentId)?.nombre ?? null : null,
         }));
+
+        // expandir raíces por defecto
+        this.expandedIds.clear();
+        this.rows
+          .filter((c) => !c.parentId)
+          .forEach((c) => this.expandedIds.add(c.id));
       },
       error: (err) => this.toastError('No se pudieron cargar las cuentas', err),
     });
@@ -235,7 +252,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     });
     this.subs.push(s);
   }
-
 
   onPrimary(): void {
     if (!this.canCreate) return this.toastWarn('No tienes permiso para crear cuentas.');
@@ -321,7 +337,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   }
 
   private validate(field?: 'codigo' | 'nombre'): void {
-    // valida campo específico o ambos
     const check = (f: 'codigo' | 'nombre') => {
       const val = (this.formCuenta[f] ?? '').toString().trim();
       if (!val) this.errors[f] = f === 'codigo' ? 'El código es obligatorio' : 'El nombre es obligatorio';
@@ -336,17 +351,19 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     }
   }
 
-
   onFieldChange(field: 'codigo' | 'nombre', value: string): void {
-    const v = (value ?? '').trimStart(); // evita espacios al inicio
+    const v = (value ?? '').trimStart();
     this.formCuenta[field] = v;
     this.touched[field] = true;
     this.validate(field);
   }
 
-
-  closeModal(): void { this.editOpen = false; }
-  cancelModal(): void { this.editOpen = false; }
+  closeModal(): void {
+    this.editOpen = false;
+  }
+  cancelModal(): void {
+    this.editOpen = false;
+  }
 
   confirmModal(): void {
     this.enforcePosteableRule();
@@ -356,10 +373,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     if (!this.canSave) {
       const msg = this.errors.codigo || this.errors.nombre || 'Completa los campos obligatorios';
       return this.toastWarn(msg);
-    }
-
-    if (this.formCuenta.ctaMayor && this.formCuenta.parentId) {
-      return this.toastWarn('Una cuenta mayor no debe tener cuenta padre');
     }
 
     const payload: Partial<Cuenta> = {
@@ -376,12 +389,13 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     else this.updateCuenta(this.editId, payload);
   }
 
-
   closeConfirm(): void {
     this.confirmOpen = false;
     this.confirmPayload = null;
   }
-  cancelConfirm(): void { this.closeConfirm(); }
+  cancelConfirm(): void {
+    this.closeConfirm();
+  }
   confirmProceed(): void {
     if (!this.confirmPayload) return this.closeConfirm();
     if (this.confirmPayload.type === 'delete') {
@@ -394,34 +408,32 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     if (this.formCuenta.ctaMayor) {
       this.formCuenta.posteable = false;
     } else {
-      // si deja de ser mayor, lo normal es permitir postear; default a true si venía en false
       if (this.formCuenta.posteable === false) this.formCuenta.posteable = true;
     }
   }
 
   onCtaMayorChange(v: boolean) {
     this.formCuenta.ctaMayor = !!v;
-    if (this.formCuenta.ctaMayor) this.formCuenta.parentId = null;
     this.enforcePosteableRule();
   }
 
   getParentOptions(): Cuenta[] {
     const excludeId = this.editId;
-    return this.allCuentas.filter(c =>
-      c.id !== excludeId &&
-      c.ctaMayor === true
-    );
+    return this.allCuentas.filter((c) => c.id !== excludeId && c.ctaMayor === true);
   }
 
   getCodigoPadre(id: number | null): string | null {
     if (!id) return null;
-    const c = this.allCuentas.find(x => x.id === id);
+    const c = this.allCuentas.find((x) => x.id === id);
     return c ? c.codigo : null;
   }
 
-  onSidebarToggle(open: boolean): void { this.sidebarOpen = open; }
-  onTabChange(tabId: string): void { this.activeTabId = tabId as any; }
-
+  onSidebarToggle(open: boolean): void {
+    this.sidebarOpen = open;
+  }
+  onTabChange(tabId: string): void {
+    this.activeTabId = tabId as any;
+  }
 
   toastOk(msg: string): void {
     this.vm = { open: true, title: 'Éxito', message: msg, type: 'success', autoCloseMs: 2800 };
@@ -442,26 +454,112 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     }
     this.toastError(fallbackMsg, err);
   }
-  // Search
-  searchTerm = '';
 
-  get filteredRows() {
+  //   buascar
+  onSearch(term: string) {
+    this.searchTerm = (term ?? '').toLowerCase();
+  }
+
+  // match directo contra código, nombre y padre
+  private matchesSearch(c: Cuenta, term: string): boolean {
+    if (!term) return true;
+    const nombre = (c.nombre ?? '').toLowerCase();
+    const codigo = (c.codigo ?? '').toLowerCase();
+    const padreNombre = (c.padreNombre ?? '').toLowerCase();
+    const padreCodigo = (c.padreCodigo ?? '').toLowerCase();
+
+    return (
+      nombre.includes(term) ||
+      codigo.includes(term) ||
+      padreNombre.includes(term) ||
+      padreCodigo.includes(term)
+    );
+  }
+
+  private buildChildrenMap(): Map<number, Cuenta[]> {
+    const map = new Map<number, Cuenta[]>();
+    for (const c of this.rows) {
+      if (c.parentId == null) continue;
+      if (!map.has(c.parentId)) map.set(c.parentId, []);
+      map.get(c.parentId)!.push(c);
+    }
+    return map;
+  }
+
+
+  private isVisible(
+    c: Cuenta,
+    term: string,
+    childrenMap: Map<number, Cuenta[]>,
+    cache: Map<number, boolean>
+  ): boolean {
+    if (!term) return true;
+    if (cache.has(c.id)) return cache.get(c.id)!;
+
+    if (this.matchesSearch(c, term)) {
+      cache.set(c.id, true);
+      return true;
+    }
+
+    const children = childrenMap.get(c.id) ?? [];
+    const anyChildVisible = children.some((child) => this.isVisible(child, term, childrenMap, cache));
+
+    cache.set(c.id, anyChildVisible);
+    return anyChildVisible;
+  }
+
+  private getVisibleRows(): Cuenta[] {
     const term = this.searchTerm.trim().toLowerCase();
     if (!term) return this.rows;
 
-    return this.rows.filter((r: any) => {
-      const nombre = (r?.nombre ?? '').toLowerCase();
-      const codigo = (r?.codigo ?? '').toLowerCase();
-      const padresArr = Array.isArray(r?.padreNombre)
-        ? r.padreNombre
-        : (r?.padreNombre ? [r.padreNombre] : []);
-      const hitPadre = padresArr.some((p: string) => p?.toLowerCase().includes(term));
-      return nombre.includes(term) || codigo.includes(term) || hitPadre;
-    });
+    const childrenMap = this.buildChildrenMap();
+    const cache = new Map<number, boolean>();
+
+    return this.rows.filter((c) => this.isVisible(c, term, childrenMap, cache));
   }
-  // ================== EXPORTAR A EXCEL ==================
+
+  trackByCuentaId = (_: number, c: Cuenta) => c.id;
+
+  getRootCuentas(): Cuenta[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    const childrenMap = this.buildChildrenMap();
+    const cache = new Map<number, boolean>();
+
+    return this.rows.filter(
+      (c) => !c.parentId && this.isVisible(c, term, childrenMap, cache)
+    );
+  }
+
+  getChildren(parentId: number): Cuenta[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    const childrenMap = this.buildChildrenMap();
+    const cache = new Map<number, boolean>();
+
+    const children = childrenMap.get(parentId) ?? [];
+    return children.filter((c) => this.isVisible(c, term, childrenMap, cache));
+  }
+
+  hasChildren(cuenta: Cuenta): boolean {
+    return this.rows.some((r) => r.parentId === cuenta.id);
+  }
+
+  toggleExpand(id: number): void {
+    if (this.expandedIds.has(id)) {
+      this.expandedIds.delete(id);
+    } else {
+      this.expandedIds.add(id);
+    }
+  }
+
+  isExpanded(id: number): boolean {
+    return this.expandedIds.has(id);
+  }
+
+  //  EXPORTAR A EXCEL 
   exportToExcel(): void {
-    const exportData = this.filteredRows.map(r => ({
+    const visible = this.getVisibleRows();
+
+    const exportData = visible.map((r) => ({
       Código: r.codigo,
       Nombre: r.nombre,
       '¿Mayor?': r.ctaMayor ? 'Sí' : 'No',
@@ -482,12 +580,14 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.toastOk('Catálogo exportado a Excel');
   }
 
-  // ================== EXPORTAR A PDF ==================
+  //  EXPORTAR A PDF 
   exportToPDF(): void {
+    const visible = this.getVisibleRows();
+
     const doc = new jsPDF();
     doc.text('Catálogo de Cuentas', 14, 15);
 
-    const tableData = this.filteredRows.map(r => [
+    const tableData = visible.map((r) => [
       r.codigo,
       r.nombre,
       r.ctaMayor ? 'Sí' : 'No',
@@ -505,8 +605,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.toastOk('Catálogo exportado a PDF');
   }
 
-
-
   importFromExcel(event: any): void {
     const file = event.target.files[0];
     if (!file) return;
@@ -521,19 +619,18 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
 
       const normalize = (str: any) => (str ?? '').toString().trim();
 
-      // Convertir todas las filas en objetos tipo Cuenta
-      const cuentas = rowsExcel.map(r => ({
+      const cuentas = rowsExcel.map((r) => ({
         codigo: normalize(r['Código']),
         nombre: normalize(r['Nombre']),
         ctaMayor: normalize(r['¿Mayor?']) === 'Sí',
-        parentCodigo: normalize(r['Código Padre']) || null
+        parentCodigo: normalize(r['Código Padre']) || null,
       }));
 
       const codigoToId = new Map<string, number>();
 
       try {
-        // Crear todas las cuentas padre 
-        for (const c of cuentas.filter(x => !x.parentCodigo)) {
+        // Crear cuentas sin padre
+        for (const c of cuentas.filter((x) => !x.parentCodigo)) {
           const created: any = await firstValueFrom(
             this.http.post('http://localhost:3000/api/v1/cuentas', c)
           );
@@ -541,16 +638,16 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
           if (created?.id) {
             codigoToId.set(c.codigo, created.id);
           } else {
-            console.warn('⚠️ No se devolvió ID para:', c);
+            console.warn(' No se devolvió ID para:', c);
           }
         }
 
-        //  Crear cuentas hijas (ya existen los padres) 
-        for (const c of cuentas.filter(x => x.parentCodigo)) {
+        // Crear cuentas con padre
+        for (const c of cuentas.filter((x) => x.parentCodigo)) {
           const parentId = codigoToId.get(c.parentCodigo);
 
           if (!parentId) {
-            console.warn(`⚠️ Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
+            console.warn(` Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
             continue;
           }
 
@@ -566,7 +663,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
           }
         }
 
-        //  Refrescar la tabla
         this.loadCuentas();
         this.toastOk('Importación completada y jerarquía asociada correctamente.');
       } catch (err) {
@@ -576,12 +672,6 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     };
 
     reader.readAsArrayBuffer(file);
-  }
-
-
-
-  onSearch(term: string) {
-    this.searchTerm = term ?? '';
   }
 
   trackById(index: number, item: { id: number }): number {

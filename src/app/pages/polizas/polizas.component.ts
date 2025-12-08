@@ -34,7 +34,15 @@ type CentroCostoItem = {
   clave?: string | null;
 };
 
-type CuentaLigera = { id_cuenta: number; codigo: string; nombre: string };
+type CuentaLigera = {
+  id_cuenta: number;
+  codigo: string;
+  nombre: string; // sin flechita, la sangría la haremos en el template
+  nivel?: number;
+  esPadre?: boolean;
+  posteable?: boolean | 0 | 1 | '0' | '1' | null;
+};
+
 
 // Tipos del toast
 type ToastType = 'info' | 'success' | 'warning' | 'error';
@@ -949,6 +957,8 @@ export class PolizasComponent implements OnInit {
   }
 
   // Catálogo de cuentas (para movimientos)
+   // Catálogo de cuentas (para movimientos) EN FORMA DE ÁRBOL APLANADO
+    // Catálogo de cuentas (para movimientos) en forma de árbol aplanado
   private cargarCuentas(): void {
     const svc: any = this.api as any;
     const fn =
@@ -966,28 +976,132 @@ export class PolizasComponent implements OnInit {
     fn.call(this.api).subscribe({
       next: (r: any) => {
         const items = this.normalizeList(r);
-        const parsed: CuentaLigera[] = (items || []).map((x: any) => {
-          const id = Number(x.id_cuenta ?? x.id ?? x.ID);
-          const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
-          const posteable = x.posteable ?? x.es_posteable ?? x.posteable_flag ?? x.posteable_indicator;
-          const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
-          return { id_cuenta: id, codigo, nombre, posteable } as any;
-        }).filter((c: CuentaLigera) => Number.isFinite(c.id_cuenta));
 
-        parsed.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
+        type NodoBase = {
+          id: number;
+          codigo: string;
+          nombre: string;
+          parentId: number | null;
+          posteable: boolean;
+          ctaMayor: boolean;
+          hijos: NodoBase[];
+        };
 
-        this.cuentas = parsed;
-        this.cuentasMap = new Map(parsed.map(c => [c.id_cuenta, { codigo: c.codigo, nombre: c.nombre }]));
-        console.log('Respuesta de cuentas, ', this.cuentasMap)
+        const nodos: NodoBase[] = (items || [])
+          .map((x: any) => {
+            const id = Number(x.id_cuenta ?? x.id ?? x.ID);
+            const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
+            const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
+
+            const parentIdRaw = x.parentId ?? x.parent_id ?? null;
+            const parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
+
+            const posteableRaw =
+              x.posteable ??
+              x.es_posteable ??
+              x.posteable_flag ??
+              x.posteable_indicator;
+            const ctaMayorRaw =
+              x.ctaMayor ??
+              x.cta_mayor ??
+              x.es_mayor ??
+              x.mayor_flag;
+
+            const posteable =
+              posteableRaw === true ||
+              posteableRaw === 1 ||
+              posteableRaw === '1';
+
+            const ctaMayor =
+              ctaMayorRaw === true ||
+              ctaMayorRaw === 1 ||
+              ctaMayorRaw === '1';
+
+            return {
+              id,
+              codigo,
+              nombre,
+              parentId,
+              posteable,
+              ctaMayor,
+              hijos: []
+            } as NodoBase;
+          })
+          .filter((n: NodoBase) => Number.isFinite(n.id));
+
+        // 1) map id → nodo
+        const porId = new Map<number, NodoBase>();
+        nodos.forEach(n => porId.set(n.id, n));
+
+        // 2) enlazar árbol
+        const raices: NodoBase[] = [];
+        porId.forEach(nodo => {
+          if (nodo.parentId) {
+            const padre = porId.get(nodo.parentId);
+            if (padre) {
+              padre.hijos.push(nodo);
+            } else {
+              // huérfano → raíz
+              raices.push(nodo);
+            }
+          } else {
+            raices.push(nodo);
+          }
+        });
+
+        // 3) ordenar por código
+        const sortTree = (n: NodoBase) => {
+          n.hijos.sort((a, b) =>
+            a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+          );
+          n.hijos.forEach(h => sortTree(h));
+        };
+        raices.sort((a, b) =>
+          a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+        );
+        raices.forEach(r => sortTree(r));
+
+        // 4) aplanar árbol → lista ordenada con nivel + esPadre
+        const resultado: CuentaLigera[] = [];
+
+        const visitar = (nodo: NodoBase, nivel: number) => {
+          resultado.push({
+            id_cuenta: nodo.id,
+            codigo: nodo.codigo,
+            nombre: nodo.nombre,
+            nivel,
+            esPadre: nodo.ctaMayor && !nodo.posteable,
+            posteable: nodo.posteable
+          });
+
+          nodo.hijos.forEach(h => visitar(h, nivel + 1));
+        };
+
+        raices.forEach(r => visitar(r, 0));
+
+        this.cuentas = resultado;
+
+        // el map ahora guarda el objeto completo
+        this.cuentasMap = new Map(
+          resultado.map(c => [c.id_cuenta, c])
+        );
+
+        console.log('✅ Plan de cuentas (árbol aplanado con nivel):', this.cuentas);
       },
       error: (err: any) => {
         console.error('Cuentas:', err);
-        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar las cuentas.' });
+        this.showToast({
+          type: 'warning',
+          title: 'Aviso',
+          message: 'No se pudieron cargar las cuentas.'
+        });
         this.cuentas = [];
         this.cuentasMap.clear();
       }
     });
   }
+
+
 
   cargarPolizas(): void {
     this.api.getPolizas({
@@ -1069,9 +1183,14 @@ export class PolizasComponent implements OnInit {
 
   labelCuenta(id_cuenta: number | null | undefined): string {
     if (!id_cuenta) return '—';
-    const c = this.cuentasMap.get(Number(id_cuenta));
-    return c ? `${c.codigo} — ${c.nombre}` : '—';
+    const c = this.cuentas.find(x => x.id_cuenta === Number(id_cuenta));
+    if (!c) return '—';
+
+    const nivel = c.nivel ?? 0;
+    const indent = nivel > 0 ? ' '.repeat((nivel - 1) * 2) + '↳ ' : '';
+    return `${indent}${c.codigo} — ${c.nombre}`;
   }
+
 
   triggerXmlPickerForMovimiento(input: HTMLInputElement, index: number): void {
     this.xmlMovimientoIndex = index;

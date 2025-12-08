@@ -56,42 +56,64 @@ exports.__esModule = true;
 exports.CatalogoCuentasComponent = void 0;
 var core_1 = require("@angular/core");
 var http_1 = require("@angular/common/http");
+var rxjs_1 = require("rxjs");
 var XLSX = require("xlsx");
 var file_saver_1 = require("file-saver");
 var jspdf_1 = require("jspdf");
 var jspdf_autotable_1 = require("jspdf-autotable");
-var rxjs_1 = require("rxjs");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
 var crud_panel_component_1 = require("@app/components/crud-panel/crud-panel.component");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
+var auth_service_1 = require("@app/services/auth.service");
+var ws_service_1 = require("@app/services/ws.service");
+var permissions_util_1 = require("@app/utils/permissions.util");
 var API = 'http://localhost:3000/api/v1/cuentas';
 var CatalogoCuentasComponent = /** @class */ (function () {
     function CatalogoCuentasComponent() {
+        this.auth = core_1.inject(auth_service_1.AuthService);
+        this.ws = core_1.inject(ws_service_1.WsService);
         this.http = core_1.inject(http_1.HttpClient);
         this.subs = [];
+        this.TIPO_OPTS = ['ACTIVO', 'PASIVO', 'CAPITAL', 'INGRESO', 'GASTO'];
+        this.NAT_OPTS = ['DEUDORA', 'ACREEDORA'];
         this.sidebarOpen = true;
         this.title = 'Catálogo de Cuentas';
-        this.tabs = [{ id: 'datos', label: 'Cuentas' }];
+        this.tabs = [
+            {
+                id: 'Cuentas',
+                label: 'Cuentas',
+                icon: 'assets/svgs/catalog-cuentas.svg',
+                iconAlt: 'Cuentas',
+                route: '/catalogos/cuentas'
+            },
+            {
+                id: 'Centros de costo',
+                label: 'Centros de costo',
+                icon: 'assets/svgs/catalogue-catalog.svg',
+                iconAlt: 'centros-costo',
+                route: '/centros-costo'
+            },
+        ];
         this.activeTabId = 'datos';
-        this.canEdit = true;
         this.primaryActionLabel = 'Nueva cuenta';
         this.columns = [
             { key: 'codigo', header: 'Código', width: '140' },
             { key: 'nombre', header: 'Nombre', width: '260' },
             { key: 'ctaMayor', header: '¿Mayor?', width: '90', format: function (v) { return (v ? 'Sí' : 'No'); } },
+            { key: 'tipo', header: 'Tipo', width: '120' },
+            { key: 'naturaleza', header: 'Naturaleza', width: '120' },
             { key: 'padreCodigo', header: 'Padre (código)', width: '140' },
             { key: 'padreNombre', header: 'Padre (nombre)', width: '220' },
         ];
-        this.actions = [
-            { id: 'child', label: 'Crear hijo', icon: 'folder-plus', kind: 'secondary' },
-            { id: 'edit', label: 'Editar', icon: 'edit', kind: 'primary' },
-            { id: 'delete', label: 'Eliminar', icon: 'trash', kind: 'danger' },
-        ];
+        this.actions = [];
         this.rows = [];
-        this.allCuentas = []; // para combos de padre
+        this.allCuentas = [];
+        this.canCreate = false;
+        this.canEdit = false;
+        this.canDelete = false;
         this.editOpen = false;
         this.modalTitle = 'Nueva cuenta';
         this.modalSize = 'md';
@@ -102,6 +124,9 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             codigo: '',
             nombre: '',
             ctaMayor: false,
+            posteable: true,
+            tipo: 'ACTIVO',
+            naturaleza: 'DEUDORA',
             parentId: null
         };
         this.errors = {};
@@ -111,9 +136,20 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         this.confirmMessage = '';
         this.confirmPayload = null;
         this.vm = { open: false, title: '', message: '', type: 'info', autoCloseMs: 3500 };
-        // Search
+        this.expandedIds = new Set();
         this.searchTerm = '';
+        this.trackByCuentaId = function (_, c) { return c.id; };
     }
+    CatalogoCuentasComponent.prototype.rebuildActions = function () {
+        var acts = [];
+        if (this.canCreate)
+            acts.push({ id: 'child', label: 'Crear hijo', icon: 'folder-plus', kind: 'secondary' });
+        if (this.canEdit)
+            acts.push({ id: 'edit', label: 'Editar', icon: 'edit', kind: 'primary' });
+        if (this.canDelete)
+            acts.push({ id: 'delete', label: 'Eliminar', icon: 'trash', kind: 'danger' });
+        this.actions = acts;
+    };
     Object.defineProperty(CatalogoCuentasComponent.prototype, "canSave", {
         get: function () {
             var _a, _b;
@@ -123,10 +159,32 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         configurable: true
     });
     CatalogoCuentasComponent.prototype.ngOnInit = function () {
+        var _this = this;
         this.loadCuentas();
+        this.permWatcher = new permissions_util_1.PermissionWatcher(this.auth, this.ws, {
+            toastOk: function (m) { return _this.toastOk(m); },
+            toastWarn: function (m) { return _this.toastWarn(m); },
+            toastError: function (m, e) { return _this.toastError(m, e); }
+        }, function (flags) {
+            _this.canCreate = flags.canCreate;
+            _this.canEdit = flags.canEdit;
+            _this.canDelete = flags.canDelete;
+            _this.rebuildActions();
+        }, {
+            keys: {
+                create: 'crear_cat_Contable',
+                edit: 'editar_cat_Contable',
+                "delete": 'eliminar_cat_Contable'
+            },
+            socketEvent: ['permissions:changed', 'role-permissions:changed'],
+            contextLabel: 'Catálogo contable'
+        });
+        this.permWatcher.start();
     };
     CatalogoCuentasComponent.prototype.ngOnDestroy = function () {
         this.subs.forEach(function (s) { return s.unsubscribe(); });
+        if (this.permWatcher)
+            this.permWatcher.stop();
     };
     CatalogoCuentasComponent.prototype.loadCuentas = function () {
         var _this = this;
@@ -139,6 +197,11 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                     var _a, _b, _c, _d;
                     return (__assign(__assign({}, c), { padreCodigo: c.parentId ? (_b = (_a = byId.get(c.parentId)) === null || _a === void 0 ? void 0 : _a.codigo) !== null && _b !== void 0 ? _b : null : null, padreNombre: c.parentId ? (_d = (_c = byId.get(c.parentId)) === null || _c === void 0 ? void 0 : _c.nombre) !== null && _d !== void 0 ? _d : null : null }));
                 });
+                // expandir raíces por defecto
+                _this.expandedIds.clear();
+                _this.rows
+                    .filter(function (c) { return !c.parentId; })
+                    .forEach(function (c) { return _this.expandedIds.add(c.id); });
             },
             error: function (err) { return _this.toastError('No se pudieron cargar las cuentas', err); }
         });
@@ -181,7 +244,9 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         this.subs.push(s);
     };
     CatalogoCuentasComponent.prototype.onPrimary = function () {
-        // Nueva cuenta
+        var _a;
+        if (!this.canCreate)
+            return this.toastWarn('No tienes permiso para crear cuentas.');
         this.editId = null;
         this.parentPreselectedId = null;
         this.modalTitle = 'Nueva cuenta';
@@ -189,8 +254,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             codigo: '',
             nombre: '',
             ctaMayor: false,
-            parentId: null
+            posteable: true,
+            tipo: 'ACTIVO',
+            naturaleza: 'DEUDORA',
+            parentId: (_a = this.parentPreselectedId) !== null && _a !== void 0 ? _a : null
         };
+        this.enforcePosteableRule();
         this.resetValidation();
         this.editOpen = true;
     };
@@ -203,24 +272,31 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             codigo: row.codigo,
             nombre: row.nombre,
             ctaMayor: row.ctaMayor,
+            posteable: row.posteable,
+            tipo: row.tipo,
+            naturaleza: row.naturaleza,
             parentId: (_b = row.parentId) !== null && _b !== void 0 ? _b : null
         };
+        this.enforcePosteableRule();
         this.resetValidation();
         this.editOpen = true;
     };
-    // Acepta tanto { id, row } como { action, row }
     CatalogoCuentasComponent.prototype.onRowAction = function (evt) {
         var _a;
         var id = (_a = evt === null || evt === void 0 ? void 0 : evt.id) !== null && _a !== void 0 ? _a : evt === null || evt === void 0 ? void 0 : evt.action;
         var row = evt === null || evt === void 0 ? void 0 : evt.row;
         if (!id || !row)
             return;
-        if (id === 'edit')
+        if (id === 'edit') {
+            if (!this.canEdit)
+                return this.toastWarn('No tienes permiso para editar.');
             return this.onEdit(row);
+        }
         if (id === 'child') {
-            if (!row.ctaMayor) {
+            if (!this.canCreate)
+                return this.toastWarn('No tienes permiso para crear subcuentas.');
+            if (!row.ctaMayor)
                 return this.toastWarn('Solo las cuentas mayor pueden tener subcuentas');
-            }
             this.editId = null;
             this.parentPreselectedId = row.id;
             this.modalTitle = "Nueva subcuenta de " + row.codigo;
@@ -228,13 +304,19 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                 codigo: '',
                 nombre: '',
                 ctaMayor: false,
+                posteable: true,
+                tipo: 'ACTIVO',
+                naturaleza: 'DEUDORA',
                 parentId: row.id
             };
+            this.enforcePosteableRule();
             this.resetValidation();
             this.editOpen = true;
             return;
         }
         if (id === 'delete') {
+            if (!this.canDelete)
+                return this.toastWarn('No tienes permiso para eliminar.');
             this.confirmTitle = 'Eliminar cuenta';
             this.confirmMessage = "\u00BFDeseas eliminar la cuenta " + row.codigo + " - " + row.nombre + "?";
             this.confirmPayload = { type: 'delete', id: row.id };
@@ -248,7 +330,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
     };
     CatalogoCuentasComponent.prototype.validate = function (field) {
         var _this = this;
-        // valida campo específico o ambos
         var check = function (f) {
             var _a;
             var val = ((_a = _this.formCuenta[f]) !== null && _a !== void 0 ? _a : '').toString().trim();
@@ -266,29 +347,33 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         }
     };
     CatalogoCuentasComponent.prototype.onFieldChange = function (field, value) {
-        var v = (value !== null && value !== void 0 ? value : '').trimStart(); // evita espacios al inicio
+        var v = (value !== null && value !== void 0 ? value : '').trimStart();
         this.formCuenta[field] = v;
         this.touched[field] = true;
         this.validate(field);
     };
-    CatalogoCuentasComponent.prototype.closeModal = function () { this.editOpen = false; };
-    CatalogoCuentasComponent.prototype.cancelModal = function () { this.editOpen = false; };
+    CatalogoCuentasComponent.prototype.closeModal = function () {
+        this.editOpen = false;
+    };
+    CatalogoCuentasComponent.prototype.cancelModal = function () {
+        this.editOpen = false;
+    };
     CatalogoCuentasComponent.prototype.confirmModal = function () {
         var _a, _b, _c;
-        // Valida antes de enviar
+        this.enforcePosteableRule();
         this.touched = { codigo: true, nombre: true };
         this.validate();
         if (!this.canSave) {
             var msg = this.errors.codigo || this.errors.nombre || 'Completa los campos obligatorios';
             return this.toastWarn(msg);
         }
-        if (this.formCuenta.ctaMayor && this.formCuenta.parentId) {
-            return this.toastWarn('Una cuenta mayor no debe tener cuenta padre');
-        }
         var payload = {
             codigo: ((_a = this.formCuenta.codigo) !== null && _a !== void 0 ? _a : '').trim(),
             nombre: ((_b = this.formCuenta.nombre) !== null && _b !== void 0 ? _b : '').trim(),
             ctaMayor: !!this.formCuenta.ctaMayor,
+            posteable: !!this.formCuenta.posteable,
+            tipo: this.formCuenta.tipo,
+            naturaleza: this.formCuenta.naturaleza,
             parentId: (_c = this.formCuenta.parentId) !== null && _c !== void 0 ? _c : null
         };
         if (this.editId == null)
@@ -300,7 +385,9 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         this.confirmOpen = false;
         this.confirmPayload = null;
     };
-    CatalogoCuentasComponent.prototype.cancelConfirm = function () { this.closeConfirm(); };
+    CatalogoCuentasComponent.prototype.cancelConfirm = function () {
+        this.closeConfirm();
+    };
     CatalogoCuentasComponent.prototype.confirmProceed = function () {
         if (!this.confirmPayload)
             return this.closeConfirm();
@@ -309,9 +396,22 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         }
         this.closeConfirm();
     };
+    CatalogoCuentasComponent.prototype.enforcePosteableRule = function () {
+        if (this.formCuenta.ctaMayor) {
+            this.formCuenta.posteable = false;
+        }
+        else {
+            if (this.formCuenta.posteable === false)
+                this.formCuenta.posteable = true;
+        }
+    };
+    CatalogoCuentasComponent.prototype.onCtaMayorChange = function (v) {
+        this.formCuenta.ctaMayor = !!v;
+        this.enforcePosteableRule();
+    };
     CatalogoCuentasComponent.prototype.getParentOptions = function () {
         var excludeId = this.editId;
-        return this.allCuentas.filter(function (c) { return c.id !== excludeId; });
+        return this.allCuentas.filter(function (c) { return c.id !== excludeId && c.ctaMayor === true; });
     };
     CatalogoCuentasComponent.prototype.getCodigoPadre = function (id) {
         if (!id)
@@ -319,8 +419,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         var c = this.allCuentas.find(function (x) { return x.id === id; });
         return c ? c.codigo : null;
     };
-    CatalogoCuentasComponent.prototype.onSidebarToggle = function (open) { this.sidebarOpen = open; };
-    CatalogoCuentasComponent.prototype.onTabChange = function (tabId) { this.activeTabId = tabId; };
+    CatalogoCuentasComponent.prototype.onSidebarToggle = function (open) {
+        this.sidebarOpen = open;
+    };
+    CatalogoCuentasComponent.prototype.onTabChange = function (tabId) {
+        this.activeTabId = tabId;
+    };
     CatalogoCuentasComponent.prototype.toastOk = function (msg) {
         this.vm = { open: true, title: 'Éxito', message: msg, type: 'success', autoCloseMs: 2800 };
     };
@@ -342,33 +446,103 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         }
         this.toastError(fallbackMsg, err);
     };
-    Object.defineProperty(CatalogoCuentasComponent.prototype, "filteredRows", {
-        get: function () {
-            var term = this.searchTerm.trim().toLowerCase();
-            if (!term)
-                return this.rows;
-            return this.rows.filter(function (r) {
-                var _a, _b;
-                var nombre = ((_a = r === null || r === void 0 ? void 0 : r.nombre) !== null && _a !== void 0 ? _a : '').toLowerCase();
-                var codigo = ((_b = r === null || r === void 0 ? void 0 : r.codigo) !== null && _b !== void 0 ? _b : '').toLowerCase();
-                var padresArr = Array.isArray(r === null || r === void 0 ? void 0 : r.padreNombre)
-                    ? r.padreNombre
-                    : ((r === null || r === void 0 ? void 0 : r.padreNombre) ? [r.padreNombre] : []);
-                var hitPadre = padresArr.some(function (p) { return p === null || p === void 0 ? void 0 : p.toLowerCase().includes(term); });
-                return nombre.includes(term) || codigo.includes(term) || hitPadre;
-            });
-        },
-        enumerable: false,
-        configurable: true
-    });
-    // ================== EXPORTAR A EXCEL ==================
+    //   buascar
+    CatalogoCuentasComponent.prototype.onSearch = function (term) {
+        this.searchTerm = (term !== null && term !== void 0 ? term : '').toLowerCase();
+    };
+    // match directo contra código, nombre y padre
+    CatalogoCuentasComponent.prototype.matchesSearch = function (c, term) {
+        var _a, _b, _c, _d;
+        if (!term)
+            return true;
+        var nombre = ((_a = c.nombre) !== null && _a !== void 0 ? _a : '').toLowerCase();
+        var codigo = ((_b = c.codigo) !== null && _b !== void 0 ? _b : '').toLowerCase();
+        var padreNombre = ((_c = c.padreNombre) !== null && _c !== void 0 ? _c : '').toLowerCase();
+        var padreCodigo = ((_d = c.padreCodigo) !== null && _d !== void 0 ? _d : '').toLowerCase();
+        return (nombre.includes(term) ||
+            codigo.includes(term) ||
+            padreNombre.includes(term) ||
+            padreCodigo.includes(term));
+    };
+    CatalogoCuentasComponent.prototype.buildChildrenMap = function () {
+        var map = new Map();
+        for (var _i = 0, _a = this.rows; _i < _a.length; _i++) {
+            var c = _a[_i];
+            if (c.parentId == null)
+                continue;
+            if (!map.has(c.parentId))
+                map.set(c.parentId, []);
+            map.get(c.parentId).push(c);
+        }
+        return map;
+    };
+    CatalogoCuentasComponent.prototype.isVisible = function (c, term, childrenMap, cache) {
+        var _this = this;
+        var _a;
+        if (!term)
+            return true;
+        if (cache.has(c.id))
+            return cache.get(c.id);
+        if (this.matchesSearch(c, term)) {
+            cache.set(c.id, true);
+            return true;
+        }
+        var children = (_a = childrenMap.get(c.id)) !== null && _a !== void 0 ? _a : [];
+        var anyChildVisible = children.some(function (child) { return _this.isVisible(child, term, childrenMap, cache); });
+        cache.set(c.id, anyChildVisible);
+        return anyChildVisible;
+    };
+    CatalogoCuentasComponent.prototype.getVisibleRows = function () {
+        var _this = this;
+        var term = this.searchTerm.trim().toLowerCase();
+        if (!term)
+            return this.rows;
+        var childrenMap = this.buildChildrenMap();
+        var cache = new Map();
+        return this.rows.filter(function (c) { return _this.isVisible(c, term, childrenMap, cache); });
+    };
+    CatalogoCuentasComponent.prototype.getRootCuentas = function () {
+        var _this = this;
+        var term = this.searchTerm.trim().toLowerCase();
+        var childrenMap = this.buildChildrenMap();
+        var cache = new Map();
+        return this.rows.filter(function (c) { return !c.parentId && _this.isVisible(c, term, childrenMap, cache); });
+    };
+    CatalogoCuentasComponent.prototype.getChildren = function (parentId) {
+        var _this = this;
+        var _a;
+        var term = this.searchTerm.trim().toLowerCase();
+        var childrenMap = this.buildChildrenMap();
+        var cache = new Map();
+        var children = (_a = childrenMap.get(parentId)) !== null && _a !== void 0 ? _a : [];
+        return children.filter(function (c) { return _this.isVisible(c, term, childrenMap, cache); });
+    };
+    CatalogoCuentasComponent.prototype.hasChildren = function (cuenta) {
+        return this.rows.some(function (r) { return r.parentId === cuenta.id; });
+    };
+    CatalogoCuentasComponent.prototype.toggleExpand = function (id) {
+        if (this.expandedIds.has(id)) {
+            this.expandedIds["delete"](id);
+        }
+        else {
+            this.expandedIds.add(id);
+        }
+    };
+    CatalogoCuentasComponent.prototype.isExpanded = function (id) {
+        return this.expandedIds.has(id);
+    };
+    //  EXPORTAR A EXCEL 
     CatalogoCuentasComponent.prototype.exportToExcel = function () {
-        var exportData = this.filteredRows.map(function (r) {
+        var visible = this.getVisibleRows();
+        var exportData = visible.map(function (r) {
             var _a, _b;
             return ({
                 Código: r.codigo,
                 Nombre: r.nombre,
                 '¿Mayor?': r.ctaMayor ? 'Sí' : 'No',
+                Posteable: r.posteable ? 'Sí' : 'No',
+                Tipo: r.tipo,
+                Naturaleza: r.naturaleza,
                 'Padre (Código)': (_a = r.padreCodigo) !== null && _a !== void 0 ? _a : '',
                 'Padre (Nombre)': (_b = r.padreNombre) !== null && _b !== void 0 ? _b : ''
             });
@@ -381,11 +555,12 @@ var CatalogoCuentasComponent = /** @class */ (function () {
         file_saver_1.saveAs(blob, "catalogo_cuentas_" + new Date().toISOString().split('T')[0] + ".xlsx");
         this.toastOk('Catálogo exportado a Excel');
     };
-    // ================== EXPORTAR A PDF ==================
+    //  EXPORTAR A PDF 
     CatalogoCuentasComponent.prototype.exportToPDF = function () {
+        var visible = this.getVisibleRows();
         var doc = new jspdf_1["default"]();
         doc.text('Catálogo de Cuentas', 14, 15);
-        var tableData = this.filteredRows.map(function (r) {
+        var tableData = visible.map(function (r) {
             var _a, _b;
             return [
                 r.codigo,
@@ -442,7 +617,7 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                             codigoToId.set(c.codigo, created.id);
                         }
                         else {
-                            console.warn('⚠️ No se devolvió ID para:', c);
+                            console.warn(' No se devolvió ID para:', c);
                         }
                         _d.label = 4;
                     case 4:
@@ -456,7 +631,7 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                         c = _c[_b];
                         parentId = codigoToId.get(c.parentCodigo);
                         if (!parentId) {
-                            console.warn("\u26A0\uFE0F Padre no encontrado para " + c.codigo + " (" + c.parentCodigo + ")");
+                            console.warn(" Padre no encontrado para " + c.codigo + " (" + c.parentCodigo + ")");
                             return [3 /*break*/, 8];
                         }
                         return [4 /*yield*/, rxjs_1.firstValueFrom(this.http.post('http://localhost:3000/api/v1/cuentas', __assign(__assign({}, c), { parentId: parentId })))];
@@ -470,7 +645,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
                         _b++;
                         return [3 /*break*/, 6];
                     case 9:
-                        // === 3️⃣ Refrescar la tabla ===
                         this.loadCuentas();
                         this.toastOk('Importación completada y jerarquía asociada correctamente.');
                         return [3 /*break*/, 11];
@@ -484,9 +658,6 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             });
         }); };
         reader.readAsArrayBuffer(file);
-    };
-    CatalogoCuentasComponent.prototype.onSearch = function (term) {
-        this.searchTerm = term !== null && term !== void 0 ? term : '';
     };
     CatalogoCuentasComponent.prototype.trackById = function (index, item) {
         return item.id;

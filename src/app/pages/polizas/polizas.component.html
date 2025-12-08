@@ -16,19 +16,6 @@
 
     <h3>Nueva póliza</h3>
 
-    <!-- <div class="mode-switch">
-      <label class="mode-switch__check">
-        <input
-          type="checkbox"
-          [checked]="modoCaptura === 'motor'"
-          (change)="modoCaptura = (modoCaptura==='manual' ? 'motor' : 'manual')"
-          aria-label="Usar motor" />
-        <span>Usar motor</span>
-      </label>
-      <small *ngIf="modoCaptura==='manual'">Captura manual de movimientos</small>
-      <small *ngIf="modoCaptura==='motor'">Generación automática (flujo + contrapartida + impuestos)</small>
-    </div> -->
-
     <form
       class="form-poliza"
       (ngSubmit)="guardarPoliza()"
@@ -38,64 +25,64 @@
 
       <h4 class="section-title">Cabecera de póliza</h4>
 
-      <!-- Encabezado -->
+      <!-- Barra de ejercicio y usuario -->
       <div
-  style="
-    margin-left: auto;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.9rem;
-    color: #565656;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem; /* más separación entre bloques */
-  "
->
-  <!-- Ejercicio -->
-  <div style="display: flex; align-items: center; gap: 0.4rem;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-      <path d="M3 4h18v2H3zM8 10h13v2H8zM8 16h13v2H8zM3 10h2v2H3zM3 16h2v2H3z"></path>
-    </svg>
-    <strong>Ejercicio:</strong>
-    <select
-      [(ngModel)]="ejercicioActualId"
-      (ngModelChange)="onEjercicioSeleccionado($event)"
-      name="ejercicioSeleccionado"
-      style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
-    >
-      <option *ngFor="let e of ejercicios; trackBy: trackByEjercicioId" [ngValue]="e.id_ejercicio">
-        {{ e.anio || (e.fecha_inicio ? (e.fecha_inicio | date:'yyyy') : '—') }}
-      </option>
-    </select>
-    <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
-  </div>
+        style="
+          margin-left: auto;
+          background: rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          padding: 0.35rem 0.75rem;
+          font-size: 0.9rem;
+          color: #565656;
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+        "
+      >
+        <!-- Ejercicio -->
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M3 4h18v2H3zM8 10h13v2H8zM8 16h13v2H8zM3 10h2v2H3zM3 16h2v2H3z"></path>
+          </svg>
+          <strong>Ejercicio:</strong>
+          <select
+            [(ngModel)]="ejercicioActualId"
+            (ngModelChange)="onEjercicioSeleccionado($event)"
+            name="ejercicioSeleccionado"
+            style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
+          >
+            <option *ngFor="let e of ejercicios; trackBy: trackByEjercicioId" [ngValue]="e.id_ejercicio">
+              {{ e.anio || (e.fecha_inicio ? (e.fecha_inicio | date:'yyyy') : '—') }}
+            </option>
+          </select>
+          <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
+        </div>
 
-  <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
+        <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
 
-  <!-- Usuario -->
-  <div style="display: flex; align-items: center; gap: 0.4rem;">
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-      <circle cx="12" cy="7" r="4"></circle>
-    </svg>
-    <span class="user-name">{{ currentUserLabel || 'Usuario' }}</span>
-  </div>
+        <!-- Usuario -->
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span class="user-name">{{ currentUserLabel || 'Usuario' }}</span>
+        </div>
 
-  <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
-</div>
+        <div style="width: 1px; height: 20px; background: #ccc; opacity: 0.4;"></div>
+      </div>
 
-
+      <!-- Encabezado -->
       <div class="form-grid">
 
         <label>
@@ -147,24 +134,24 @@
         </label>
 
         <label class="status-label">
-        <span>Estatus de póliza</span>
-        <div class="status-chip por-revisar">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="black"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <circle cx="12" cy="16" r="1"></circle>
-          </svg>
-          <span>Por revisar</span>
-        </div>
-      </label>
+          <span>Estatus de póliza</span>
+          <div class="status-chip por-revisar">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <circle cx="12" cy="16" r="1"></circle>
+            </svg>
+            <span>Por revisar</span>
+          </div>
+        </label>
 
         <label>
           Concepto:
@@ -186,91 +173,26 @@
         </label>
       </div>
 
-      <!-- <div *ngIf="modoCaptura==='motor'" class="motor-panel">
-        
-        <h4>Evento (motor)</h4>
-        <div class="form-grid">
-          <label> Tipo de operación:
-            <select class="field select" [(ngModel)]="evento.tipo_operacion" [ngModelOptions]="{standalone:true}">
-              <option [ngValue]="'ingreso'">Ingreso</option>
-              <option [ngValue]="'egreso'">Egreso</option>
-            </select>
-          </label>
-
-          <label> Monto base:
-            <input class="field" type="number" [(ngModel)]="evento.monto_base" [ngModelOptions]="{standalone:true}" min="0" step="0.01">
-          </label>
-
-          <label> Fecha operación:
-            <input class="field" type="date" [(ngModel)]="evento.fecha_operacion" [ngModelOptions]="{standalone:true}">
-          </label>
-
-          <label> Medio:
-            <select class="field select" [(ngModel)]="evento.medio_cobro_pago" [ngModelOptions]="{standalone:true}">
-              <option [ngValue]="'bancos'">Bancos</option>
-              <option [ngValue]="'caja'">Caja</option>
-              <option [ngValue]="'clientes'">Clientes</option>
-              <option [ngValue]="'proveedores'">Proveedores</option>
-            </select>
-          </label>
-
-          <label> Cuenta contrapartida:
-            <select
-              class="field select"
-              [(ngModel)]="evento.id_cuenta_contrapartida"
-              [ngModelOptions]="{standalone:true}">
-              <option [ngValue]="null">— Selecciona cuenta —</option>
-              <option *ngFor="let c of getCuentasFiltradasGlobal()" [ngValue]="c.id_cuenta">
-                {{ c.codigo }} — {{ c.nombre }}
-              </option>
-            </select>
-            <div class="hint" *ngIf="evento.id_cuenta_contrapartida">
-              Seleccionada: <strong>{{ labelCuenta(evento.id_cuenta_contrapartida) }}</strong>
-            </div>
-          </label>
-
-          <label> Cliente:
-            <input class="field" [(ngModel)]="evento.cliente" [ngModelOptions]="{standalone:true}">
-          </label>
-
-          <label> Ref. Serie:
-            <input class="field" [(ngModel)]="evento.ref_serie_venta" [ngModelOptions]="{standalone:true}">
-          </label>
-
-          <label> Centro de costo:
-            <select class="field select" [(ngModel)]="evento.cc" [ngModelOptions]="{standalone:true}">
-              <option [ngValue]="null">— Selecciona CC —</option>
-              <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
-                {{ cc.nombre }}
-              </option>
-            </select>
-          </label>
-        </div>
-      </div> -->
-
+      <!-- Modo manual -->
       <div *ngIf="modoCaptura==='manual'">
         <div class="movs-header">
-  <h4 class="section-title">Movimientos</h4>
+          <h4 class="section-title">Movimientos</h4>
 
-  <div style="display:flex; gap:.5rem; align-items:center;">
-     <button type="button" class="btn pill" (click)="agregarMovimiento()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"
-                 stroke-linecap="round" stroke-linejoin="round" class="icon">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Agregar movimiento
-          </button>
+          <div style="display:flex; gap:.5rem; align-items:center;">
+            <button type="button" class="btn pill" (click)="agregarMovimiento()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"
+                   stroke-linecap="round" stroke-linejoin="round" class="icon">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Agregar movimiento
+            </button>
 
-    <!-- Botón Calculadora -->
-    <button type="button" class="btn pill" (click)="abrirModalIva()">
-      🧮 Calculadora IVA
-    </button>
-  </div>
-</div>
-
-        <div class="movs-header">
-         
+            <!-- Botón Calculadora -->
+            <button type="button" class="btn pill" (click)="abrirModalIva()">
+              🧮 Calculadora IVA
+            </button>
+          </div>
         </div>
 
         <div class="tabla-wrapper">
@@ -297,7 +219,9 @@
                   </button>
                 </td>
 
-                <td><input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" /></td>
+                <td>
+                  <input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" />
+                </td>
 
                 <td>
                   <select class="cell-input select" [(ngModel)]="mov.operacion" name="operacion{{i}}" required>
@@ -307,9 +231,17 @@
                   </select>
                 </td>
 
-                <td><input class="cell-input" type="number" [(ngModel)]="mov.monto" name="monto{{i}}" min="0" step="0.01" required /></td>
-                <td><input class="cell-input" [(ngModel)]="mov.cliente" name="cliente{{i}}" /></td>
-                <td><input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" /></td>
+                <td>
+                  <input class="cell-input" type="number" [(ngModel)]="mov.monto" name="monto{{i}}" min="0" step="0.01" required />
+                </td>
+
+                <td>
+                  <input class="cell-input" [(ngModel)]="mov.cliente" name="cliente{{i}}" />
+                </td>
+
+                <td>
+                  <input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" />
+                </td>
 
                 <td>
                   <select
@@ -345,13 +277,17 @@
                       hidden
                       (change)="onXmlPickedForMovimiento($event, i)" />
 
-                    <!-- Badge opcional con el UUID recortado -->
                     <small class="uuid-badge" *ngIf="mov.uuid">{{ mov.uuid | slice:0:8 }}…</small>
                   </div>
                 </td>
 
                 <td class="actions-cell">
-                  <button type="button" class="icon-btn danger" (click)="eliminarMovimiento(i)" title="Eliminar movimiento" aria-label="Eliminar movimiento">
+                  <button
+                    type="button"
+                    class="icon-btn danger"
+                    (click)="eliminarMovimiento(i)"
+                    title="Eliminar movimiento"
+                    aria-label="Eliminar movimiento">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                       <polyline points="3 6 5 6 21 6"></polyline>
                       <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
@@ -370,12 +306,16 @@
         <div class="totales-panel">
           <div class="tot-card">
             <div class="tot-label">TOTAL CARGOS</div>
-            <div class="tot-value">{{ getTotal(nuevaPoliza, '0') | number:'1.2-2' }}</div>
+            <div class="tot-value">
+              {{ getTotal($any(nuevaPoliza), '0') | number:'1.2-2' }}
+            </div>
           </div>
 
           <div class="tot-card">
             <div class="tot-label">TOTAL ABONOS</div>
-            <div class="tot-value">{{ getTotal(nuevaPoliza, '1') | number:'1.2-2' }}</div>
+            <div class="tot-value">
+              {{ getTotal($any(nuevaPoliza), '1') | number:'1.2-2' }}
+            </div>
           </div>
 
           <div class="tot-card">
@@ -399,7 +339,7 @@
             </span>
           </div>
         </div>
-      </div> 
+      </div>
 
       <div class="actions">
         <span *ngIf="!canGuardar()" class="hint error">
@@ -419,6 +359,7 @@
   </div>
 </app-polizas-layout>
 
+<!-- Modal selección de cuenta -->
 <app-modal-seleccion-cuenta
   [open]="modalCuentasAbierto"
   [cuentas]="cuentas"
@@ -437,6 +378,7 @@
   [showClose]="toast.showClose"
   (closed)="onToastClosed()">
 </app-toast-message>
+
 <!-- Modal Calculadora IVA -->
 <app-modal
   [open]="modalIvaOpen"
@@ -507,14 +449,13 @@
 
       <label>
         Concepto
-        <input class="field" [(ngModel)]="iva.concepto" name="iva_concepto"
-               placeholder="Ej. Venta mostrador folio 123">
+        <input
+          class="field"
+          [(ngModel)]="iva.concepto"
+          name="iva_concepto"
+          placeholder="Ej. Venta mostrador folio 123">
       </label>
     </div>
-
-    <!-- <div style="display:flex; gap:10px; margin-top:4px;">
-      <button type="button" class="btn" (click)="recalcularIVA()">Calcular</button>
-    </div> -->
 
     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
       <div class="tot-card">

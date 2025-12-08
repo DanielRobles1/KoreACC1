@@ -70,10 +70,12 @@ var router_1 = require("@angular/router");
 var modal_seleccion_cuenta_component_1 = require("@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component");
 var rxjs_1 = require("rxjs");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
+var fecha_utils_1 = require("@app/utils/fecha-utils");
 var PolizasComponent = /** @class */ (function () {
-    function PolizasComponent(api) {
+    function PolizasComponent(api, ejercicioSvc) {
         var _this = this;
         this.api = api;
+        this.ejercicioSvc = ejercicioSvc;
         this.modalIvaOpen = false;
         this.iva = {
             op: 'venta',
@@ -131,17 +133,8 @@ var PolizasComponent = /** @class */ (function () {
         this.toStrOrNull = function (v) {
             return (v == null ? null : (String(v).trim() || null));
         };
-        this.toDateOrNull = function (v) {
-            if (!v)
-                return null;
-            var s = String(v);
-            if (/^\d{4}-\d{2}-\d2$/.test(s))
-                return s;
-            var d = new Date(s);
-            if (isNaN(d.getTime()))
-                return null;
-            return d.getFullYear() + "-" + _this.pad2(d.getMonth() + 1) + "-" + _this.pad2(d.getDate());
-        };
+        this.trackByEjercicioId = function (_, e) { return e === null || e === void 0 ? void 0 : e.id_ejercicio; };
+        this.compareById = function (a, b) { return Number(a) === Number(b); };
         this.modoCaptura = 'manual';
         this.evento = {
             tipo_operacion: 'ingreso',
@@ -176,6 +169,29 @@ var PolizasComponent = /** @class */ (function () {
     /** Redondeo a 2 decimales tipo contable */
     PolizasComponent.prototype.r2 = function (n) {
         return Math.round((n + Number.EPSILON) * 100) / 100;
+    };
+    PolizasComponent.prototype.onBaseTipoChange = function (value) {
+        this.iva.baseTipo = value;
+        if (value === 'sin') {
+            this.iva.tasa = 0.00;
+        }
+        else {
+            this.iva.tasa = 0.16;
+        }
+        this.recalcularIVA();
+    };
+    PolizasComponent.prototype.onTasaChange = function (value) {
+        this.iva.tasa = value;
+        this.recalcularIVA();
+    };
+    PolizasComponent.prototype.onMontoChange = function (value) {
+        var n = Number(value);
+        this.iva.monto = Number.isFinite(n) ? n : 0;
+        this.recalcularIVA();
+    };
+    PolizasComponent.prototype.onConfirmarIva = function () {
+        this.agregarMovimientosDesdeIVA();
+        this.cerrarModalIva();
     };
     /** Recalcula subtotal/IVA/total según base y tasa */
     PolizasComponent.prototype.recalcularIVA = function () {
@@ -261,8 +277,11 @@ var PolizasComponent = /** @class */ (function () {
         // Normaliza tasa a número o etiqueta
         var tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
         var esExento = (tasa === 'exento');
-        var hoyISO = (new Date()).toISOString().slice(0, 10);
+        var hoyISO = fecha_utils_1.todayISO();
         var refSerie = (_b = (_a = this.evento) === null || _a === void 0 ? void 0 : _a.ref_serie_venta) !== null && _b !== void 0 ? _b : null;
+        var ccHeader = this.toNumOrNull(this.nuevaPoliza.id_centro);
+        var serieHeader = this.getSerieVentaByCcId(ccHeader !== null && ccHeader !== void 0 ? ccHeader : null);
+        var refSerieEfectiva = serieHeader !== null && serieHeader !== void 0 ? serieHeader : refSerie;
         // Selección de cuenta por MEDIO (cobro/pago) y por TASA
         var cuentaMedioVenta = function () {
             if (medio === 'caja')
@@ -336,9 +355,9 @@ var PolizasComponent = /** @class */ (function () {
                 monto: this.r2(total),
                 cliente: concepto || 'Venta',
                 fecha: hoyISO,
-                cc: null,
+                cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                 uuid: null,
-                ref_serie_venta: refSerie
+                ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
             // Abono a Ventas por el subtotal
             this.nuevaPoliza.movimientos.push({
@@ -347,9 +366,9 @@ var PolizasComponent = /** @class */ (function () {
                 monto: this.r2(subtotal),
                 cliente: concepto || 'Venta',
                 fecha: hoyISO,
-                cc: null,
+                cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                 uuid: null,
-                ref_serie_venta: refSerie
+                ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
             // Abono a IVA Trasladado (solo si tasa > 0)
             if (!esExento && tasaNum > 0) {
@@ -359,9 +378,9 @@ var PolizasComponent = /** @class */ (function () {
                     monto: this.r2(iva),
                     cliente: concepto || 'IVA Trasladado',
                     fecha: hoyISO,
-                    cc: null,
+                    cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                     uuid: null,
-                    ref_serie_venta: refSerie
+                    ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
                 });
             }
         }
@@ -376,9 +395,9 @@ var PolizasComponent = /** @class */ (function () {
                 monto: this.r2(subtotal),
                 cliente: concepto || 'Compra',
                 fecha: hoyISO,
-                cc: null,
+                cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                 uuid: null,
-                ref_serie_venta: ''
+                ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
             // Cargo a IVA Acreditable (solo si tasa > 0)
             if (!esExento && tasaNum > 0) {
@@ -388,9 +407,9 @@ var PolizasComponent = /** @class */ (function () {
                     monto: this.r2(iva),
                     cliente: concepto || 'IVA Acreditable',
                     fecha: hoyISO,
-                    cc: null,
+                    cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                     uuid: null,
-                    ref_serie_venta: ''
+                    ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
                 });
             }
             // Abono por el total pagado/por pagar
@@ -400,9 +419,9 @@ var PolizasComponent = /** @class */ (function () {
                 monto: this.r2(total),
                 cliente: concepto || (medio === 'proveedores' ? 'Proveedor' : 'Pago'),
                 fecha: hoyISO,
-                cc: null,
+                cc: ccHeader !== null && ccHeader !== void 0 ? ccHeader : null,
                 uuid: null,
-                ref_serie_venta: ''
+                ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
         }
     };
@@ -429,8 +448,8 @@ var PolizasComponent = /** @class */ (function () {
             return;
         }
         var k = tipoNombre.trim().toLowerCase();
-        var hoy = this.todayISO();
-        var año = this.todayISO().slice(0, 4);
+        var hoy = fecha_utils_1.todayISO();
+        var año = fecha_utils_1.todayISO().slice(0, 4);
         var base = '';
         if (k.includes('apertura'))
             base = "APERTURA EJERCICIO " + año;
@@ -476,16 +495,16 @@ var PolizasComponent = /** @class */ (function () {
     };
     PolizasComponent.prototype.ngOnInit = function () {
         this.cargarEjercicioActivo();
-        this.initUsuarioActual(); // setea id_usuario y nombre forzado
-        this.cargarCatalogos(); // tipos/periodos/centros
-        this.getCentros(); // centros de costo para tabla
-        this.cargarCuentas(); // catálogo de cuentas para select
-        this.cargarPolizas(); // listado
-        this.cargarCfdiRecientes(); // UUIDs
+        this.initUsuarioActual();
+        this.cargarCatalogos();
+        this.getCentros();
+        this.cargarCuentas();
+        this.cargarPolizas();
+        this.cargarCfdiRecientes();
         if (!this.evento.id_empresa)
             this.evento.id_empresa = 1;
         if (!this.evento.fecha_operacion)
-            this.evento.fecha_operacion = this.todayISO();
+            this.evento.fecha_operacion = fecha_utils_1.todayISO();
     };
     PolizasComponent.prototype.abrirModalCuentas = function (index) {
         this.indiceMovimientoSeleccionado = index;
@@ -517,18 +536,6 @@ var PolizasComponent = /** @class */ (function () {
         var _a, _b, _c, _d;
         return Array.isArray(res) ? res : ((_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : []);
     };
-    PolizasComponent.prototype.pad2 = function (n) { return String(n).padStart(2, '0'); };
-    PolizasComponent.prototype.fmtDate = function (d) {
-        if (!d)
-            return '—';
-        var s = String(d);
-        if (/^\d{4}-\d{2}-\d{2}$/.test(s))
-            return s;
-        var dt = new Date(s);
-        if (isNaN(dt.getTime()))
-            return s;
-        return dt.getFullYear() + "-" + this.pad2(dt.getMonth() + 1) + "-" + this.pad2(dt.getDate());
-    };
     PolizasComponent.prototype.N = function (v) {
         if (v === '' || v === null || v === undefined)
             return undefined;
@@ -546,6 +553,7 @@ var PolizasComponent = /** @class */ (function () {
         var fallback = usr.id_usuario != null ? "Usuario " + usr.id_usuario : 'Usuario';
         var nombreForzado = (resolved || fromEmail || fallback).toString().trim();
         this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado });
+        console.log('USUARIO', this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado }));
         var idNum = Number(usr.id_usuario);
         if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
             this.nuevaPoliza.id_usuario = idNum;
@@ -647,74 +655,75 @@ var PolizasComponent = /** @class */ (function () {
         var sel = this.cuentasMap.get(selectedId);
         return sel ? __spreadArrays([{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }], base) : base;
     };
+    PolizasComponent.prototype.isAbierto = function (e) {
+        var _a, _b, _c;
+        var v = (_c = (_b = (_a = e === null || e === void 0 ? void 0 : e.esta_abierto) !== null && _a !== void 0 ? _a : e === null || e === void 0 ? void 0 : e.activo) !== null && _b !== void 0 ? _b : e === null || e === void 0 ? void 0 : e.activo_flag) !== null && _c !== void 0 ? _c : e === null || e === void 0 ? void 0 : e.is_open;
+        if (v === true || v === 1 || v === '1')
+            return true;
+        if (typeof v === 'string')
+            return v.trim().toLowerCase() === 'true';
+        return false;
+    };
     PolizasComponent.prototype.cargarEjercicioActivo = function () {
         var _this = this;
-        var svc = this.api;
-        var fn = svc.getEjercicioActivo ||
-            svc.fetchEjercicioActivo ||
-            svc.getEjercicio ||
-            svc.fetchEjercicio ||
-            svc.listEjercicios ||
-            svc.getEjercicios;
-        if (typeof fn !== 'function') {
-            console.warn('⚠ No existe método de API para Ejercicio.');
-            this.ejercicioActual = null;
-            return;
-        }
-        var isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
-        fn.call(this.api).subscribe({
-            next: function (r) {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
-                console.log('🔍 Resultado de ejercicios:', r);
-                var items = isList ? _this.normalizeList(r) : [r];
-                // Solo incluir ejercicios abiertos o activos
-                _this.ejercicios = items.filter(function (e) {
-                    var _a, _b, _c, _d, _e, _f;
-                    var activoFlag = e.activo === true || e.activo === 1 || e.activo === '1' || e.activo_flag === 1 || e.esta_abierto === true;
-                    var hoy = new Date().toISOString().slice(0, 10);
-                    var fiRaw = (_c = (_b = (_a = e.fecha_inicio) !== null && _a !== void 0 ? _a : e.inicio) !== null && _b !== void 0 ? _b : e.fechaInicio) !== null && _c !== void 0 ? _c : e.inicio_ejercicio;
-                    var ffRaw = (_f = (_e = (_d = e.fecha_fin) !== null && _d !== void 0 ? _d : e.fin) !== null && _e !== void 0 ? _e : e.fechaFin) !== null && _f !== void 0 ? _f : e.fin_ejercicio;
-                    var fi = _this.fmtDate(fiRaw);
-                    var ff = _this.fmtDate(ffRaw);
-                    var dentroDeFechas = !!(fi && ff && fi <= hoy && hoy <= ff);
-                    return activoFlag || dentroDeFechas;
+        this.ejercicioSvc.listEjerciciosAbiertos({ esta_abierto: true }).subscribe({
+            next: function (res) {
+                var _a, _b, _c, _d, _e, _f;
+                var raw = Array.isArray(res) ? res : ((_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res) !== null && _c !== void 0 ? _c : []);
+                var hoy = new Date();
+                var anioActual = hoy.getFullYear();
+                var activos = raw.filter(function (e) { return _this.isAbierto(e); });
+                _this.ejercicios = activos.map(function (e) {
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+                    var id = Number((_b = (_a = e.id_ejercicio) !== null && _a !== void 0 ? _a : e.id) !== null && _b !== void 0 ? _b : e.ID);
+                    var fi0 = (_e = (_d = (_c = e.fecha_inicio) !== null && _c !== void 0 ? _c : e.inicio) !== null && _d !== void 0 ? _d : e.start_date) !== null && _e !== void 0 ? _e : null;
+                    var ff0 = (_h = (_g = (_f = e.fecha_fin) !== null && _f !== void 0 ? _f : e.fin) !== null && _g !== void 0 ? _g : e.end_date) !== null && _h !== void 0 ? _h : null;
+                    var anio = Number((_k = (_j = e.anio) !== null && _j !== void 0 ? _j : e.year) !== null && _k !== void 0 ? _k : (fi0 ? new Date(fi0).getFullYear() : NaN));
+                    return {
+                        id_ejercicio: id,
+                        nombre: (_m = (_l = e.nombre) !== null && _l !== void 0 ? _l : e.descripcion) !== null && _m !== void 0 ? _m : null,
+                        fecha_inicio: fecha_utils_1.fmtDate(fi0),
+                        fecha_fin: fecha_utils_1.fmtDate(ff0),
+                        activo: true,
+                        anio: Number.isFinite(anio) ? anio : null
+                    };
                 });
-                var seleccionado = (_a = items.find(function (e) { return e.is_selected; })) !== null && _a !== void 0 ? _a : items[0];
-                if (seleccionado)
-                    _this.ejercicioActualId = Number((_b = seleccionado.id_ejercicio) !== null && _b !== void 0 ? _b : seleccionado.id);
-                if (!items || !items.length) {
-                    console.warn('⚠ No se encontraron ejercicios.');
+                if (!_this.ejercicios.length) {
+                    console.warn('⚠ No se encontraron ejercicios activos.');
                     _this.ejercicioActual = null;
+                    _this.ejercicioActualId = undefined;
+                    _this.showToast({
+                        type: 'info',
+                        title: 'Sin ejercicios abiertos',
+                        message: 'No hay ejercicios abiertos para seleccionar.'
+                    });
+                    _this.periodos = [];
                     return;
                 }
-                var elegido = (_d = (_c = items.find(function (e) { return e === null || e === void 0 ? void 0 : e.is_selected; })) !== null && _c !== void 0 ? _c : items.find(function (e) {
-                    var _a, _b;
-                    var hoy = new Date().toISOString().slice(0, 10);
-                    var fi = _this.fmtDate((_a = e === null || e === void 0 ? void 0 : e.fecha_inicio) !== null && _a !== void 0 ? _a : e === null || e === void 0 ? void 0 : e.inicio);
-                    var ff = _this.fmtDate((_b = e === null || e === void 0 ? void 0 : e.fecha_fin) !== null && _b !== void 0 ? _b : e === null || e === void 0 ? void 0 : e.fin);
-                    return fi <= hoy && hoy <= ff;
-                })) !== null && _d !== void 0 ? _d : items[0];
+                var elegido = (_e = (_d = _this.ejercicios.find(function (e) { return e.is_selected; })) !== null && _d !== void 0 ? _d : _this.ejercicios.find(function (e) { return e.anio === anioActual; })) !== null && _e !== void 0 ? _e : (_this.ejercicios.length === 1 ? _this.ejercicios[0] : null);
                 if (!elegido) {
-                    console.warn('⚠ No se encontró ejercicio activo.');
-                    _this.ejercicioActual = null;
-                    return;
+                    elegido = (_f = _this.ejercicios.find(function (e) {
+                        var fi = e.fecha_inicio ? new Date(e.fecha_inicio) : null;
+                        var ff = e.fecha_fin ? new Date(e.fecha_fin) : null;
+                        if (!fi && !ff)
+                            return false;
+                        var t = hoy.getTime();
+                        var ti = fi ? fi.getTime() : -Infinity;
+                        var tf = ff ? ff.getTime() : Infinity;
+                        return t >= ti && t <= tf;
+                    })) !== null && _f !== void 0 ? _f : _this.ejercicios[0];
                 }
-                _this.ejercicioActual = {
-                    id_ejercicio: Number((_g = (_f = (_e = elegido.id_ejercicio) !== null && _e !== void 0 ? _e : elegido.id) !== null && _f !== void 0 ? _f : elegido.ID) !== null && _g !== void 0 ? _g : 0),
-                    nombre: String((_l = (_k = (_j = (_h = elegido.nombre) !== null && _h !== void 0 ? _h : elegido.descripcion) !== null && _j !== void 0 ? _j : elegido.year) !== null && _k !== void 0 ? _k : elegido.ejercicio) !== null && _l !== void 0 ? _l : '').trim() || "Ejercicio " + ((_m = elegido.id_ejercicio) !== null && _m !== void 0 ? _m : ''),
-                    fecha_inicio: _this.fmtDate((_o = elegido.fecha_inicio) !== null && _o !== void 0 ? _o : elegido.inicio),
-                    fecha_fin: _this.fmtDate((_p = elegido.fecha_fin) !== null && _p !== void 0 ? _p : elegido.fin),
-                    activo: Boolean((_q = elegido.activo) !== null && _q !== void 0 ? _q : elegido.esta_abierto)
-                };
-                console.log(' Ejercicio elegido:', _this.ejercicioActual);
+                _this.ejercicioActual = elegido;
+                _this.ejercicioActualId = elegido.id_ejercicio;
+                console.log('✅ Ejercicio elegido (nueva póliza):', _this.ejercicioActual);
                 _this.applyPeriodoFilter();
             },
             error: function (err) {
-                console.error('❌ Error al cargar ejercicio:', err);
+                console.error('❌ Error al cargar ejercicios:', err);
                 _this.showToast({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'No se pudo cargar el ejercicio actual.'
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar los ejercicios contables.'
                 });
                 _this.ejercicioActual = null;
             }
@@ -722,41 +731,31 @@ var PolizasComponent = /** @class */ (function () {
     };
     PolizasComponent.prototype.onEjercicioSeleccionado = function (id) {
         var ejercicioId = Number(id);
+        if (!Number.isFinite(ejercicioId) || ejercicioId === this.ejercicioActualId)
+            return;
         var seleccionado = this.ejercicios.find(function (e) { return Number(e.id_ejercicio) === ejercicioId; });
-        if (seleccionado) {
-            this.ejercicioActual = seleccionado;
-            this.ejercicioActualId = ejercicioId;
-            this.guardarEjercicioSeleccionado(ejercicioId);
-            this.applyPeriodoFilter();
-        }
+        if (!seleccionado)
+            return;
+        this.ejercicioActual = __assign({}, seleccionado);
+        this.ejercicioActualId = ejercicioId;
+        this.guardarEjercicioSeleccionado(ejercicioId);
+        this.applyPeriodoFilter();
     };
     PolizasComponent.prototype.guardarEjercicioSeleccionado = function (id_ejercicio) {
         var _this = this;
         if (!this.api.selectEjercicio) {
             console.warn('⚠ No hay método API para guardar ejercicio seleccionado');
-            this.showToast({
-                type: 'warning',
-                title: 'Aviso',
-                message: 'El servicio no expone selectEjercicio().'
-            });
+            this.showToast({ type: 'warning', title: 'Aviso', message: 'El servicio no expone selectEjercicio().' });
             return;
         }
         this.api.selectEjercicio(id_ejercicio).subscribe({
             next: function () {
                 console.log('Ejercicio seleccionado guardado en BD:', id_ejercicio);
-                _this.showToast({
-                    type: 'success',
-                    title: 'Ejercicio actualizado',
-                    message: "Se guard\u00F3 el ejercicio " + id_ejercicio + " como activo."
-                });
+                _this.showToast({ type: 'success', title: 'Ejercicio actualizado', message: "Se guard\u00F3 el ejercicio " + id_ejercicio + " como activo." });
             },
             error: function (err) {
                 console.error('❌ Error al guardar ejercicio seleccionado:', err);
-                _this.showToast({
-                    type: 'error',
-                    title: 'Error',
-                    message: 'No se pudo actualizar el ejercicio seleccionado.'
-                });
+                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
             }
         });
     };
@@ -771,12 +770,6 @@ var PolizasComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    PolizasComponent.prototype.todayISO = function () {
-        var d = new Date();
-        var mm = this.pad2(d.getMonth() + 1);
-        var dd = this.pad2(d.getDate());
-        return d.getFullYear() + "-" + mm + "-" + dd;
-    };
     // Catálogos
     PolizasComponent.prototype.cargarCatalogos = function () {
         var _this = this;
@@ -805,8 +798,8 @@ var PolizasComponent = /** @class */ (function () {
                     return ({
                         id_periodo: Number((_b = (_a = p.id_periodo) !== null && _a !== void 0 ? _a : p.id) !== null && _b !== void 0 ? _b : p.ID),
                         id_ejercicio: Number((_g = (_f = (_e = (_d = (_c = p.id_ejercicio) !== null && _c !== void 0 ? _c : p.ejercicio_id) !== null && _d !== void 0 ? _d : p.ejercicio) !== null && _e !== void 0 ? _e : p.idEjercicio) !== null && _f !== void 0 ? _f : p.ID_EJERCICIO) !== null && _g !== void 0 ? _g : NaN),
-                        fecha_inicio: _this.fmtDate((_l = (_k = (_j = (_h = p.fecha_inicio) !== null && _h !== void 0 ? _h : p.fechaInicio) !== null && _j !== void 0 ? _j : p.inicio) !== null && _k !== void 0 ? _k : p.start_date) !== null && _l !== void 0 ? _l : p.fecha_ini),
-                        fecha_fin: _this.fmtDate((_q = (_p = (_o = (_m = p.fecha_fin) !== null && _m !== void 0 ? _m : p.fechaFin) !== null && _o !== void 0 ? _o : p.fin) !== null && _p !== void 0 ? _p : p.end_date) !== null && _q !== void 0 ? _q : p.fecha_fin),
+                        fecha_inicio: fecha_utils_1.fmtDate((_l = (_k = (_j = (_h = p.fecha_inicio) !== null && _h !== void 0 ? _h : p.fechaInicio) !== null && _j !== void 0 ? _j : p.inicio) !== null && _k !== void 0 ? _k : p.start_date) !== null && _l !== void 0 ? _l : p.fecha_ini),
+                        fecha_fin: fecha_utils_1.fmtDate((_q = (_p = (_o = (_m = p.fecha_fin) !== null && _m !== void 0 ? _m : p.fechaFin) !== null && _o !== void 0 ? _o : p.fin) !== null && _p !== void 0 ? _p : p.end_date) !== null && _q !== void 0 ? _q : p.fecha_fin),
                         _raw: p
                     });
                 });
@@ -846,19 +839,15 @@ var PolizasComponent = /** @class */ (function () {
         }
         var ej = this.ejercicioActual;
         if (!ej) {
-            // Si aún no hay ejercicio resuelto, muestra todos
-            this.periodos = this.allPeriodos.map(function (p) {
-                var _a, _b;
-                return ({
-                    id_periodo: p.id_periodo,
-                    nombre: ((_a = p.fecha_inicio) !== null && _a !== void 0 ? _a : '—') + " \u2014 " + ((_b = p.fecha_fin) !== null && _b !== void 0 ? _b : '—')
-                });
-            });
+            this.periodos = this.allPeriodos.map(function (p) { return ({
+                id_periodo: p.id_periodo,
+                nombre: fecha_utils_1.periodoEtiqueta(p.fecha_inicio, p.fecha_fin)
+            }); });
             return;
         }
         var idEj = Number(ej.id_ejercicio);
-        var ejIni = this.fmtDate((_a = ej.fecha_inicio) !== null && _a !== void 0 ? _a : ej.inicio);
-        var ejFin = this.fmtDate((_b = ej.fecha_fin) !== null && _b !== void 0 ? _b : ej.fin);
+        var ejIni = fecha_utils_1.fmtDate((_a = ej.fecha_inicio) !== null && _a !== void 0 ? _a : ej.inicio);
+        var ejFin = fecha_utils_1.fmtDate((_b = ej.fecha_fin) !== null && _b !== void 0 ? _b : ej.fin);
         var filtrados = this.allPeriodos.filter(function (p) { return Number.isFinite(p.id_ejercicio) && p.id_ejercicio === idEj; });
         if (filtrados.length === 0 && ejIni && ejFin) {
             filtrados = this.allPeriodos.filter(function (p) {
@@ -868,13 +857,10 @@ var PolizasComponent = /** @class */ (function () {
                 return (pi <= ejFin) && (pf >= ejIni); // solapamiento
             });
         }
-        this.periodos = filtrados.map(function (p) {
-            var _a, _b;
-            return ({
-                id_periodo: p.id_periodo,
-                nombre: ((_a = p.fecha_inicio) !== null && _a !== void 0 ? _a : '—') + " \u2014 " + ((_b = p.fecha_fin) !== null && _b !== void 0 ? _b : '—')
-            });
-        });
+        this.periodos = filtrados.map(function (p) { return ({
+            id_periodo: p.id_periodo,
+            nombre: fecha_utils_1.periodoEtiqueta(p.fecha_inicio, p.fecha_fin)
+        }); });
     };
     PolizasComponent.prototype.getCentros = function () {
         var _this = this;
@@ -914,6 +900,8 @@ var PolizasComponent = /** @class */ (function () {
         });
     };
     // Catálogo de cuentas (para movimientos)
+    // Catálogo de cuentas (para movimientos) EN FORMA DE ÁRBOL APLANADO
+    // Catálogo de cuentas (para movimientos) en forma de árbol aplanado
     PolizasComponent.prototype.cargarCuentas = function () {
         var _this = this;
         var svc = this.api;
@@ -929,22 +917,90 @@ var PolizasComponent = /** @class */ (function () {
         fn.call(this.api).subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
-                var parsed = (items || []).map(function (x) {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+                var nodos = (items || [])
+                    .map(function (x) {
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
                     var id = Number((_b = (_a = x.id_cuenta) !== null && _a !== void 0 ? _a : x.id) !== null && _b !== void 0 ? _b : x.ID);
                     var codigo = String((_e = (_d = (_c = x.codigo) !== null && _c !== void 0 ? _c : x.clave) !== null && _d !== void 0 ? _d : x.CODIGO) !== null && _e !== void 0 ? _e : '').trim();
-                    var posteable = (_h = (_g = (_f = x.posteable) !== null && _f !== void 0 ? _f : x.es_posteable) !== null && _g !== void 0 ? _g : x.posteable_flag) !== null && _h !== void 0 ? _h : x.posteable_indicator;
-                    var nombre = String((_l = (_k = (_j = x.nombre) !== null && _j !== void 0 ? _j : x.descripcion) !== null && _k !== void 0 ? _k : x.NOMBRE) !== null && _l !== void 0 ? _l : '').trim();
-                    return { id_cuenta: id, codigo: codigo, nombre: nombre, posteable: posteable };
-                }).filter(function (c) { return Number.isFinite(c.id_cuenta); });
-                parsed.sort(function (a, b) { return a.codigo.localeCompare(b.codigo, undefined, { numeric: true }); });
-                _this.cuentas = parsed;
-                _this.cuentasMap = new Map(parsed.map(function (c) { return [c.id_cuenta, { codigo: c.codigo, nombre: c.nombre }]; }));
-                console.log('Respuesta de cuentas, ', _this.cuentasMap);
+                    var nombre = String((_h = (_g = (_f = x.nombre) !== null && _f !== void 0 ? _f : x.descripcion) !== null && _g !== void 0 ? _g : x.NOMBRE) !== null && _h !== void 0 ? _h : '').trim();
+                    var parentIdRaw = (_k = (_j = x.parentId) !== null && _j !== void 0 ? _j : x.parent_id) !== null && _k !== void 0 ? _k : null;
+                    var parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
+                    var posteableRaw = (_o = (_m = (_l = x.posteable) !== null && _l !== void 0 ? _l : x.es_posteable) !== null && _m !== void 0 ? _m : x.posteable_flag) !== null && _o !== void 0 ? _o : x.posteable_indicator;
+                    var ctaMayorRaw = (_r = (_q = (_p = x.ctaMayor) !== null && _p !== void 0 ? _p : x.cta_mayor) !== null && _q !== void 0 ? _q : x.es_mayor) !== null && _r !== void 0 ? _r : x.mayor_flag;
+                    var posteable = posteableRaw === true ||
+                        posteableRaw === 1 ||
+                        posteableRaw === '1';
+                    var ctaMayor = ctaMayorRaw === true ||
+                        ctaMayorRaw === 1 ||
+                        ctaMayorRaw === '1';
+                    return {
+                        id: id,
+                        codigo: codigo,
+                        nombre: nombre,
+                        parentId: parentId,
+                        posteable: posteable,
+                        ctaMayor: ctaMayor,
+                        hijos: []
+                    };
+                })
+                    .filter(function (n) { return Number.isFinite(n.id); });
+                // 1) map id → nodo
+                var porId = new Map();
+                nodos.forEach(function (n) { return porId.set(n.id, n); });
+                // 2) enlazar árbol
+                var raices = [];
+                porId.forEach(function (nodo) {
+                    if (nodo.parentId) {
+                        var padre = porId.get(nodo.parentId);
+                        if (padre) {
+                            padre.hijos.push(nodo);
+                        }
+                        else {
+                            // huérfano → raíz
+                            raices.push(nodo);
+                        }
+                    }
+                    else {
+                        raices.push(nodo);
+                    }
+                });
+                // 3) ordenar por código
+                var sortTree = function (n) {
+                    n.hijos.sort(function (a, b) {
+                        return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                    });
+                    n.hijos.forEach(function (h) { return sortTree(h); });
+                };
+                raices.sort(function (a, b) {
+                    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                });
+                raices.forEach(function (r) { return sortTree(r); });
+                // 4) aplanar árbol → lista ordenada con nivel + esPadre
+                var resultado = [];
+                var visitar = function (nodo, nivel) {
+                    resultado.push({
+                        id_cuenta: nodo.id,
+                        codigo: nodo.codigo,
+                        nombre: nodo.nombre,
+                        nivel: nivel,
+                        esPadre: nodo.ctaMayor && !nodo.posteable,
+                        posteable: nodo.posteable
+                    });
+                    nodo.hijos.forEach(function (h) { return visitar(h, nivel + 1); });
+                };
+                raices.forEach(function (r) { return visitar(r, 0); });
+                _this.cuentas = resultado;
+                // el map ahora guarda el objeto completo
+                _this.cuentasMap = new Map(resultado.map(function (c) { return [c.id_cuenta, c]; }));
+                console.log('✅ Plan de cuentas (árbol aplanado con nivel):', _this.cuentas);
             },
             error: function (err) {
                 console.error('Cuentas:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar las cuentas.' });
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar las cuentas.'
+                });
                 _this.cuentas = [];
                 _this.cuentasMap.clear();
             }
@@ -1035,10 +1091,15 @@ var PolizasComponent = /** @class */ (function () {
         });
     };
     PolizasComponent.prototype.labelCuenta = function (id_cuenta) {
+        var _a;
         if (!id_cuenta)
             return '—';
-        var c = this.cuentasMap.get(Number(id_cuenta));
-        return c ? c.codigo + " \u2014 " + c.nombre : '—';
+        var c = this.cuentas.find(function (x) { return x.id_cuenta === Number(id_cuenta); });
+        if (!c)
+            return '—';
+        var nivel = (_a = c.nivel) !== null && _a !== void 0 ? _a : 0;
+        var indent = nivel > 0 ? ' '.repeat((nivel - 1) * 2) + '↳ ' : '';
+        return "" + indent + c.codigo + " \u2014 " + c.nombre;
     };
     PolizasComponent.prototype.triggerXmlPickerForMovimiento = function (input, index) {
         this.xmlMovimientoIndex = index;
@@ -1113,7 +1174,7 @@ var PolizasComponent = /** @class */ (function () {
             operacion: '',
             monto: null,
             cliente: '',
-            fecha: this.todayISO(),
+            fecha: fecha_utils_1.todayISO(),
             cc: (_b = this.nuevaPoliza.id_centro) !== null && _b !== void 0 ? _b : null,
             uuid: null,
             _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''
@@ -1277,7 +1338,7 @@ var PolizasComponent = /** @class */ (function () {
                     operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
                     monto: _this.toNumOrNull(m.monto),
                     cliente: _this.toStrOrNull(m.cliente),
-                    fecha: _this.toDateOrNull(m.fecha),
+                    fecha: fecha_utils_1.toDateOrNull(m.fecha),
                     cc: _this.toNumOrNull(m.cc),
                     uuid: _this.toStrOrNull(m.uuid)
                 }); })
@@ -1320,7 +1381,7 @@ var PolizasComponent = /** @class */ (function () {
                 concepto: this.toStrOrNull(this.nuevaPoliza.concepto),
                 tipo_operacion: this.evento.tipo_operacion,
                 monto_base: Number(this.evento.monto_base),
-                fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion),
+                fecha_operacion: fecha_utils_1.toDateOrNull(this.evento.fecha_operacion),
                 id_empresa: Number(this.evento.id_empresa),
                 medio_cobro_pago: this.evento.medio_cobro_pago,
                 id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
@@ -1358,7 +1419,7 @@ var PolizasComponent = /** @class */ (function () {
         var body = {
             tipo_operacion: this.evento.tipo_operacion,
             monto_base: Number(this.evento.monto_base),
-            fecha_operacion: this.toDateOrNull(this.evento.fecha_operacion),
+            fecha_operacion: fecha_utils_1.toDateOrNull(this.evento.fecha_operacion),
             id_empresa: Number(this.evento.id_empresa),
             medio_cobro_pago: this.evento.medio_cobro_pago,
             id_cuenta_contrapartida: Number(this.evento.id_cuenta_contrapartida),
@@ -1388,7 +1449,7 @@ var PolizasComponent = /** @class */ (function () {
                         id_tipopoliza = this.toNumOrNull(this.nuevaPoliza.id_tipopoliza);
                         id_periodo = this.toNumOrNull(this.nuevaPoliza.id_periodo);
                         id_centro = this.toNumOrNull(this.nuevaPoliza.id_centro);
-                        if (!id_tipopoliza || !id_periodo)
+                        if (!id_tipopoliza || !id_periodo || !id_centro)
                             return [2 /*return*/];
                         _a.label = 1;
                     case 1:

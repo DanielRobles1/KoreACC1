@@ -504,6 +504,22 @@
 .tabla-movimientos tbody tr:hover { background: #f6faff; }
 
 /* inputs de celda */
+.tree-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tree-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tree-parent-label {
+  font-weight: 600; // negritas padres
+}
+
 .cell-input {
   width: 100%;
   height: 34px;
