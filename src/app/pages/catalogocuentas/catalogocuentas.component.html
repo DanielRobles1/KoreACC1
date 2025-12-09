@@ -13,13 +13,12 @@
         <button class="btn-excel" (click)="exportToExcel()">Exportar Excel</button>
         <button class="btn-pdf" (click)="exportToPDF()">Exportar PDF</button>
 
-        <label class="btn-import" *ngIf="false">
+        <label class="btn-import" *ngIf="true">
           Importar Excel
           <input
             type="file"
             accept=".xlsx, .xls"
-            (change)="importFromExcel($event)"
-            hidden />
+            (change)="importFromExcel($event)"/>
         </label>
       </div>
 

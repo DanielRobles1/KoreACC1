@@ -608,72 +608,152 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   }
 
   importFromExcel(event: any): void {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = async (e: any) => {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const rowsExcel: any[] = XLSX.utils.sheet_to_json(worksheet);
+      const rowsExcel: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-      const normalize = (str: any) => (str ?? '').toString().trim();
+      if (!rowsExcel.length) {
+        this.toastWarn('El archivo no contiene filas para importar.');
+        return;
+      }
 
-      const cuentas = rowsExcel.map((r) => ({
-        codigo: normalize(r['Código']),
-        nombre: normalize(r['Nombre']),
-        ctaMayor: normalize(r['¿Mayor?']) === 'Sí',
-        parentCodigo: normalize(r['Código Padre']) || null,
-      }));
+      const normalize = (v: any) => (v ?? '').toString().trim();
+
+      type CuentaImport = {
+        codigo: string;
+        nombre: string;
+        ctaMayor: boolean;
+        posteable: boolean;
+        tipo: CuentaTipo;
+        naturaleza: Naturaleza;
+        parentCodigo: string | null;
+      };
+
+      const cuentas: CuentaImport[] = rowsExcel.map((r) => {
+        const codigo = normalize(r['Código']);
+        const nombre = normalize(r['Nombre']);
+        const tipo = normalize(r['Tipo']) as CuentaTipo;
+        const naturaleza = normalize(r['Naturaleza']) as Naturaleza;
+        const mayorStr = normalize(r['¿Mayor?']);
+        const posteableStr = normalize(r['Posteable']);
+        const parentCodigoRaw = normalize(r['Padre (Código)']);
+
+        const toBool = (s: string) => {
+          const v = s.toLowerCase();
+          return v === 'sí' || v === 'si' || v === 'true' || v === '1';
+        };
+
+        return {
+          codigo,
+          nombre,
+          tipo,
+          naturaleza,
+          ctaMayor: toBool(mayorStr),
+          posteable: toBool(posteableStr),
+          parentCodigo: parentCodigoRaw || null,
+        };
+      });
+
+      const invalid = cuentas.filter(
+        (c) =>
+          !c.codigo ||
+          !c.nombre ||
+          !this.TIPO_OPTS.includes(c.tipo) ||
+          !this.NAT_OPTS.includes(c.naturaleza)
+      );
+
+      if (invalid.length) {
+        this.toastWarn(
+          `Hay ${invalid.length} filas con datos inválidos (código, nombre, tipo o naturaleza). Corrige el archivo e inténtalo de nuevo.`
+        );
+        return;
+      }
 
       const codigoToId = new Map<string, number>();
 
+      this.allCuentas.forEach((c) => {
+        if (c.codigo && c.id) {
+          codigoToId.set(c.codigo, c.id);
+        }
+      });
+
       try {
-        // Crear cuentas sin padre
         for (const c of cuentas.filter((x) => !x.parentCodigo)) {
-          const created: any = await firstValueFrom(
-            this.http.post('http://localhost:3000/api/v1/cuentas', c)
-          );
+          if (codigoToId.has(c.codigo)) {
+            console.warn(`Código ya existente, se omite creación: ${c.codigo}`);
+            continue;
+          }
+
+          const payload: Partial<Cuenta> = {
+            codigo: c.codigo,
+            nombre: c.nombre,
+            ctaMayor: c.ctaMayor,
+            posteable: c.posteable,
+            tipo: c.tipo,
+            naturaleza: c.naturaleza,
+            parentId: null,
+          };
+
+          const created: any = await firstValueFrom(this.http.post(API, payload));
 
           if (created?.id) {
             codigoToId.set(c.codigo, created.id);
           } else {
-            console.warn(' No se devolvió ID para:', c);
+            console.warn('No se devolvió ID para:', c);
           }
         }
 
-        // Crear cuentas con padre
-        for (const c of cuentas.filter((x) => x.parentCodigo)) {
-          const parentId = codigoToId.get(c.parentCodigo);
+        for (const c of cuentas.filter((x) => !!x.parentCodigo)) {
+          const parentId = c.parentCodigo ? codigoToId.get(c.parentCodigo) : undefined;
 
           if (!parentId) {
-            console.warn(` Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
+            console.warn(`Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
             continue;
           }
 
-          const created: any = await firstValueFrom(
-            this.http.post('http://localhost:3000/api/v1/cuentas', {
-              ...c,
-              parentId,
-            })
-          );
+          if (codigoToId.has(c.codigo)) {
+            console.warn(`Código ya existente, se omite creación: ${c.codigo}`);
+            continue;
+          }
+
+          const payload: Partial<Cuenta> = {
+            codigo: c.codigo,
+            nombre: c.nombre,
+            ctaMayor: c.ctaMayor,
+            posteable: c.posteable,
+            tipo: c.tipo,
+            naturaleza: c.naturaleza,
+            parentId,
+          };
+
+          const created: any = await firstValueFrom(this.http.post(API, payload));
 
           if (created?.id) {
             codigoToId.set(c.codigo, created.id);
+          } else {
+            console.warn('No se devolvió ID para:', c);
           }
         }
 
         this.loadCuentas();
         this.toastOk('Importación completada y jerarquía asociada correctamente.');
       } catch (err) {
-        console.error('❌ Error en importación:', err);
+        console.error('Error en importación:', err);
         this.toastError('No se pudo completar la importación', err);
       }
     };
 
     reader.readAsArrayBuffer(file);
+
+    event.target.value = '';
   }
 
   trackById(index: number, item: { id: number }): number {
