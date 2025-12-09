@@ -23,15 +23,16 @@
         </label>
       </div>
 
+      <!-- CONTENEDOR BLANCO -->
       <div class="tree-wrapper">
-
+        <!-- TÍTULO PRINCIPAL -->
         <h2 class="page-title">
           Catálogo de cuentas contables
         </h2>
-
+  <!-- HEADER / BUSCADOR -->
         <div class="tree-header">
           <div class="left">
-            <h3 class="tree-title">{{ title }}</h3>
+       <!--     <h3 class="tree-title">{{ title }}</h3> -->
             <small class="tree-subtitle">
               Visualización en árbol de cuentas contables
             </small>
@@ -67,6 +68,30 @@
             </button>
           </div>
         </div>
+        <!-- PESTAÑAS (Cuentas / Centros de costo) -->
+        <div class="tabs-row">
+          <button
+            type="button"
+            class="tab-pill is-active">
+            <span class="tab-icon">
+              <img src="assets/svgs/catalog-cuentas.svg" alt="Cuentas" />
+            </span>
+            <span class="tab-label">Cuentas</span>
+          </button>
+
+          <button
+  type="button"
+  class="tab-pill"
+  [routerLink]="['/centros-costo']">
+  <span class="tab-icon">
+    <img src="assets/svgs/catalogue-catalog.svg" alt="Centros de costo" />
+  </span>
+  <span class="tab-label">Centros de costo</span>
+</button>
+
+        </div>
+
+      
 
         <!-- ÁRBOL DE CUENTAS -->
         <ul class="tree-root">
@@ -79,11 +104,12 @@
         </ul>
       </div>
 
+      <!-- Template recursivo para cada nodo -->
       <ng-template #renderNode let-node let-level="level">
         <li class="tree-node" [style.padding-left.px]="level * 18">
           <div class="tree-node-row">
 
-            <!-- Icono expandir -->
+            <!-- Icono expandir/colapsar -->
             <button
               type="button"
               class="tree-toggle"
@@ -97,6 +123,7 @@
               class="tree-toggle-placeholder">
             </span>
 
+            <!-- Código + nombre -->
             <div class="tree-node-main">
               <span class="tree-code">{{ node.codigo }}</span>
               <span
@@ -147,7 +174,8 @@
             </div>
           </div>
 
-                            <ul class="tree-children" *ngIf="isExpanded(node.id)">
+          <!-- Hijos -->
+          <ul class="tree-children" *ngIf="isExpanded(node.id)">
             <ng-container
               *ngFor="let child of getChildren(node.id); trackBy: trackByCuentaId">
               <ng-container

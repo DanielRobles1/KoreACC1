@@ -61,6 +61,7 @@ var XLSX = require("xlsx");
 var file_saver_1 = require("file-saver");
 var jspdf_1 = require("jspdf");
 var jspdf_autotable_1 = require("jspdf-autotable");
+var router_1 = require("@angular/router");
 var common_1 = require("@angular/common");
 var forms_1 = require("@angular/forms");
 var sidebar_component_1 = require("@app/components/sidebar/sidebar.component");
@@ -671,6 +672,7 @@ var CatalogoCuentasComponent = /** @class */ (function () {
             imports: [
                 common_1.CommonModule,
                 forms_1.FormsModule,
+                router_1.RouterModule,
                 http_1.HttpClientModule,
                 sidebar_component_1.SidebarComponent,
                 crud_panel_component_1.CrudPanelComponent,

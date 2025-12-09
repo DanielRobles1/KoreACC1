@@ -291,6 +291,69 @@
   color: #9ca3af;
 }
 
+/* ===== TÍTULO ===== */
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0b1120;
+  margin: 0 0 16px;
+}
+
+/* ===== FILA DE PESTAÑAS ===== */
+.tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Botón tipo “píldora” */
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab-pill:hover {
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+/* Pestaña activa (como la de “Centros de costo”) */
+.tab-pill.is-active {
+  background-color: #eef3ff;
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #0b4ad1;
+}
+
+/* Ícono de la pestaña */
+.tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+
+/* AQUÍ está el cambio importante: limitar tamaño del SVG */
+.tab-icon img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Texto de la pestaña */
+.tab-label {
+  white-space: nowrap;
+}
+
 /* Botón “Nueva cuenta” como el de “+ Nuevo centro” */
 .btn-primary.btn-new-account {
   display: inline-flex;

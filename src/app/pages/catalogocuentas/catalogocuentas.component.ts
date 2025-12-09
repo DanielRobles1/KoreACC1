@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { RouterModule } from '@angular/router';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -55,6 +56,7 @@ interface ToastVM {
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     HttpClientModule,
     SidebarComponent,
     CrudPanelComponent,
