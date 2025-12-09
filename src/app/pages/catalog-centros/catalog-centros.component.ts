@@ -16,9 +16,11 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { CommonModule } from '@angular/common';
 
 type UiCentro = {
   id_centro?: number;
+  parent_id?: number | null;
   serie_venta: string;
   nombre_centro: string;
   calle: string;
@@ -31,10 +33,16 @@ type UiCentro = {
   activo: boolean;
 };
 
+interface CentroNode {
+  data: UiCentro;
+  children: CentroNode[];
+  expanded: boolean;
+}
+
 @Component({
   selector: 'app-catalog-centros',
   standalone: true,
-  imports: [FormsModule, SidebarComponent, CrudPanelComponent, ModalComponent, ToastMessageComponent],
+  imports: [FormsModule, SidebarComponent, CrudPanelComponent, ModalComponent, ToastMessageComponent, CommonModule],
   templateUrl: './catalog-centros.component.html',
   styleUrls: ['./catalog-centros.component.scss']
 })
@@ -45,8 +53,8 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
     public toast: ToastService,
     private auth: AuthService,
     private centroService: CentrosCostosService,
-    private ws: WsService, 
-  ) {}
+    private ws: WsService,
+  ) { }
 
   private destroy$ = new Subject<void>();
   private permWatcher?: PermissionWatcher;
@@ -73,7 +81,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
 
   private emptyCentro(): UiCentro {
     return {
-      id_centro: undefined, 
+      id_centro: undefined,
       serie_venta: '',
       nombre_centro: '',
       calle: '',
@@ -121,6 +129,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
     { key: 'activo', header: 'Estatus' },
   ];
   rows: UiCentro[] = [];
+  treeRoots: CentroNode[] = [];
 
   actions: CrudAction[] = [];
 
@@ -174,7 +183,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(s => (this.vm = s));
 
-    
+
     this.permWatcher = new PermissionWatcher(
       this.auth,
       this.ws,
@@ -185,14 +194,14 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       },
       (flags) => {
         this.canCreate = flags.canCreate;
-        this.canEdit   = flags.canEdit;
+        this.canEdit = flags.canEdit;
         this.canDelete = flags.canDelete;
         this.rebuildActions();
       },
       {
         keys: {
           create: 'crear_cat_Centros',
-          edit:   'editar_cat_Centros',
+          edit: 'editar_cat_Centros',
           delete: 'eliminar_cat_Centros',
         },
         socketEvent: ['permissions:changed', 'role-permissions:changed'],
@@ -210,7 +219,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
 
   private rebuildActions(): void {
     this.actions = [
-      ...(this.canEdit   ? [{ id: 'edit',   label: 'Editar',   tooltip: 'Editar'   } as CrudAction] : []),
+      ...(this.canEdit ? [{ id: 'edit', label: 'Editar', tooltip: 'Editar' } as CrudAction] : []),
       ...(this.canDelete ? [{ id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' } as CrudAction] : []),
     ];
   }
@@ -218,10 +227,17 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
   // ===== Cargar lista =====
   loadCentros() {
     this.centroService.getCentros().subscribe({
-      next: (data) => (this.rows = data),
-      error: (err) => this.toast.error(this.extractErrorMessage(err) ?? 'No se pudieron cargar los centros de costo')
+      next: (data) => {
+        this.rows = data;
+        this.treeRoots = this.buildTree(data);
+      },
+      error: (err) =>
+        this.toast.error(
+          this.extractErrorMessage(err) ?? 'No se pudieron cargar los centros de costo'
+        ),
     });
   }
+
 
   // ===== Crear (botón primario) =====
   onPrimary() {
@@ -311,6 +327,94 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  toggleNode(node: CentroNode, event?: MouseEvent) {
+    if (event) {
+      event.stopPropagation();
+    }
+    node.expanded = !node.expanded;
+  }
+
+  askDelete(c: UiCentro, event?: MouseEvent) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.onRowAction({ action: 'delete', row: c });
+  }
+
+
+  private buildTree(list: UiCentro[]): CentroNode[] {
+    const nodeById = new Map<number, CentroNode>();
+    const roots: CentroNode[] = [];
+
+    // Crear nodos base
+    for (const c of list) {
+      if (c.id_centro == null) continue;
+      nodeById.set(c.id_centro, {
+        data: c,
+        children: [],
+        expanded: false,
+      });
+    }
+
+    // Enlazar padres e hijos
+    for (const c of list) {
+      if (c.id_centro == null) continue;
+      const node = nodeById.get(c.id_centro)!;
+
+      if (c.parent_id != null) {
+        const parent = nodeById.get(c.parent_id);
+        if (parent) {
+          parent.children.push(node);
+        } else {
+          // Si el padre no está, lo tratamos como raíz
+          roots.push(node);
+        }
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  }
+
+  // 🌳 Versión filtrada del árbol según searchTerm
+  get filteredTreeRoots(): CentroNode[] {
+    if (!this.searchTerm) return this.treeRoots;
+    const term = this.norm(this.searchTerm);
+    return this.filterTree(this.treeRoots, term);
+  }
+
+  private filterTree(nodes: CentroNode[], term: string): CentroNode[] {
+    const result: CentroNode[] = [];
+
+    for (const node of nodes) {
+      const matches = this.nodeMatches(node, term);
+      const filteredChildren = this.filterTree(node.children, term);
+
+      if (matches || filteredChildren.length) {
+        result.push({
+          ...node,
+          // al filtrar, abrimos nodos que tienen hijos que coinciden
+          expanded: filteredChildren.length ? true : node.expanded,
+          children: filteredChildren,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  private nodeMatches(node: CentroNode, term: string): boolean {
+    const c = node.data;
+    return (
+      this.norm(c.nombre_centro).includes(term) ||
+      this.norm(c.serie_venta).includes(term) ||
+      this.norm(c.region).includes(term) ||
+      this.norm(c.cp).includes(term)
+    );
+  }
+
 
   // ===== Confirmar modal: crea o actualiza =====
   confirmCentroModal() {

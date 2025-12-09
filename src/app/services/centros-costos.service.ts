@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 type UiCentro = {
   id_centro?: number;
+  parent_id?: number | null;
   serie_venta: string;
   nombre_centro: string;
   calle: string;
@@ -25,6 +26,22 @@ export class CentrosCostosService {
 
   getCentros(): Observable<UiCentro[]> {
     return this.http.get<UiCentro[]>(this.apiURL);
+  }
+
+  getRoots(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiURL}/roots/list`);
+  }
+
+  getChildren(parentId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiURL}/${parentId}/children`);
+  }
+
+  getSubtree(rootId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiURL}/${rootId}/subtree`);
+  }
+
+  moveCentro(id: number, new_parent_id: number | null): Observable<any> {
+    return this.http.patch<any>(`${this.apiURL}/${id}/move`, { new_parent_id });
   }
 
   createCentro(data: UiCentro): Observable<any> {

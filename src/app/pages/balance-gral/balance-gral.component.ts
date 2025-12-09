@@ -92,7 +92,7 @@ export class BalanceGralComponent {
   };
   onToastClosed = () => { this.toast.open = false; };
   sidebarOpen = true;
-  miEmpresaId = 1;
+  miEmpresaId = 5;
   ejercicios: Observable<EjercicioContableDto[]> = this.polizaService.getEjercicios();
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }

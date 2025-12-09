@@ -66,7 +66,7 @@ export class BalanzaComprobacionComponent {
   };
   onToastClosed = () => { this.toast.open = false; };
   sidebarOpen = true;
-  miEmpresaId = 1;
+  miEmpresaId = 5;
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
   private showToast(opts: { type?: ToastType; title?: string; message: string; autoCloseMs?: number; position?: ToastPosition }) {
     this.toast.type = opts.type ?? 'info';

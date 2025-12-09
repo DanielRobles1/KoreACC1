@@ -29,6 +29,8 @@ export class CrudPanelComponent {
   @Input() disablePrimary = false;
  @Input() hidePrimary = false;
 
+ @Input() projectContent = false;
+
  // Emite la fila seleccionada cuando cambia el radio
   @Output() selection = new EventEmitter<any>();
   @Input() selectionMode: 'none' | 'single' = 'none';    // opt-in

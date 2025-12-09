@@ -16,7 +16,7 @@ export class ReportesLayoutComponent implements OnChanges {
   @Input() open = true;
   @Output() openChange = new EventEmitter<boolean>();
 
-  @Input() empresaId = 1;
+  @Input() empresaId = 5;
 
   empresa$!: Observable<Empresa>;
 
