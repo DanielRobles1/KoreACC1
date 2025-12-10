@@ -40,6 +40,12 @@ interface Cuenta {
   icon?: string;
 }
 
+interface CuentaNode {
+  data: Cuenta;
+  children: CuentaNode[];
+  expanded: boolean;
+}
+
 interface ToastVM {
   open: boolean;
   title: string;
@@ -116,6 +122,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   }
 
   rows: Cuenta[] = [];
+  treeRoots: CuentaNode[] = [];
   allCuentas: Cuenta[] = [];
 
   canCreate = false;
@@ -208,16 +215,108 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
           padreNombre: c.parentId ? byId.get(c.parentId)?.nombre ?? null : null,
         }));
 
-        // expandir raíces por defecto
-        this.expandedIds.clear();
-        this.rows
-          .filter((c) => !c.parentId)
-          .forEach((c) => this.expandedIds.add(c.id));
+        // Construir árbol (mismo enfoque que el primer código)
+        this.treeRoots = this.buildTree(this.rows);
       },
       error: (err) => this.toastError('No se pudieron cargar las cuentas', err),
     });
     this.subs.push(s);
   }
+
+  private buildTree(list: Cuenta[]): CuentaNode[] {
+    const nodeById = new Map<number, CuentaNode>();
+    const roots: CuentaNode[] = [];
+
+    for (const c of list) {
+      if (c.id == null) continue;
+      nodeById.set(c.id, {
+        data: c,
+        children: [],
+        expanded: false,
+      });
+    }
+
+    for (const c of list) {
+      if (c.id == null) continue;
+      const node = nodeById.get(c.id)!;
+
+      if (c.parentId != null) {
+        const parent = nodeById.get(c.parentId);
+        if (parent) {
+          parent.children.push(node);
+        } else {
+          roots.push(node);
+        }
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
+  }
+
+  private norm(v: unknown): string {
+    return (v ?? '')
+      .toString()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private nodeMatches(node: CuentaNode, term: string): boolean {
+    const c = node.data;
+    return (
+      this.norm(c.codigo).includes(term) ||
+      this.norm(c.nombre).includes(term) ||
+      this.norm(c.tipo).includes(term) ||
+      this.norm(c.naturaleza).includes(term) ||
+      this.norm(c.padreCodigo).includes(term) ||
+      this.norm(c.padreNombre).includes(term)
+    );
+  }
+
+  private filterTree(nodes: CuentaNode[], term: string): CuentaNode[] {
+    if (!term) return nodes;
+    const result: CuentaNode[] = [];
+
+    for (const node of nodes) {
+      const childFiltered = this.filterTree(node.children, term);
+      const matches = this.nodeMatches(node, term);
+
+      if (matches || childFiltered.length) {
+        result.push({
+          ...node,
+          expanded: childFiltered.length ? true : node.expanded,
+          children: childFiltered,
+        });
+      }
+    }
+    return result;
+  }
+
+  get filteredTreeRoots(): CuentaNode[] {
+    const term = this.norm(this.searchTerm);
+    if (!term) return this.treeRoots;
+    return this.filterTree(this.treeRoots, term);
+  }
+
+  toggleNode(node: CuentaNode, event?: MouseEvent): void {
+    event?.stopPropagation();
+    node.expanded = !node.expanded;
+  }
+
+  askDelete(c: Cuenta, event?: MouseEvent): void {
+    event?.stopPropagation();
+    if (!this.canDelete) return this.toastWarn('No tienes permiso para eliminar.');
+    this.confirmTitle = 'Eliminar cuenta';
+    this.confirmMessage = `¿Deseas eliminar la cuenta ${c.codigo} - ${c.nombre}?`;
+    this.confirmPayload = { type: 'delete', id: c.id };
+    this.confirmOpen = true;
+  }
+
+  trackByCuentaNodeId = (_: number, n: CuentaNode) => n.data.id;
 
   createCuenta(payload: Partial<Cuenta>): void {
     const s = this.http.post<Cuenta>(API, payload).subscribe({
