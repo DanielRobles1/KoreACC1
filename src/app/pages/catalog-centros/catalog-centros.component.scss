@@ -155,7 +155,6 @@
   }
 
   .btn-pdf:hover {
-    background-color: #a11f1f;
     box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
   }
 
@@ -271,7 +270,6 @@
 .tree-pill--inactive {
   background: #fee2e2;
   color: #991b1b;
-  border-color: #fecaca;
 }
 
 /* Acciones del nodo */
@@ -294,14 +292,11 @@
 }
 
 .tree-action--danger {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+  background: #fafafa;
 }
 
 .tree-action--danger:hover {
   background: #fee2e2;
-  border-color: #fca5a5;
 }
 
 .tree-node > ul {

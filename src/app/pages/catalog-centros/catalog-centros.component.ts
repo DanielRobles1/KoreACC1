@@ -378,7 +378,6 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
     return roots;
   }
 
-  // 🌳 Versión filtrada del árbol según searchTerm
   get filteredTreeRoots(): CentroNode[] {
     if (!this.searchTerm) return this.treeRoots;
     const term = this.norm(this.searchTerm);
