@@ -72,10 +72,11 @@ var rxjs_1 = require("rxjs");
 var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var fecha_utils_1 = require("@app/utils/fecha-utils");
 var PolizasComponent = /** @class */ (function () {
-    function PolizasComponent(api, ejercicioSvc) {
+    function PolizasComponent(api, ejercicioSvc, router) {
         var _this = this;
         this.api = api;
         this.ejercicioSvc = ejercicioSvc;
+        this.router = router;
         this.modalIvaOpen = false;
         this.iva = {
             op: 'venta',
@@ -100,12 +101,11 @@ var PolizasComponent = /** @class */ (function () {
         // Listado
         this.polizas = [];
         this.cuentasQuery = '';
-        this.ejercicios = []; // array de ejercicios para el select
+        this.ejercicios = [];
         this.tiposPoliza = [];
         this.periodos = [];
         this.allPeriodos = [];
         this.centros = [];
-        // Catálogo de cuentas (para movimientos)
         this.cuentas = [];
         this.cuentasMap = new Map();
         // Formulario de nueva póliza
@@ -114,6 +114,9 @@ var PolizasComponent = /** @class */ (function () {
         this.cfdiOptions = [];
         this.conceptoSugerido = '';
         this.conceptoFueEditadoPorUsuario = false;
+        // Modal de cuentas
+        this.modalCuentasAbierto = false;
+        this.indiceMovimientoSeleccionado = null;
         // Toast
         this.toast = {
             open: false,
@@ -124,17 +127,6 @@ var PolizasComponent = /** @class */ (function () {
             autoCloseMs: 3500,
             showClose: true
         };
-        this.modalCuentasAbierto = false;
-        this.indiceMovimientoSeleccionado = null;
-        this.onToastClosed = function () { _this.toast.open = false; };
-        this.toNumOrNull = function (v) {
-            return (v === '' || v == null || isNaN(Number(v)) ? null : Number(v));
-        };
-        this.toStrOrNull = function (v) {
-            return (v == null ? null : (String(v).trim() || null));
-        };
-        this.trackByEjercicioId = function (_, e) { return e === null || e === void 0 ? void 0 : e.id_ejercicio; };
-        this.compareById = function (a, b) { return Number(a) === Number(b); };
         this.modoCaptura = 'manual';
         this.evento = {
             tipo_operacion: 'ingreso',
@@ -147,37 +139,238 @@ var PolizasComponent = /** @class */ (function () {
             ref_serie_venta: '',
             cc: null
         };
-        // Movimientos
+        this.onToastClosed = function () {
+            _this.toast.open = false;
+        };
+        this.toNumOrNull = function (v) {
+            return v === '' || v == null || isNaN(Number(v)) ? null : Number(v);
+        };
+        this.toStrOrNull = function (v) {
+            return v == null ? null : String(v).trim() || null;
+        };
+        this.trackByEjercicioId = function (_, e) { return e === null || e === void 0 ? void 0 : e.id_ejercicio; };
+        this.compareById = function (a, b) { return Number(a) === Number(b); };
         this.normalizaStr = function (s) { var _a, _b; return (_b = (_a = s.normalize) === null || _a === void 0 ? void 0 : _a.call(s, 'NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) !== null && _b !== void 0 ? _b : s.toLowerCase(); };
         this.folioFueEditadoPorUsuario = false;
         this.trackByFolio = function (_, x) { var _a; return (_a = x === null || x === void 0 ? void 0 : x.folio) !== null && _a !== void 0 ? _a : _; };
     }
-    PolizasComponent.prototype.abrirModalIva = function () { this.modalIvaOpen = true; };
-    PolizasComponent.prototype.cerrarModalIva = function () { this.modalIvaOpen = false; };
-    PolizasComponent.prototype.volver = function () { this.router.navigate(['/poliza-home']); };
-    // Obtiene etiqueta legible del tipo de póliza y del centro
-    PolizasComponent.prototype.getTipoPolizaLabelById = function (id) {
-        var _a;
-        var t = this.tiposPoliza.find(function (x) { return Number(x.id_tipopoliza) === Number(id); });
-        return ((_a = t === null || t === void 0 ? void 0 : t.nombre) !== null && _a !== void 0 ? _a : '').toString().trim();
+    PolizasComponent.prototype.abrirModalIva = function () {
+        this.modalIvaOpen = true;
     };
-    PolizasComponent.prototype.findCuentaIdByCodigo = function (codigo) {
+    PolizasComponent.prototype.cerrarModalIva = function () {
+        this.modalIvaOpen = false;
+    };
+    PolizasComponent.prototype.volver = function () {
+        this.router.navigate(['/poliza-home']);
+    };
+    PolizasComponent.prototype.ngOnInit = function () {
+        this.cargarEjercicioActivo();
+        this.initUsuarioActual();
+        this.cargarCatalogos();
+        this.getCentros();
+        this.cargarCuentas();
+        this.cargarPolizas();
+        this.cargarCfdiRecientes();
+        if (!this.evento.id_empresa)
+            this.evento.id_empresa = 1;
+        if (!this.evento.fecha_operacion)
+            this.evento.fecha_operacion = fecha_utils_1.todayISO();
+    };
+    //  Sidebar / Modal de cuentas 
+    PolizasComponent.prototype.onSidebarToggle = function (v) {
+        this.sidebarOpen = v;
+    };
+    PolizasComponent.prototype.abrirModalCuentas = function (index) {
+        this.indiceMovimientoSeleccionado = index;
+        this.modalCuentasAbierto = true;
+    };
+    PolizasComponent.prototype.cerrarModalCuentas = function () {
+        this.modalCuentasAbierto = false;
+        this.indiceMovimientoSeleccionado = null;
+    };
+    PolizasComponent.prototype.onCuentaSeleccionadaModal = function (cuenta) {
+        if (this.indiceMovimientoSeleccionado != null && this.nuevaPoliza.movimientos) {
+            this.nuevaPoliza.movimientos[this.indiceMovimientoSeleccionado].id_cuenta =
+                cuenta.id_cuenta;
+        }
+        this.cerrarModalCuentas();
+    };
+    PolizasComponent.prototype.showToast = function (opts) {
         var _a, _b;
-        var c = (_a = this.cuentas) === null || _a === void 0 ? void 0 : _a.find(function (x) { var _a; return ((_a = x.codigo) === null || _a === void 0 ? void 0 : _a.toString()) === codigo; });
-        return (_b = c === null || c === void 0 ? void 0 : c.id_cuenta) !== null && _b !== void 0 ? _b : null;
+        this.toast.message = opts.message;
+        this.toast.type = (_a = opts.type) !== null && _a !== void 0 ? _a : 'info';
+        this.toast.title = (_b = opts.title) !== null && _b !== void 0 ? _b : '';
+        if (opts.autoCloseMs != null)
+            this.toast.autoCloseMs = opts.autoCloseMs;
+        if (opts.position)
+            this.toast.position = opts.position;
+        this.toast.open = true;
     };
-    /** Redondeo a 2 decimales tipo contable */
+    PolizasComponent.prototype.normalizeList = function (res) {
+        var _a, _b, _c, _d;
+        return Array.isArray(res)
+            ? res
+            : (_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : [];
+    };
+    PolizasComponent.prototype.N = function (v) {
+        if (v === '' || v === null || v === undefined)
+            return undefined;
+        var n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+    };
     PolizasComponent.prototype.r2 = function (n) {
         return Math.round((n + Number.EPSILON) * 100) / 100;
     };
+    //  Usuario actual 
+    PolizasComponent.prototype.initUsuarioActual = function () {
+        var usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
+        if (!usr)
+            return;
+        var resolved = this.resolveNombre(usr);
+        var email = this.resolveEmail(usr);
+        var fromEmail = (email
+            ? email.split('@')[0].replace(/[._-]+/g, ' ').trim()
+            : '') || undefined;
+        var fallback = usr.id_usuario != null ? "Usuario " + usr.id_usuario : 'Usuario';
+        var nombreForzado = (resolved || fromEmail || fallback).toString().trim();
+        this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado });
+        console.log('USUARIO', (this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado })));
+        var idNum = Number(usr.id_usuario);
+        if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
+            this.nuevaPoliza.id_usuario = idNum;
+        }
+    };
+    PolizasComponent.prototype.getNombreForzado = function (src) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
+        var nombre = (_m = (_l = (_k = (_j = (_h = (_g = (_f = (_e = (_d = (_c = (_b = (_a = src === null || src === void 0 ? void 0 : src.nombre) !== null && _a !== void 0 ? _a : src === null || src === void 0 ? void 0 : src.name) !== null && _b !== void 0 ? _b : src === null || src === void 0 ? void 0 : src.nombres) !== null && _c !== void 0 ? _c : src === null || src === void 0 ? void 0 : src.displayName) !== null && _d !== void 0 ? _d : src === null || src === void 0 ? void 0 : src.full_name) !== null && _e !== void 0 ? _e : src === null || src === void 0 ? void 0 : src.fullName) !== null && _f !== void 0 ? _f : src === null || src === void 0 ? void 0 : src.first_name) !== null && _g !== void 0 ? _g : src === null || src === void 0 ? void 0 : src.given_name) !== null && _h !== void 0 ? _h : src === null || src === void 0 ? void 0 : src.preferred_username) !== null && _j !== void 0 ? _j : src === null || src === void 0 ? void 0 : src.usuario) !== null && _k !== void 0 ? _k : src === null || src === void 0 ? void 0 : src.username) !== null && _l !== void 0 ? _l : src === null || src === void 0 ? void 0 : src.userName) !== null && _m !== void 0 ? _m : '';
+        var apP = (_t = (_s = (_r = (_q = (_p = (_o = src === null || src === void 0 ? void 0 : src.apellido_p) !== null && _o !== void 0 ? _o : src === null || src === void 0 ? void 0 : src.apellidoP) !== null && _p !== void 0 ? _p : src === null || src === void 0 ? void 0 : src.apellido) !== null && _q !== void 0 ? _q : src === null || src === void 0 ? void 0 : src.apellidos) !== null && _r !== void 0 ? _r : src === null || src === void 0 ? void 0 : src.last_name) !== null && _s !== void 0 ? _s : src === null || src === void 0 ? void 0 : src.family_name) !== null && _t !== void 0 ? _t : '';
+        var apM = (_v = (_u = src === null || src === void 0 ? void 0 : src.apellido_m) !== null && _u !== void 0 ? _u : src === null || src === void 0 ? void 0 : src.apellidoM) !== null && _v !== void 0 ? _v : '';
+        var base = [nombre, apP, apM]
+            .map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); })
+            .filter(Boolean)
+            .join(' ');
+        if (base)
+            return base;
+        var email = this.resolveEmail(src);
+        if (email) {
+            var alias = String(email)
+                .split('@')[0]
+                .replace(/[._-]+/g, ' ')
+                .trim();
+            if (alias)
+                return alias;
+        }
+        return (src === null || src === void 0 ? void 0 : src.id_usuario) != null ? "Usuario " + src.id_usuario : 'Usuario';
+    };
+    PolizasComponent.prototype.leerUsuarioDescompuesto = function () {
+        var _a, _b, _c, _d, _e;
+        try {
+            var w = window;
+            var candidatos = [
+                w === null || w === void 0 ? void 0 : w.Usuario,
+                w === null || w === void 0 ? void 0 : w.usuario,
+                w === null || w === void 0 ? void 0 : w.currentUser,
+                localStorage.getItem('usuario'),
+                localStorage.getItem('user'),
+                sessionStorage.getItem('usuario')
+            ];
+            for (var _i = 0, candidatos_1 = candidatos; _i < candidatos_1.length; _i++) {
+                var c = candidatos_1[_i];
+                if (!c)
+                    continue;
+                var obj = typeof c === 'string' ? JSON.parse(c) : c;
+                var id = Number((_c = (_b = (_a = obj === null || obj === void 0 ? void 0 : obj.id_usuario) !== null && _a !== void 0 ? _a : obj === null || obj === void 0 ? void 0 : obj.id) !== null && _b !== void 0 ? _b : obj === null || obj === void 0 ? void 0 : obj.sub) !== null && _c !== void 0 ? _c : obj === null || obj === void 0 ? void 0 : obj.uid);
+                if (!Number.isFinite(id))
+                    continue;
+                return __assign({ id_usuario: id, nombre: (_d = this.resolveNombre(obj)) !== null && _d !== void 0 ? _d : undefined, email: (_e = this.resolveEmail(obj)) !== null && _e !== void 0 ? _e : undefined }, obj);
+            }
+        }
+        catch (_f) {
+            // ignore
+        }
+        return null;
+    };
+    PolizasComponent.prototype.leerUsuarioDesdeJwt = function () {
+        var _a, _b, _c, _d, _e, _f;
+        var token = localStorage.getItem('token') ||
+            localStorage.getItem('access_token') ||
+            sessionStorage.getItem('token');
+        if (!token)
+            return null;
+        var payload = this.decodeJwt(token);
+        if (!payload)
+            return null;
+        var rawId = (_c = (_b = (_a = payload === null || payload === void 0 ? void 0 : payload.id_usuario) !== null && _a !== void 0 ? _a : payload === null || payload === void 0 ? void 0 : payload.sub) !== null && _b !== void 0 ? _b : payload === null || payload === void 0 ? void 0 : payload.uid) !== null && _c !== void 0 ? _c : null;
+        var maybeNum = Number(rawId);
+        var idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
+        return __assign({ id_usuario: (_d = idNum) !== null && _d !== void 0 ? _d : rawId, nombre: (_e = this.resolveNombre(payload)) !== null && _e !== void 0 ? _e : undefined, email: (_f = this.resolveEmail(payload)) !== null && _f !== void 0 ? _f : undefined }, payload);
+    };
+    PolizasComponent.prototype.decodeJwt = function (token) {
+        try {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var json = decodeURIComponent(atob(base64)
+                .split('')
+                .map(function (c) {
+                return '%' +
+                    ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+                .join(''));
+            return JSON.parse(json);
+        }
+        catch (_a) {
+            return null;
+        }
+    };
+    PolizasComponent.prototype.resolveNombre = function (src) {
+        var _a, _b, _c, _d, _e, _f;
+        if (!src)
+            return null;
+        var cand = [
+            src.nombre,
+            src.name,
+            src.full_name,
+            src.fullName,
+            src.username,
+            src.userName,
+            src.nombres,
+            src.displayName,
+            src.first_name,
+            src.given_name,
+            src.preferred_username,
+            src.usuario,
+            src.nombre_usuario,
+            src.nombreCompleto
+        ]
+            .map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); })
+            .filter(Boolean);
+        var ap = ((_e = (_d = (_c = (_b = (_a = src.apellido_p) !== null && _a !== void 0 ? _a : src.apellido) !== null && _b !== void 0 ? _b : src.apellidos) !== null && _c !== void 0 ? _c : src.last_name) !== null && _d !== void 0 ? _d : src.family_name) !== null && _e !== void 0 ? _e : '')
+            .toString()
+            .trim();
+        var apm = ((_f = src.apellido_m) !== null && _f !== void 0 ? _f : '').toString().trim();
+        if (cand.length && (ap || apm))
+            return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
+        return cand[0] || null;
+    };
+    PolizasComponent.prototype.resolveEmail = function (src) {
+        if (!src)
+            return null;
+        var cand = [src.email, src.correo, src.mail, src.Email, src.EMAIL]
+            .map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); })
+            .filter(Boolean);
+        return cand[0] || null;
+    };
+    Object.defineProperty(PolizasComponent.prototype, "currentUserLabel", {
+        get: function () {
+            var _a;
+            return (((_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.nombre) || '').toString().trim();
+        },
+        enumerable: false,
+        configurable: true
+    });
     PolizasComponent.prototype.onBaseTipoChange = function (value) {
         this.iva.baseTipo = value;
-        if (value === 'sin') {
-            this.iva.tasa = 0.00;
-        }
-        else {
-            this.iva.tasa = 0.16;
-        }
+        this.iva.tasa = value === 'sin' ? 0.0 : 0.16;
         this.recalcularIVA();
     };
     PolizasComponent.prototype.onTasaChange = function (value) {
@@ -193,7 +386,6 @@ var PolizasComponent = /** @class */ (function () {
         this.agregarMovimientosDesdeIVA();
         this.cerrarModalIva();
     };
-    /** Recalcula subtotal/IVA/total según base y tasa */
     PolizasComponent.prototype.recalcularIVA = function () {
         var _a = this.iva, baseTipo = _a.baseTipo, tasa = _a.tasa, monto = _a.monto;
         if (!monto || monto <= 0) {
@@ -201,17 +393,9 @@ var PolizasComponent = /** @class */ (function () {
             return;
         }
         if (tasa === 'exento') {
-            // Exento: IVA = 0, subtotal = total según base
-            if (baseTipo === 'sin') {
-                this.iva.subtotal = this.r2(monto);
-                this.iva.iva = 0;
-                this.iva.total = this.r2(monto);
-            }
-            else {
-                this.iva.subtotal = this.r2(monto);
-                this.iva.iva = 0;
-                this.iva.total = this.r2(monto);
-            }
+            this.iva.subtotal = this.r2(monto);
+            this.iva.iva = 0;
+            this.iva.total = this.r2(monto);
             return;
         }
         var t = tasa;
@@ -224,7 +408,6 @@ var PolizasComponent = /** @class */ (function () {
             this.iva.total = this.r2(total);
         }
         else {
-            // base = precio con IVA
             var total = monto;
             var subtotal = total / (1 + t);
             var iva = total - subtotal;
@@ -233,7 +416,6 @@ var PolizasComponent = /** @class */ (function () {
             this.iva.total = this.r2(total);
         }
     };
-    /** movimientos calculadora de iva */
     PolizasComponent.prototype.agregarMovimientosDesdeIVA = function () {
         var _this = this;
         var _a, _b;
@@ -272,28 +454,30 @@ var PolizasComponent = /** @class */ (function () {
             COMPRAS_0: '5105010009',
             COMPRAS_EXE: '5105010010'
         };
-        // Helper para obtener id_cuenta por código (o null si no existe en catálogo)
-        var id = function (codigo) { return (codigo ? _this.findCuentaIdByCodigo(codigo) : null); };
-        // Normaliza tasa a número o etiqueta
-        var tasaNum = (tasa === 'exento') ? 0 : Number(tasa || 0);
-        var esExento = (tasa === 'exento');
+        var id = function (codigo) {
+            return codigo ? _this.findCuentaIdByCodigo(codigo) : null;
+        };
+        var tasaNum = tasa === 'exento' ? 0 : Number(tasa || 0);
+        var esExento = tasa === 'exento';
         var hoyISO = fecha_utils_1.todayISO();
         var refSerie = (_b = (_a = this.evento) === null || _a === void 0 ? void 0 : _a.ref_serie_venta) !== null && _b !== void 0 ? _b : null;
         var ccHeader = this.toNumOrNull(this.nuevaPoliza.id_centro);
         var serieHeader = this.getSerieVentaByCcId(ccHeader !== null && ccHeader !== void 0 ? ccHeader : null);
         var refSerieEfectiva = serieHeader !== null && serieHeader !== void 0 ? serieHeader : refSerie;
-        // Selección de cuenta por MEDIO (cobro/pago) y por TASA
         var cuentaMedioVenta = function () {
             if (medio === 'caja')
                 return id(COD.CAJA);
             if (medio === 'bancos')
                 return id(COD.BANCOS);
-            // clientes (crédito) por tasa:
             switch (true) {
-                case esExento: return id(COD.CLIENTES_EXE) || id(COD.CLIENTES16);
-                case tasaNum === 0: return id(COD.CLIENTES0) || id(COD.CLIENTES16);
-                case tasaNum === 0.08: return id(COD.CLIENTES08) || id(COD.CLIENTES16);
-                default: return id(COD.CLIENTES16);
+                case esExento:
+                    return id(COD.CLIENTES_EXE) || id(COD.CLIENTES16);
+                case tasaNum === 0:
+                    return id(COD.CLIENTES0) || id(COD.CLIENTES16);
+                case tasaNum === 0.08:
+                    return id(COD.CLIENTES08) || id(COD.CLIENTES16);
+                default:
+                    return id(COD.CLIENTES16);
             }
         };
         var cuentaMedioCompra = function () {
@@ -301,15 +485,17 @@ var PolizasComponent = /** @class */ (function () {
                 return id(COD.CAJA);
             if (medio === 'bancos')
                 return id(COD.BANCOS);
-            // proveedores (crédito) por tasa:
             switch (true) {
-                case esExento: return id(COD.PROV_EXE) || id(COD.PROV16);
-                case tasaNum === 0: return id(COD.PROV0) || id(COD.PROV16);
-                case tasaNum === 0.08: return id(COD.PROV08) || id(COD.PROV16);
-                default: return id(COD.PROV16);
+                case esExento:
+                    return id(COD.PROV_EXE) || id(COD.PROV16);
+                case tasaNum === 0:
+                    return id(COD.PROV0) || id(COD.PROV16);
+                case tasaNum === 0.08:
+                    return id(COD.PROV08) || id(COD.PROV16);
+                default:
+                    return id(COD.PROV16);
             }
         };
-        // Selección de cuenta de ventas/compras por tasa
         var cuentaVentas = function () {
             if (esExento)
                 return id(COD.VENTAS_EXE) || id(COD.VENTAS_16);
@@ -328,7 +514,6 @@ var PolizasComponent = /** @class */ (function () {
                 return id(COD.COMPRAS_08) || id(COD.COMPRAS_16);
             return id(COD.COMPRAS_16);
         };
-        // IVA por tasa (solo si tasa > 0)
         var cuentaIVAtras = function () {
             if (tasaNum === 0.16)
                 return id(COD.IVA_TRAS_16);
@@ -343,12 +528,10 @@ var PolizasComponent = /** @class */ (function () {
                 return id(COD.IVA_ACRED_08) || id(COD.IVA_ACRED_16);
             return null;
         };
-        //  Asientos 
         if (op === 'venta') {
             var idMedio = cuentaMedioVenta();
             var idVentas = cuentaVentas();
             var idIVAtras = cuentaIVAtras();
-            // Cargo por el total (cobrado o por cobrar)
             this.nuevaPoliza.movimientos.push({
                 id_cuenta: idMedio,
                 operacion: '0',
@@ -359,7 +542,6 @@ var PolizasComponent = /** @class */ (function () {
                 uuid: null,
                 ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
-            // Abono a Ventas por el subtotal
             this.nuevaPoliza.movimientos.push({
                 id_cuenta: idVentas,
                 operacion: '1',
@@ -370,7 +552,6 @@ var PolizasComponent = /** @class */ (function () {
                 uuid: null,
                 ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
-            // Abono a IVA Trasladado (solo si tasa > 0)
             if (!esExento && tasaNum > 0) {
                 this.nuevaPoliza.movimientos.push({
                     id_cuenta: idIVAtras,
@@ -388,7 +569,6 @@ var PolizasComponent = /** @class */ (function () {
             var idMedio = cuentaMedioCompra();
             var idCompras = cuentaCompras();
             var idIVAacred = cuentaIVAacred();
-            // Cargo a Compras por el subtotal
             this.nuevaPoliza.movimientos.push({
                 id_cuenta: idCompras,
                 operacion: '0',
@@ -399,7 +579,6 @@ var PolizasComponent = /** @class */ (function () {
                 uuid: null,
                 ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
             });
-            // Cargo a IVA Acreditable (solo si tasa > 0)
             if (!esExento && tasaNum > 0) {
                 this.nuevaPoliza.movimientos.push({
                     id_cuenta: idIVAacred,
@@ -412,7 +591,6 @@ var PolizasComponent = /** @class */ (function () {
                     ref_serie_venta: refSerieEfectiva !== null && refSerieEfectiva !== void 0 ? refSerieEfectiva : null
                 });
             }
-            // Abono por el total pagado/por pagar
             this.nuevaPoliza.movimientos.push({
                 id_cuenta: idMedio,
                 operacion: '1',
@@ -425,8 +603,16 @@ var PolizasComponent = /** @class */ (function () {
             });
         }
     };
-    // recalcula totales/estado visual si tienes funciones para ello
-    // (tu UI ya muestra la diferencia con getDiferencia)
+    PolizasComponent.prototype.getTipoPolizaLabelById = function (id) {
+        var _a;
+        var t = this.tiposPoliza.find(function (x) { return Number(x.id_tipopoliza) === Number(id); });
+        return ((_a = t === null || t === void 0 ? void 0 : t.nombre) !== null && _a !== void 0 ? _a : '').toString().trim();
+    };
+    PolizasComponent.prototype.findCuentaIdByCodigo = function (codigo) {
+        var _a, _b;
+        var c = (_a = this.cuentas) === null || _a === void 0 ? void 0 : _a.find(function (x) { var _a; return ((_a = x.codigo) === null || _a === void 0 ? void 0 : _a.toString()) === codigo; });
+        return (_b = c === null || c === void 0 ? void 0 : c.id_cuenta) !== null && _b !== void 0 ? _b : null;
+    };
     PolizasComponent.prototype.getCentroLabelById = function (id) {
         var _a;
         var c = this.centros.find(function (x) { return Number(x.id_centro) === Number(id); });
@@ -438,7 +624,9 @@ var PolizasComponent = /** @class */ (function () {
             return null;
         var cc = this.centrosCostoMap.get(Number(ccId));
         var serie = (_b = (_a = cc) === null || _a === void 0 ? void 0 : _a.serie_venta) !== null && _b !== void 0 ? _b : null;
-        return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
+        return typeof serie === 'string' && serie.trim()
+            ? String(serie).trim()
+            : null;
     };
     PolizasComponent.prototype.recomputarConceptoSugerido = function () {
         var tipoNombre = this.getTipoPolizaLabelById(this.nuevaPoliza.id_tipopoliza);
@@ -493,168 +681,7 @@ var PolizasComponent = /** @class */ (function () {
             }
         });
     };
-    PolizasComponent.prototype.ngOnInit = function () {
-        this.cargarEjercicioActivo();
-        this.initUsuarioActual();
-        this.cargarCatalogos();
-        this.getCentros();
-        this.cargarCuentas();
-        this.cargarPolizas();
-        this.cargarCfdiRecientes();
-        if (!this.evento.id_empresa)
-            this.evento.id_empresa = 1;
-        if (!this.evento.fecha_operacion)
-            this.evento.fecha_operacion = fecha_utils_1.todayISO();
-    };
-    PolizasComponent.prototype.abrirModalCuentas = function (index) {
-        this.indiceMovimientoSeleccionado = index;
-        this.modalCuentasAbierto = true;
-    };
-    PolizasComponent.prototype.cerrarModalCuentas = function () {
-        this.modalCuentasAbierto = false;
-        this.indiceMovimientoSeleccionado = null;
-    };
-    PolizasComponent.prototype.onCuentaSeleccionadaModal = function (cuenta) {
-        if (this.indiceMovimientoSeleccionado != null) {
-            this.nuevaPoliza.movimientos[this.indiceMovimientoSeleccionado].id_cuenta = cuenta.id_cuenta;
-        }
-        this.cerrarModalCuentas();
-    };
-    PolizasComponent.prototype.onSidebarToggle = function (v) { this.sidebarOpen = v; };
-    PolizasComponent.prototype.showToast = function (opts) {
-        var _a, _b;
-        this.toast.message = opts.message;
-        this.toast.type = (_a = opts.type) !== null && _a !== void 0 ? _a : 'info';
-        this.toast.title = (_b = opts.title) !== null && _b !== void 0 ? _b : '';
-        if (opts.autoCloseMs != null)
-            this.toast.autoCloseMs = opts.autoCloseMs;
-        if (opts.position)
-            this.toast.position = opts.position;
-        this.toast.open = true;
-    };
-    PolizasComponent.prototype.normalizeList = function (res) {
-        var _a, _b, _c, _d;
-        return Array.isArray(res) ? res : ((_d = (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res === null || res === void 0 ? void 0 : res.items) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.result) !== null && _d !== void 0 ? _d : []);
-    };
-    PolizasComponent.prototype.N = function (v) {
-        if (v === '' || v === null || v === undefined)
-            return undefined;
-        var n = Number(v);
-        return Number.isFinite(n) ? n : undefined;
-    };
-    // ===== FIX: forzar nombre utilizable =====
-    PolizasComponent.prototype.initUsuarioActual = function () {
-        var usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
-        if (!usr)
-            return;
-        var resolved = this.resolveNombre(usr);
-        var email = this.resolveEmail(usr);
-        var fromEmail = (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') || undefined;
-        var fallback = usr.id_usuario != null ? "Usuario " + usr.id_usuario : 'Usuario';
-        var nombreForzado = (resolved || fromEmail || fallback).toString().trim();
-        this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado });
-        console.log('USUARIO', this.currentUser = __assign(__assign({}, usr), { nombre: nombreForzado }));
-        var idNum = Number(usr.id_usuario);
-        if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
-            this.nuevaPoliza.id_usuario = idNum;
-        }
-    };
-    PolizasComponent.prototype.getNombreForzado = function (src) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
-        var nombre = (_m = (_l = (_k = (_j = (_h = (_g = (_f = (_e = (_d = (_c = (_b = (_a = src === null || src === void 0 ? void 0 : src.nombre) !== null && _a !== void 0 ? _a : src === null || src === void 0 ? void 0 : src.name) !== null && _b !== void 0 ? _b : src === null || src === void 0 ? void 0 : src.nombres) !== null && _c !== void 0 ? _c : src === null || src === void 0 ? void 0 : src.displayName) !== null && _d !== void 0 ? _d : src === null || src === void 0 ? void 0 : src.full_name) !== null && _e !== void 0 ? _e : src === null || src === void 0 ? void 0 : src.fullName) !== null && _f !== void 0 ? _f : src === null || src === void 0 ? void 0 : src.first_name) !== null && _g !== void 0 ? _g : src === null || src === void 0 ? void 0 : src.given_name) !== null && _h !== void 0 ? _h : src === null || src === void 0 ? void 0 : src.preferred_username) !== null && _j !== void 0 ? _j : src === null || src === void 0 ? void 0 : src.usuario) !== null && _k !== void 0 ? _k : src === null || src === void 0 ? void 0 : src.username) !== null && _l !== void 0 ? _l : src === null || src === void 0 ? void 0 : src.userName) !== null && _m !== void 0 ? _m : '';
-        var apP = (_t = (_s = (_r = (_q = (_p = (_o = src === null || src === void 0 ? void 0 : src.apellido_p) !== null && _o !== void 0 ? _o : src === null || src === void 0 ? void 0 : src.apellidoP) !== null && _p !== void 0 ? _p : src === null || src === void 0 ? void 0 : src.apellido) !== null && _q !== void 0 ? _q : src === null || src === void 0 ? void 0 : src.apellidos) !== null && _r !== void 0 ? _r : src === null || src === void 0 ? void 0 : src.last_name) !== null && _s !== void 0 ? _s : src === null || src === void 0 ? void 0 : src.family_name) !== null && _t !== void 0 ? _t : '';
-        var apM = (_v = (_u = src === null || src === void 0 ? void 0 : src.apellido_m) !== null && _u !== void 0 ? _u : src === null || src === void 0 ? void 0 : src.apellidoM) !== null && _v !== void 0 ? _v : '';
-        var base = [nombre, apP, apM].map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); }).filter(Boolean).join(' ');
-        if (base)
-            return base;
-        var email = this.resolveEmail(src);
-        if (email) {
-            var alias = String(email).split('@')[0].replace(/[._-]+/g, ' ').trim();
-            if (alias)
-                return alias;
-        }
-        return (src === null || src === void 0 ? void 0 : src.id_usuario) != null ? "Usuario " + src.id_usuario : 'Usuario';
-    };
-    PolizasComponent.prototype.leerUsuarioDescompuesto = function () {
-        var _a, _b, _c, _d, _e;
-        try {
-            var w = window;
-            var candidatos = [
-                w === null || w === void 0 ? void 0 : w.Usuario,
-                w === null || w === void 0 ? void 0 : w.usuario,
-                w === null || w === void 0 ? void 0 : w.currentUser,
-                localStorage.getItem('usuario'),
-                localStorage.getItem('user'),
-                sessionStorage.getItem('usuario')
-            ];
-            for (var _i = 0, candidatos_1 = candidatos; _i < candidatos_1.length; _i++) {
-                var c = candidatos_1[_i];
-                if (!c)
-                    continue;
-                var obj = typeof c === 'string' ? JSON.parse(c) : c;
-                var id = Number((_c = (_b = (_a = obj === null || obj === void 0 ? void 0 : obj.id_usuario) !== null && _a !== void 0 ? _a : obj === null || obj === void 0 ? void 0 : obj.id) !== null && _b !== void 0 ? _b : obj === null || obj === void 0 ? void 0 : obj.sub) !== null && _c !== void 0 ? _c : obj === null || obj === void 0 ? void 0 : obj.uid);
-                if (!Number.isFinite(id))
-                    continue;
-                return __assign({ id_usuario: id, nombre: (_d = this.resolveNombre(obj)) !== null && _d !== void 0 ? _d : undefined, email: (_e = this.resolveEmail(obj)) !== null && _e !== void 0 ? _e : undefined }, obj);
-            }
-        }
-        catch (_f) { }
-        return null;
-    };
-    PolizasComponent.prototype.leerUsuarioDesdeJwt = function () {
-        var _a, _b, _c, _d, _e, _f;
-        var token = localStorage.getItem('token') ||
-            localStorage.getItem('access_token') ||
-            sessionStorage.getItem('token');
-        if (!token)
-            return null;
-        var payload = this.decodeJwt(token);
-        if (!payload)
-            return null;
-        // toma el id crudo (puede ser UUID)
-        var rawId = (_c = (_b = (_a = payload === null || payload === void 0 ? void 0 : payload.id_usuario) !== null && _a !== void 0 ? _a : payload === null || payload === void 0 ? void 0 : payload.sub) !== null && _b !== void 0 ? _b : payload === null || payload === void 0 ? void 0 : payload.uid) !== null && _c !== void 0 ? _c : null;
-        var maybeNum = Number(rawId);
-        var idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
-        return __assign({ id_usuario: (_d = idNum) !== null && _d !== void 0 ? _d : rawId, nombre: (_e = this.resolveNombre(payload)) !== null && _e !== void 0 ? _e : undefined, email: (_f = this.resolveEmail(payload)) !== null && _f !== void 0 ? _f : undefined }, payload);
-    };
-    PolizasComponent.prototype.decodeJwt = function (token) {
-        try {
-            var base64Url = token.split('.')[1];
-            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            var json = decodeURIComponent(atob(base64).split('').map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
-            return JSON.parse(json);
-        }
-        catch (_a) {
-            return null;
-        }
-    };
-    PolizasComponent.prototype.getCuentasFiltradasGlobal = function () {
-        var _this = this;
-        var q = this.normalizaStr(String(this.cuentasQuery || '').trim());
-        if (!q)
-            return this.cuentas;
-        return this.cuentas.filter(function (c) {
-            var cad = c.codigo + " " + c.nombre;
-            return _this.normalizaStr(cad).includes(q);
-        });
-    };
-    PolizasComponent.prototype.onCuentaSeleccionada = function (index) {
-        var _a;
-        var movs = ((_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : []);
-        if (!movs[index])
-            return;
-        movs[index]._cuentaQuery = '';
-    };
-    PolizasComponent.prototype.onCuentaSeleccionadaGlobal = function () { this.cuentasQuery = ''; };
-    PolizasComponent.prototype.getCuentasParaFila = function (index, selectedId) {
-        var base = this.getCuentasFiltradasGlobal();
-        if (!selectedId)
-            return base;
-        if (base.some(function (c) { return c.id_cuenta === selectedId; }))
-            return base;
-        var sel = this.cuentasMap.get(selectedId);
-        return sel ? __spreadArrays([{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }], base) : base;
-    };
+    //  Ejercicios / periodos 
     PolizasComponent.prototype.isAbierto = function (e) {
         var _a, _b, _c;
         var v = (_c = (_b = (_a = e === null || e === void 0 ? void 0 : e.esta_abierto) !== null && _a !== void 0 ? _a : e === null || e === void 0 ? void 0 : e.activo) !== null && _b !== void 0 ? _b : e === null || e === void 0 ? void 0 : e.activo_flag) !== null && _c !== void 0 ? _c : e === null || e === void 0 ? void 0 : e.is_open;
@@ -666,10 +693,14 @@ var PolizasComponent = /** @class */ (function () {
     };
     PolizasComponent.prototype.cargarEjercicioActivo = function () {
         var _this = this;
-        this.ejercicioSvc.listEjerciciosAbiertos({ esta_abierto: true }).subscribe({
+        this.ejercicioSvc
+            .listEjerciciosAbiertos({ esta_abierto: true })
+            .subscribe({
             next: function (res) {
                 var _a, _b, _c, _d, _e, _f;
-                var raw = Array.isArray(res) ? res : ((_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res) !== null && _c !== void 0 ? _c : []);
+                var raw = Array.isArray(res)
+                    ? res
+                    : (_c = (_b = (_a = res === null || res === void 0 ? void 0 : res.rows) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.data) !== null && _b !== void 0 ? _b : res) !== null && _c !== void 0 ? _c : [];
                 var hoy = new Date();
                 var anioActual = hoy.getFullYear();
                 var activos = raw.filter(function (e) { return _this.isAbierto(e); });
@@ -715,7 +746,7 @@ var PolizasComponent = /** @class */ (function () {
                 }
                 _this.ejercicioActual = elegido;
                 _this.ejercicioActualId = elegido.id_ejercicio;
-                console.log('✅ Ejercicio elegido (nueva póliza):', _this.ejercicioActual);
+                console.log(' Ejercicio elegido (nueva póliza):', _this.ejercicioActual);
                 _this.applyPeriodoFilter();
             },
             error: function (err) {
@@ -745,17 +776,29 @@ var PolizasComponent = /** @class */ (function () {
         var _this = this;
         if (!this.api.selectEjercicio) {
             console.warn('⚠ No hay método API para guardar ejercicio seleccionado');
-            this.showToast({ type: 'warning', title: 'Aviso', message: 'El servicio no expone selectEjercicio().' });
+            this.showToast({
+                type: 'warning',
+                title: 'Aviso',
+                message: 'El servicio no expone selectEjercicio().'
+            });
             return;
         }
         this.api.selectEjercicio(id_ejercicio).subscribe({
             next: function () {
                 console.log('Ejercicio seleccionado guardado en BD:', id_ejercicio);
-                _this.showToast({ type: 'success', title: 'Ejercicio actualizado', message: "Se guard\u00F3 el ejercicio " + id_ejercicio + " como activo." });
+                _this.showToast({
+                    type: 'success',
+                    title: 'Ejercicio actualizado',
+                    message: "Se guard\u00F3 el ejercicio " + id_ejercicio + " como activo."
+                });
             },
             error: function (err) {
                 console.error('❌ Error al guardar ejercicio seleccionado:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudo actualizar el ejercicio seleccionado.'
+                });
             }
         });
     };
@@ -764,73 +807,16 @@ var PolizasComponent = /** @class */ (function () {
             var e = this.ejercicioActual;
             if (!e)
                 return '—';
-            var nombre = (e.nombre && e.nombre !== '—') ? e.nombre : (e.fecha_inicio && e.fecha_fin ? e.fecha_inicio + " \u2014 " + e.fecha_fin : '');
+            var nombre = e.nombre && e.nombre !== '—'
+                ? e.nombre
+                : e.fecha_inicio && e.fecha_fin
+                    ? e.fecha_inicio + " \u2014 " + e.fecha_fin
+                    : '';
             return nombre || '—';
         },
         enumerable: false,
         configurable: true
     });
-    // Catálogos
-    PolizasComponent.prototype.cargarCatalogos = function () {
-        var _this = this;
-        // Tipos de póliza
-        this.api.getTiposPoliza().subscribe({
-            next: function (r) {
-                _this.tiposPoliza = _this.normalizeList(r).map(function (t) {
-                    var _a, _b, _c, _d, _e;
-                    return ({
-                        id_tipopoliza: Number((_b = (_a = t.id_tipopoliza) !== null && _a !== void 0 ? _a : t.id) !== null && _b !== void 0 ? _b : t.ID),
-                        nombre: String((_e = (_d = (_c = t.nombre) !== null && _c !== void 0 ? _c : t.descripcion) !== null && _d !== void 0 ? _d : t.NOMBRE) !== null && _e !== void 0 ? _e : 'Tipo')
-                    });
-                });
-            },
-            error: function (err) {
-                console.error('Tipos de póliza:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los tipos de póliza.' });
-            }
-        });
-        this.api.getPeriodos().subscribe({
-            next: function (r) {
-                var _a;
-                var items = (_a = _this.normalizeList(r)) !== null && _a !== void 0 ? _a : [];
-                _this.allPeriodos = items.map(function (p) {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
-                    return ({
-                        id_periodo: Number((_b = (_a = p.id_periodo) !== null && _a !== void 0 ? _a : p.id) !== null && _b !== void 0 ? _b : p.ID),
-                        id_ejercicio: Number((_g = (_f = (_e = (_d = (_c = p.id_ejercicio) !== null && _c !== void 0 ? _c : p.ejercicio_id) !== null && _d !== void 0 ? _d : p.ejercicio) !== null && _e !== void 0 ? _e : p.idEjercicio) !== null && _f !== void 0 ? _f : p.ID_EJERCICIO) !== null && _g !== void 0 ? _g : NaN),
-                        fecha_inicio: fecha_utils_1.fmtDate((_l = (_k = (_j = (_h = p.fecha_inicio) !== null && _h !== void 0 ? _h : p.fechaInicio) !== null && _j !== void 0 ? _j : p.inicio) !== null && _k !== void 0 ? _k : p.start_date) !== null && _l !== void 0 ? _l : p.fecha_ini),
-                        fecha_fin: fecha_utils_1.fmtDate((_q = (_p = (_o = (_m = p.fecha_fin) !== null && _m !== void 0 ? _m : p.fechaFin) !== null && _o !== void 0 ? _o : p.fin) !== null && _p !== void 0 ? _p : p.end_date) !== null && _q !== void 0 ? _q : p.fecha_fin),
-                        _raw: p
-                    });
-                });
-                _this.applyPeriodoFilter();
-            },
-            error: function (err) {
-                console.error('Periodos:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los periodos.' });
-            }
-        });
-        // Centros (encabezado)
-        this.api.getCentros().subscribe({
-            next: function (r) {
-                var items = _this.normalizeList(r);
-                _this.centros = items.map(function (c) {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-                    var id = Number((_b = (_a = c.id_centro) !== null && _a !== void 0 ? _a : c.id) !== null && _b !== void 0 ? _b : c.ID);
-                    var serie = String((_e = (_d = (_c = c.serie_venta) !== null && _c !== void 0 ? _c : c.serie) !== null && _d !== void 0 ? _d : c.codigo) !== null && _e !== void 0 ? _e : '').trim();
-                    var nombre = String((_j = (_h = (_g = (_f = c.nombre) !== null && _f !== void 0 ? _f : c.nombre_centro) !== null && _g !== void 0 ? _g : c.descripcion) !== null && _h !== void 0 ? _h : c.NOMBRE) !== null && _j !== void 0 ? _j : '').trim();
-                    var etiqueta = serie && nombre
-                        ? serie + " \u2014 " + nombre
-                        : (serie || nombre || "Centro " + id);
-                    return { id_centro: id, nombre: etiqueta };
-                });
-            },
-            error: function (err) {
-                console.error('Centros:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los centros.' });
-            }
-        });
-    };
     PolizasComponent.prototype.applyPeriodoFilter = function () {
         var _a, _b;
         if (!Array.isArray(this.allPeriodos) || this.allPeriodos.length === 0) {
@@ -854,7 +840,7 @@ var PolizasComponent = /** @class */ (function () {
                 var pi = p.fecha_inicio, pf = p.fecha_fin;
                 if (!pi || !pf)
                     return false;
-                return (pi <= ejFin) && (pf >= ejIni); // solapamiento
+                return pi <= ejFin && pf >= ejIni; // solapamiento
             });
         }
         this.periodos = filtrados.map(function (p) { return ({
@@ -862,12 +848,88 @@ var PolizasComponent = /** @class */ (function () {
             nombre: fecha_utils_1.periodoEtiqueta(p.fecha_inicio, p.fecha_fin)
         }); });
     };
+    //  Catálogos 
+    PolizasComponent.prototype.cargarCatalogos = function () {
+        var _this = this;
+        // Tipos de póliza
+        this.api.getTiposPoliza().subscribe({
+            next: function (r) {
+                _this.tiposPoliza = _this.normalizeList(r).map(function (t) {
+                    var _a, _b, _c, _d, _e;
+                    return ({
+                        id_tipopoliza: Number((_b = (_a = t.id_tipopoliza) !== null && _a !== void 0 ? _a : t.id) !== null && _b !== void 0 ? _b : t.ID),
+                        nombre: String((_e = (_d = (_c = t.nombre) !== null && _c !== void 0 ? _c : t.descripcion) !== null && _d !== void 0 ? _d : t.NOMBRE) !== null && _e !== void 0 ? _e : 'Tipo')
+                    });
+                });
+            },
+            error: function (err) {
+                console.error('Tipos de póliza:', err);
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar los tipos de póliza.'
+                });
+            }
+        });
+        this.api.getPeriodos().subscribe({
+            next: function (r) {
+                var _a;
+                var items = (_a = _this.normalizeList(r)) !== null && _a !== void 0 ? _a : [];
+                _this.allPeriodos = items.map(function (p) {
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+                    return ({
+                        id_periodo: Number((_b = (_a = p.id_periodo) !== null && _a !== void 0 ? _a : p.id) !== null && _b !== void 0 ? _b : p.ID),
+                        id_ejercicio: Number((_g = (_f = (_e = (_d = (_c = p.id_ejercicio) !== null && _c !== void 0 ? _c : p.ejercicio_id) !== null && _d !== void 0 ? _d : p.ejercicio) !== null && _e !== void 0 ? _e : p.idEjercicio) !== null && _f !== void 0 ? _f : p.ID_EJERCICIO) !== null && _g !== void 0 ? _g : NaN),
+                        fecha_inicio: fecha_utils_1.fmtDate((_l = (_k = (_j = (_h = p.fecha_inicio) !== null && _h !== void 0 ? _h : p.fechaInicio) !== null && _j !== void 0 ? _j : p.inicio) !== null && _k !== void 0 ? _k : p.start_date) !== null && _l !== void 0 ? _l : p.fecha_ini),
+                        fecha_fin: fecha_utils_1.fmtDate((_q = (_p = (_o = (_m = p.fecha_fin) !== null && _m !== void 0 ? _m : p.fechaFin) !== null && _o !== void 0 ? _o : p.fin) !== null && _p !== void 0 ? _p : p.end_date) !== null && _q !== void 0 ? _q : p.fecha_fin),
+                        _raw: p
+                    });
+                });
+                _this.applyPeriodoFilter();
+            },
+            error: function (err) {
+                console.error('Periodos:', err);
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar los periodos.'
+                });
+            }
+        });
+        // Centros (encabezado)
+        this.api.getCentros().subscribe({
+            next: function (r) {
+                var items = _this.normalizeList(r);
+                _this.centros = items.map(function (c) {
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+                    var id = Number((_b = (_a = c.id_centro) !== null && _a !== void 0 ? _a : c.id) !== null && _b !== void 0 ? _b : c.ID);
+                    var serie = String((_e = (_d = (_c = c.serie_venta) !== null && _c !== void 0 ? _c : c.serie) !== null && _d !== void 0 ? _d : c.codigo) !== null && _e !== void 0 ? _e : '').trim();
+                    var nombre = String((_j = (_h = (_g = (_f = c.nombre) !== null && _f !== void 0 ? _f : c.nombre_centro) !== null && _g !== void 0 ? _g : c.descripcion) !== null && _h !== void 0 ? _h : c.NOMBRE) !== null && _j !== void 0 ? _j : '').trim();
+                    var etiqueta = serie && nombre
+                        ? serie + " \u2014 " + nombre
+                        : serie || nombre || "Centro " + id;
+                    return { id_centro: id, nombre: etiqueta };
+                });
+            },
+            error: function (err) {
+                console.error('Centros:', err);
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar los centros.'
+                });
+            }
+        });
+    };
     PolizasComponent.prototype.getCentros = function () {
         var _this = this;
         var svc = this.api;
-        var fn = svc.getCentrosCosto || svc.listCentrosCosto ||
-            svc.getCentroCostos || svc.listCentroCostos ||
-            svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
+        var fn = svc.getCentrosCosto ||
+            svc.listCentrosCosto ||
+            svc.getCentroCostos ||
+            svc.listCentroCostos ||
+            svc.getCentrosDeCosto ||
+            svc.listCentrosDeCosto ||
             svc.getCentros;
         if (typeof fn !== 'function') {
             console.warn('No existe método de API para Centros de Costo; usando vacío.');
@@ -885,29 +947,45 @@ var PolizasComponent = /** @class */ (function () {
                     var serie = String((_f = (_e = (_d = x.serie_venta) !== null && _d !== void 0 ? _d : x.serie) !== null && _e !== void 0 ? _e : x.codigo) !== null && _f !== void 0 ? _f : '').trim();
                     var nom = String((_j = (_h = (_g = x.nombre) !== null && _g !== void 0 ? _g : x.descripcion) !== null && _h !== void 0 ? _h : x.NOMBRE) !== null && _j !== void 0 ? _j : "CC " + id).trim();
                     var clave = String((_l = (_k = x.clave) !== null && _k !== void 0 ? _k : x.codigo) !== null && _l !== void 0 ? _l : '').trim();
-                    var etiqueta = serie ? serie + " \u2014 " + nom : (clave ? clave + " \u2014 " + nom : nom);
-                    return { id_centrocosto: id, nombre: etiqueta, clave: clave, serie_venta: serie };
+                    var etiqueta = serie
+                        ? serie + " \u2014 " + nom
+                        : clave
+                            ? clave + " \u2014 " + nom
+                            : nom;
+                    return {
+                        id_centrocosto: id,
+                        nombre: etiqueta,
+                        clave: clave,
+                        serie_venta: serie
+                    };
                 })
-                    .filter(function (cc) { return Number.isFinite(cc.id_centrocosto); });
+                    .filter(function (cc) {
+                    return Number.isFinite(cc.id_centrocosto);
+                });
                 _this.centrosCostoMap = new Map(_this.centrosCosto.map(function (cc) { return [cc.id_centrocosto, cc]; }));
             },
             error: function (err) {
                 console.error('Centros de Costo:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar Centros de Costo.'
+                });
                 _this.centrosCosto = [];
                 _this.centrosCostoMap.clear();
             }
         });
     };
-    // Catálogo de cuentas (para movimientos)
-    // Catálogo de cuentas (para movimientos) EN FORMA DE ÁRBOL APLANADO
-    // Catálogo de cuentas (para movimientos) en forma de árbol aplanado
+    //  Cuentas 
     PolizasComponent.prototype.cargarCuentas = function () {
         var _this = this;
         var svc = this.api;
-        var fn = svc.getCuentas || svc.listCuentas ||
-            svc.getCatalogoCuentas || svc.listCatalogoCuentas ||
-            svc.getPlanCuentas || svc.listPlanCuentas;
+        var fn = svc.getCuentas ||
+            svc.listCuentas ||
+            svc.getCatalogoCuentas ||
+            svc.listCatalogoCuentas ||
+            svc.getPlanCuentas ||
+            svc.listPlanCuentas;
         if (typeof fn !== 'function') {
             console.warn('No existe método de API para Cuentas; usando vacío.');
             this.cuentas = [];
@@ -944,10 +1022,8 @@ var PolizasComponent = /** @class */ (function () {
                     };
                 })
                     .filter(function (n) { return Number.isFinite(n.id); });
-                // 1) map id → nodo
                 var porId = new Map();
                 nodos.forEach(function (n) { return porId.set(n.id, n); });
-                // 2) enlazar árbol
                 var raices = [];
                 porId.forEach(function (nodo) {
                     if (nodo.parentId) {
@@ -956,7 +1032,6 @@ var PolizasComponent = /** @class */ (function () {
                             padre.hijos.push(nodo);
                         }
                         else {
-                            // huérfano → raíz
                             raices.push(nodo);
                         }
                     }
@@ -964,18 +1039,20 @@ var PolizasComponent = /** @class */ (function () {
                         raices.push(nodo);
                     }
                 });
-                // 3) ordenar por código
                 var sortTree = function (n) {
                     n.hijos.sort(function (a, b) {
-                        return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                        return a.codigo.localeCompare(b.codigo, undefined, {
+                            numeric: true
+                        });
                     });
                     n.hijos.forEach(function (h) { return sortTree(h); });
                 };
                 raices.sort(function (a, b) {
-                    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                    return a.codigo.localeCompare(b.codigo, undefined, {
+                        numeric: true
+                    });
                 });
                 raices.forEach(function (r) { return sortTree(r); });
-                // 4) aplanar árbol → lista ordenada con nivel + esPadre
                 var resultado = [];
                 var visitar = function (nodo, nivel) {
                     resultado.push({
@@ -990,9 +1067,8 @@ var PolizasComponent = /** @class */ (function () {
                 };
                 raices.forEach(function (r) { return visitar(r, 0); });
                 _this.cuentas = resultado;
-                // el map ahora guarda el objeto completo
-                _this.cuentasMap = new Map(resultado.map(function (c) { return [c.id_cuenta, c]; }));
-                console.log('✅ Plan de cuentas (árbol aplanado con nivel):', _this.cuentas);
+                _this.cuentasMap = new Map(resultado.map(function (c) { return [c.id_cuenta, { codigo: c.codigo, nombre: c.nombre }]; }));
+                console.log(' Plan de cuentas (árbol aplanado con nivel):', _this.cuentas);
             },
             error: function (err) {
                 console.error('Cuentas:', err);
@@ -1006,82 +1082,40 @@ var PolizasComponent = /** @class */ (function () {
             }
         });
     };
-    PolizasComponent.prototype.cargarPolizas = function () {
+    PolizasComponent.prototype.getCuentasFiltradasGlobal = function () {
         var _this = this;
-        this.api.getPolizas({
-            id_tipopoliza: this.filtroTipo,
-            id_periodo: this.filtroPeriodo,
-            id_centro: this.filtroCentro
-        }).subscribe({
-            next: function (r) {
-                var _a, _b;
-                var list = (_a = _this.normalizeList(r)) !== null && _a !== void 0 ? _a : ((_b = r === null || r === void 0 ? void 0 : r.polizas) !== null && _b !== void 0 ? _b : []);
-                _this.polizas = Array.isArray(list) ? list : [];
-                if (_this.polizas.length === 0) {
-                    _this.showToast({ type: 'info', message: 'No se encontraron pólizas con los filtros actuales.' });
-                }
-            },
-            error: function (err) {
-                console.error('Pólizas:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar las pólizas.' });
-            }
+        var q = this.normalizaStr(String(this.cuentasQuery || '').trim());
+        if (!q)
+            return this.cuentas;
+        return this.cuentas.filter(function (c) {
+            var cad = c.codigo + " " + c.nombre;
+            return _this.normalizaStr(cad).includes(q);
         });
     };
-    PolizasComponent.prototype.onMovimientoCcChange = function (index, ccId) {
+    PolizasComponent.prototype.onCuentaSeleccionada = function (index) {
         var _a;
-        var serie = this.getSerieVentaByCcId(this.toNumOrNull(ccId));
-        if (!((_a = this.nuevaPoliza.movimientos) === null || _a === void 0 ? void 0 : _a[index]))
-            return;
-        if (serie && (!this.nuevaPoliza.movimientos[index].ref_serie_venta ||
-            !String(this.nuevaPoliza.movimientos[index].ref_serie_venta).trim())) {
-            this.nuevaPoliza.movimientos[index].ref_serie_venta = serie;
-        }
-    };
-    // CFDI
-    PolizasComponent.prototype.cargarCfdiRecientes = function () {
-        var _this = this;
-        this.api.listCfdi({ limit: 100 }).subscribe({
-            next: function (r) {
-                var _a, _b, _c, _d;
-                var arr = Array.isArray(r) ? r : ((_d = (_c = (_b = (_a = r === null || r === void 0 ? void 0 : r.rows) !== null && _a !== void 0 ? _a : r === null || r === void 0 ? void 0 : r.data) !== null && _b !== void 0 ? _b : r === null || r === void 0 ? void 0 : r.items) !== null && _c !== void 0 ? _c : r) !== null && _d !== void 0 ? _d : []);
-                _this.cfdiOptions = arr
-                    .map(function (x) {
-                    var _a, _b, _c, _d, _e, _f, _g, _h;
-                    return ({
-                        uuid: String((_b = (_a = x.uuid) !== null && _a !== void 0 ? _a : x.UUID) !== null && _b !== void 0 ? _b : '').trim(),
-                        folio: (_d = (_c = x.folio) !== null && _c !== void 0 ? _c : x.Folio) !== null && _d !== void 0 ? _d : null,
-                        fecha: (_f = (_e = x.fecha) !== null && _e !== void 0 ? _e : x.Fecha) !== null && _f !== void 0 ? _f : null,
-                        total: (_h = (_g = x.total) !== null && _g !== void 0 ? _g : x.Total) !== null && _h !== void 0 ? _h : null
-                    });
-                })
-                    .filter(function (o) { return !!o.uuid; });
-            },
-            error: function (err) {
-                console.error('CFDI recientes:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar los CFDI recientes.' });
-            }
-        });
-    };
-    PolizasComponent.prototype.onCuentaQueryChange = function (index, value) {
-        var _a;
-        var movs = ((_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : []);
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
         if (!movs[index])
             return;
-        movs[index]._cuentaQuery = value !== null && value !== void 0 ? value : '';
+        movs[index]._cuentaQuery = '';
     };
-    // Detectar cambio de centro principal
-    PolizasComponent.prototype.onCentroSeleccionado = function () {
-        var _a;
-        var idCentro = this.nuevaPoliza.id_centro;
-        ((_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : []).forEach(function (mov) {
-            if (!mov.cc)
-                mov.cc = idCentro;
-        });
+    PolizasComponent.prototype.onCuentaSeleccionadaGlobal = function () {
+        this.cuentasQuery = '';
+    };
+    PolizasComponent.prototype.getCuentasParaFila = function (index, selectedId) {
+        var base = this.getCuentasFiltradasGlobal();
+        if (!selectedId)
+            return base;
+        if (base.some(function (c) { return c.id_cuenta === selectedId; }))
+            return base;
+        var sel = this.cuentasMap.get(selectedId);
+        return sel
+            ? __spreadArrays([{ id_cuenta: selectedId, codigo: sel.codigo, nombre: sel.nombre }], base) : base;
     };
     PolizasComponent.prototype.getCuentasFiltradas = function (index) {
         var _this = this;
         var _a, _b, _c;
-        var movs = ((_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : []);
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
         var q = this.normalizaStr(String((_c = (_b = movs[index]) === null || _b === void 0 ? void 0 : _b._cuentaQuery) !== null && _c !== void 0 ? _c : '').trim());
         if (!q)
             return this.cuentas;
@@ -1100,6 +1134,79 @@ var PolizasComponent = /** @class */ (function () {
         var nivel = (_a = c.nivel) !== null && _a !== void 0 ? _a : 0;
         var indent = nivel > 0 ? ' '.repeat((nivel - 1) * 2) + '↳ ' : '';
         return "" + indent + c.codigo + " \u2014 " + c.nombre;
+    };
+    //  Pólizas 
+    PolizasComponent.prototype.cargarPolizas = function () {
+        var _this = this;
+        this.api
+            .getPolizas({
+            id_tipopoliza: this.filtroTipo,
+            id_periodo: this.filtroPeriodo,
+            id_centro: this.filtroCentro
+        })
+            .subscribe({
+            next: function (r) {
+                var _a, _b;
+                var list = (_b = (_a = _this.normalizeList(r)) !== null && _a !== void 0 ? _a : r === null || r === void 0 ? void 0 : r.polizas) !== null && _b !== void 0 ? _b : [];
+                _this.polizas = Array.isArray(list) ? list : [];
+                if (_this.polizas.length === 0) {
+                    _this.showToast({
+                        type: 'info',
+                        message: 'No se encontraron pólizas con los filtros actuales.'
+                    });
+                }
+            },
+            error: function (err) {
+                console.error('Pólizas:', err);
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar las pólizas.'
+                });
+            }
+        });
+    };
+    PolizasComponent.prototype.onMovimientoCcChange = function (index, ccId) {
+        var _a;
+        var serie = this.getSerieVentaByCcId(this.toNumOrNull(ccId));
+        if (!((_a = this.nuevaPoliza.movimientos) === null || _a === void 0 ? void 0 : _a[index]))
+            return;
+        if (serie &&
+            (!this.nuevaPoliza.movimientos[index].ref_serie_venta ||
+                !String(this.nuevaPoliza.movimientos[index].ref_serie_venta).trim())) {
+            this.nuevaPoliza.movimientos[index].ref_serie_venta = serie;
+        }
+    };
+    //  CFDI / XML 
+    PolizasComponent.prototype.cargarCfdiRecientes = function () {
+        var _this = this;
+        this.api.listCfdi({ limit: 100 }).subscribe({
+            next: function (r) {
+                var _a, _b, _c, _d;
+                var arr = Array.isArray(r)
+                    ? r
+                    : (_d = (_c = (_b = (_a = r === null || r === void 0 ? void 0 : r.rows) !== null && _a !== void 0 ? _a : r === null || r === void 0 ? void 0 : r.data) !== null && _b !== void 0 ? _b : r === null || r === void 0 ? void 0 : r.items) !== null && _c !== void 0 ? _c : r) !== null && _d !== void 0 ? _d : [];
+                _this.cfdiOptions = arr
+                    .map(function (x) {
+                    var _a, _b, _c, _d, _e, _f, _g, _h;
+                    return ({
+                        uuid: String((_b = (_a = x.uuid) !== null && _a !== void 0 ? _a : x.UUID) !== null && _b !== void 0 ? _b : '').trim(),
+                        folio: (_d = (_c = x.folio) !== null && _c !== void 0 ? _c : x.Folio) !== null && _d !== void 0 ? _d : null,
+                        fecha: (_f = (_e = x.fecha) !== null && _e !== void 0 ? _e : x.Fecha) !== null && _f !== void 0 ? _f : null,
+                        total: (_h = (_g = x.total) !== null && _g !== void 0 ? _g : x.Total) !== null && _h !== void 0 ? _h : null
+                    });
+                })
+                    .filter(function (o) { return !!o.uuid; });
+            },
+            error: function (err) {
+                console.error('CFDI recientes:', err);
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar los CFDI recientes.'
+                });
+            }
+        });
     };
     PolizasComponent.prototype.triggerXmlPickerForMovimiento = function (input, index) {
         this.xmlMovimientoIndex = index;
@@ -1145,14 +1252,24 @@ var PolizasComponent = /** @class */ (function () {
                             });
                         }
                         else {
-                            this.showToast({ title: 'Aviso', message: 'El servidor no devolvió UUID.', type: 'warning' });
+                            this.showToast({
+                                title: 'Aviso',
+                                message: 'El servidor no devolvió UUID.',
+                                type: 'warning'
+                            });
                         }
                         return [3 /*break*/, 5];
                     case 3:
                         error_1 = _c.sent();
                         console.error('Error al subir XML:', error_1);
-                        this.uploadXmlError = ((_b = error_1 === null || error_1 === void 0 ? void 0 : error_1.error) === null || _b === void 0 ? void 0 : _b.message) || 'Error al subir el XML.';
-                        this.showToast({ title: 'Error', message: this.uploadXmlError, type: 'error', autoCloseMs: 4000 });
+                        this.uploadXmlError =
+                            ((_b = error_1 === null || error_1 === void 0 ? void 0 : error_1.error) === null || _b === void 0 ? void 0 : _b.message) || 'Error al subir el XML.';
+                        this.showToast({
+                            title: 'Error',
+                            message: this.uploadXmlError,
+                            type: 'error',
+                            autoCloseMs: 4000
+                        });
                         return [3 /*break*/, 5];
                     case 4:
                         this.uploadingXml = false;
@@ -1163,9 +1280,143 @@ var PolizasComponent = /** @class */ (function () {
             });
         });
     };
+    PolizasComponent.prototype.triggerXmlPicker = function (input) {
+        this.uploadXmlError = '';
+        input.value = '';
+        input.click();
+    };
+    PolizasComponent.prototype.onXmlPicked = function (ev) {
+        var _this = this;
+        var _a;
+        var input = ev.target;
+        var file = (_a = input === null || input === void 0 ? void 0 : input.files) === null || _a === void 0 ? void 0 : _a[0];
+        if (!file)
+            return;
+        var isXml = file.type === 'text/xml' ||
+            file.type === 'application/xml' ||
+            /\.xml$/i.test(file.name);
+        if (!isXml) {
+            this.uploadXmlError = 'El archivo debe ser .xml';
+            this.showToast({
+                type: 'warning',
+                title: 'Archivo no válido',
+                message: this.uploadXmlError
+            });
+            return;
+        }
+        if (file.size > 1 * 1024 * 1024) {
+            this.uploadXmlError =
+                'El XML excede el tamaño permitido (1 MB).';
+            this.showToast({
+                type: 'warning',
+                title: 'Archivo pesado',
+                message: this.uploadXmlError
+            });
+            return;
+        }
+        this.selectedXmlName = file.name;
+        this.uploadingXml = true;
+        var ctx = {
+            folio: this.nuevaPoliza.folio,
+            id_periodo: Number(this.nuevaPoliza.id_periodo),
+            id_centro: Number(this.nuevaPoliza.id_centro),
+            id_tipopoliza: Number(this.nuevaPoliza.id_tipopoliza)
+        };
+        this.api.uploadCfdiXml(file, ctx).subscribe({
+            next: function (res) {
+                var _a, _b, _c, _d, _e, _f;
+                var opt = {
+                    uuid: (res === null || res === void 0 ? void 0 : res.uuid) || (res === null || res === void 0 ? void 0 : res.UUID) || '',
+                    folio: (_b = (_a = res === null || res === void 0 ? void 0 : res.folio) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.Folio) !== null && _b !== void 0 ? _b : null,
+                    fecha: (_d = (_c = res === null || res === void 0 ? void 0 : res.fecha) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.Fecha) !== null && _d !== void 0 ? _d : null,
+                    total: (_f = (_e = res === null || res === void 0 ? void 0 : res.total) !== null && _e !== void 0 ? _e : res === null || res === void 0 ? void 0 : res.Total) !== null && _f !== void 0 ? _f : null
+                };
+                if (opt.uuid &&
+                    !_this.cfdiOptions.some(function (x) { return x.uuid === opt.uuid; })) {
+                    _this.cfdiOptions = __spreadArrays(_this.cfdiOptions, [opt]);
+                }
+                if (opt.uuid)
+                    _this.uuidSeleccionado = opt.uuid;
+                _this.showToast({
+                    type: 'success',
+                    title: 'XML importado',
+                    message: 'El CFDI se importó correctamente.'
+                });
+            },
+            error: function (err) {
+                var _a, _b;
+                console.error('Importar XML:', err);
+                _this.uploadXmlError = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'Error importando XML';
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: _this.uploadXmlError
+                });
+            },
+            complete: function () { return (_this.uploadingXml = false); }
+        });
+    };
+    PolizasComponent.prototype.onUuidChange = function (uuid) {
+        this.uuidSeleccionado = uuid || undefined;
+    };
+    PolizasComponent.prototype.aplicarUuidAlMovimiento = function (index) {
+        var _a;
+        if (!this.uuidSeleccionado)
+            return;
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
+        if (movs[index])
+            movs[index].uuid = this.uuidSeleccionado;
+    };
+    //  Movimientos 
+    PolizasComponent.prototype.onCuentaQueryChange = function (index, value) {
+        var _a;
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
+        if (!movs[index])
+            return;
+        movs[index]._cuentaQuery = value !== null && value !== void 0 ? value : '';
+    };
+    PolizasComponent.prototype.onCentroSeleccionado = function () {
+        var _a;
+        var idCentro = this.nuevaPoliza.id_centro;
+        ((_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : []).forEach(function (mov) {
+            if (!mov.cc)
+                mov.cc = idCentro;
+        });
+    };
+    // NUEVOS MÉTODOS PARA CARGO / ABONO
+    PolizasComponent.prototype.onCargoChange = function (index, value) {
+        var _a;
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
+        if (!movs[index])
+            return;
+        var monto = this.toNumOrNull(value);
+        movs[index].monto = monto;
+        if (monto != null && monto > 0) {
+            movs[index].operacion = '0'; // Cargo
+        }
+        else if (movs[index].operacion === '0') {
+            movs[index].operacion = '';
+        }
+    };
+    PolizasComponent.prototype.onAbonoChange = function (index, value) {
+        var _a;
+        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
+        if (!movs[index])
+            return;
+        var monto = this.toNumOrNull(value);
+        movs[index].monto = monto;
+        if (monto != null && monto > 0) {
+            movs[index].operacion = '1'; // Abono
+        }
+        else if (movs[index].operacion === '1') {
+            movs[index].operacion = '';
+        }
+    };
     PolizasComponent.prototype.agregarMovimiento = function () {
         var _a, _b, _c;
-        var defaultCuenta = this.cuentas.length ? this.cuentas[0].id_cuenta : null;
+        var defaultCuenta = this.cuentas.length
+            ? this.cuentas[0].id_cuenta
+            : null;
         var ccId = (_a = this.nuevaPoliza.id_centro) !== null && _a !== void 0 ? _a : null;
         var serie = this.getSerieVentaByCcId(this.toNumOrNull(ccId));
         var nuevo = {
@@ -1177,7 +1428,9 @@ var PolizasComponent = /** @class */ (function () {
             fecha: fecha_utils_1.todayISO(),
             cc: (_b = this.nuevaPoliza.id_centro) !== null && _b !== void 0 ? _b : null,
             uuid: null,
-            _cuentaQuery: defaultCuenta ? this.labelCuenta(defaultCuenta) : ''
+            _cuentaQuery: defaultCuenta
+                ? this.labelCuenta(defaultCuenta)
+                : ''
         };
         ((_c = this.nuevaPoliza.movimientos) !== null && _c !== void 0 ? _c : ) = [];
         push(nuevo);
@@ -1186,7 +1439,117 @@ var PolizasComponent = /** @class */ (function () {
         var _a;
         (_a = this.nuevaPoliza.movimientos) === null || _a === void 0 ? void 0 : _a.splice(i, 1);
     };
-    // Validación previa al guardado
+    //  Validación / guardado 
+    PolizasComponent.prototype.validarYExplicarErrores = function () {
+        var _this = this;
+        var _a;
+        var p = this.nuevaPoliza;
+        if (!p) {
+            this.showToast({
+                type: 'warning',
+                title: 'Faltan datos',
+                message: 'No hay póliza en edición.'
+            });
+            return false;
+        }
+        var faltantes = [];
+        if (!p.folio)
+            faltantes.push('Folio');
+        if (!p.concepto)
+            faltantes.push('Concepto');
+        if (!p.id_tipopoliza)
+            faltantes.push('Tipo de póliza');
+        if (!p.id_periodo)
+            faltantes.push('Periodo');
+        if (!p.id_centro)
+            faltantes.push('Centro');
+        if (!p.id_usuario)
+            faltantes.push('Usuario');
+        if (faltantes.length) {
+            this.showToast({
+                type: 'warning',
+                title: 'Faltan datos',
+                message: "Completa: " + faltantes.join(', ') + "."
+            });
+            return false;
+        }
+        var movs = (_a = p.movimientos) !== null && _a !== void 0 ? _a : [];
+        if (movs.length === 0) {
+            this.showToast({
+                type: 'warning',
+                title: 'Movimientos',
+                message: 'Agrega al menos un movimiento.'
+            });
+            return false;
+        }
+        for (var i = 0; i < movs.length; i++) {
+            var m = movs[i];
+            var idCuenta = this.toNumOrNull(m.id_cuenta);
+            var op = m.operacion;
+            var monto = this.toNumOrNull(m.monto);
+            var idCc = this.toNumOrNull(m.cc);
+            if (!idCuenta) {
+                this.showToast({
+                    type: 'warning',
+                    title: "Movimiento #" + (i + 1),
+                    message: 'Selecciona una cuenta contable.'
+                });
+                return false;
+            }
+            if (!this.cuentasMap.has(idCuenta)) {
+                this.showToast({
+                    type: 'warning',
+                    title: "Movimiento #" + (i + 1),
+                    message: 'La cuenta seleccionada no existe en el catálogo.'
+                });
+                return false;
+            }
+            if (!(op === '0' || op === '1')) {
+                this.showToast({
+                    type: 'warning',
+                    title: "Movimiento #" + (i + 1),
+                    message: 'Selecciona si es Cargo (0) o Abono (1).'
+                });
+                return false;
+            }
+            if (!monto || monto <= 0) {
+                this.showToast({
+                    type: 'warning',
+                    title: "Movimiento #" + (i + 1),
+                    message: 'Captura un monto mayor a 0.'
+                });
+                return false;
+            }
+            if (idCc != null && !this.centrosCostoMap.has(idCc)) {
+                this.showToast({
+                    type: 'warning',
+                    title: "Movimiento #" + (i + 1),
+                    message: 'El Centro de Costo seleccionado no existe.'
+                });
+                return false;
+            }
+        }
+        var movsValidos = movs.filter(function (m) {
+            var _a;
+            return _this.toNumOrNull(m.id_cuenta) &&
+                (m.operacion === '0' || m.operacion === '1') &&
+                ((_a = _this.toNumOrNull(m.monto)) !== null && _a !== void 0 ? _a : 0) > 0;
+        });
+        var cargos = movsValidos
+            .filter(function (m) { return m.operacion === '0'; })
+            .reduce(function (s, m) { return s + (_this.toNumOrNull(m.monto) || 0); }, 0);
+        var abonos = movsValidos
+            .filter(function (m) { return m.operacion === '1'; })
+            .reduce(function (s, m) { return s + (_this.toNumOrNull(m.monto) || 0); }, 0);
+        if (Math.abs(cargos - abonos) > 0.001) {
+            this.showToast({
+                type: 'warning',
+                title: 'Partida doble',
+                message: "No cuadra.\nCargos: " + cargos + "\nAbonos: " + abonos
+            });
+        }
+        return true;
+    };
     PolizasComponent.prototype.canGuardar = function () {
         var _this = this;
         var _a;
@@ -1202,7 +1565,10 @@ var PolizasComponent = /** @class */ (function () {
         if (!okHeader)
             return false;
         if (this.modoCaptura === 'motor') {
-            return !!(this.evento.monto_base && this.evento.fecha_operacion && this.evento.id_empresa && this.evento.id_cuenta_contrapartida);
+            return !!(this.evento.monto_base &&
+                this.evento.fecha_operacion &&
+                this.evento.id_empresa &&
+                this.evento.id_cuenta_contrapartida);
         }
         var movs = ((_a = p.movimientos) !== null && _a !== void 0 ? _a : []).filter(function (m) {
             var _a;
@@ -1223,101 +1589,6 @@ var PolizasComponent = /** @class */ (function () {
         }
         return true;
     };
-    PolizasComponent.prototype.resolveNombre = function (src) {
-        var _a, _b, _c, _d, _e, _f;
-        if (!src)
-            return null;
-        var cand = [
-            src.nombre, src.name, src.full_name, src.fullName,
-            src.username, src.userName, src.nombres, src.displayName,
-            src.first_name, src.given_name, src.preferred_username,
-            src.usuario, src.nombre_usuario, src.nombreCompleto
-        ].map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); }).filter(Boolean);
-        var ap = ((_e = (_d = (_c = (_b = (_a = src.apellido_p) !== null && _a !== void 0 ? _a : src.apellido) !== null && _b !== void 0 ? _b : src.apellidos) !== null && _c !== void 0 ? _c : src.last_name) !== null && _d !== void 0 ? _d : src.family_name) !== null && _e !== void 0 ? _e : '').toString().trim();
-        var apm = ((_f = src.apellido_m) !== null && _f !== void 0 ? _f : '').toString().trim();
-        if (cand.length && (ap || apm))
-            return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
-        return cand[0] || null;
-    };
-    PolizasComponent.prototype.resolveEmail = function (src) {
-        if (!src)
-            return null;
-        var cand = [src.email, src.correo, src.mail, src.Email, src.EMAIL]
-            .map(function (v) { return (v !== null && v !== void 0 ? v : '').toString().trim(); })
-            .filter(Boolean);
-        return cand[0] || null;
-    };
-    PolizasComponent.prototype.validarYExplicarErrores = function () {
-        var _this = this;
-        var _a;
-        var p = this.nuevaPoliza;
-        if (!p) {
-            this.showToast({ type: 'warning', title: 'Faltan datos', message: 'No hay póliza en edición.' });
-            return false;
-        }
-        var faltantes = [];
-        if (!p.folio)
-            faltantes.push('Folio');
-        if (!p.concepto)
-            faltantes.push('Concepto');
-        if (!p.id_tipopoliza)
-            faltantes.push('Tipo de póliza');
-        if (!p.id_periodo)
-            faltantes.push('Periodo');
-        if (!p.id_centro)
-            faltantes.push('Centro');
-        if (!p.id_usuario)
-            faltantes.push('Usuario');
-        if (faltantes.length) {
-            this.showToast({ type: 'warning', title: 'Faltan datos', message: "Completa: " + faltantes.join(', ') + "." });
-            return false;
-        }
-        var movs = ((_a = p.movimientos) !== null && _a !== void 0 ? _a : []);
-        if (movs.length === 0) {
-            this.showToast({ type: 'warning', title: 'Movimientos', message: 'Agrega al menos un movimiento.' });
-            return false;
-        }
-        for (var i = 0; i < movs.length; i++) {
-            var m = movs[i];
-            var idCuenta = this.toNumOrNull(m.id_cuenta);
-            var op = m.operacion;
-            var monto = this.toNumOrNull(m.monto);
-            var idCc = this.toNumOrNull(m.cc);
-            if (!idCuenta) {
-                this.showToast({ type: 'warning', title: "Movimiento #" + (i + 1), message: 'Selecciona una cuenta contable.' });
-                return false;
-            }
-            if (!this.cuentasMap.has(idCuenta)) {
-                this.showToast({ type: 'warning', title: "Movimiento #" + (i + 1), message: 'La cuenta seleccionada no existe en el catálogo.' });
-                return false;
-            }
-            if (!(op === '0' || op === '1')) {
-                this.showToast({ type: 'warning', title: "Movimiento #" + (i + 1), message: 'Selecciona si es Cargo (0) o Abono (1).' });
-                return false;
-            }
-            if (!monto || monto <= 0) {
-                this.showToast({ type: 'warning', title: "Movimiento #" + (i + 1), message: 'Captura un monto mayor a 0.' });
-                return false;
-            }
-            if (idCc != null && !this.centrosCostoMap.has(idCc)) {
-                this.showToast({ type: 'warning', title: "Movimiento #" + (i + 1), message: 'El Centro de Costo seleccionado no existe.' });
-                return false;
-            }
-        }
-        var movsValidos = movs.filter(function (m) {
-            var _a;
-            return _this.toNumOrNull(m.id_cuenta) &&
-                (m.operacion === '0' || m.operacion === '1') &&
-                ((_a = _this.toNumOrNull(m.monto)) !== null && _a !== void 0 ? _a : 0) > 0;
-        });
-        var cargos = movsValidos.filter(function (m) { return m.operacion === '0'; }).reduce(function (s, m) { return s + (_this.toNumOrNull(m.monto) || 0); }, 0);
-        var abonos = movsValidos.filter(function (m) { return m.operacion === '1'; }).reduce(function (s, m) { return s + (_this.toNumOrNull(m.monto) || 0); }, 0);
-        if (Math.abs(cargos - abonos) > 0.001) {
-            this.showToast({ type: 'warning', title: 'Partida doble', message: "No cuadra.\nCargos: " + cargos + "\nAbonos: " + abonos });
-        }
-        return true;
-    };
-    // Guardar
     PolizasComponent.prototype.guardarPoliza = function () {
         var _this = this;
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
@@ -1335,7 +1606,9 @@ var PolizasComponent = /** @class */ (function () {
                 movimientos: ((_a = p === null || p === void 0 ? void 0 : p.movimientos) !== null && _a !== void 0 ? _a : []).map(function (m) { return ({
                     id_cuenta: _this.toNumOrNull(m.id_cuenta),
                     ref_serie_venta: _this.toStrOrNull(m.ref_serie_venta),
-                    operacion: (m.operacion === '0' || m.operacion === '1') ? m.operacion : null,
+                    operacion: m.operacion === '0' || m.operacion === '1'
+                        ? m.operacion
+                        : null,
                     monto: _this.toNumOrNull(m.monto),
                     cliente: _this.toStrOrNull(m.cliente),
                     fecha: fecha_utils_1.toDateOrNull(m.fecha),
@@ -1346,21 +1619,34 @@ var PolizasComponent = /** @class */ (function () {
             this.api.createPoliza(payload).subscribe({
                 next: function () {
                     var _a;
-                    _this.nuevaPoliza = { movimientos: [], id_usuario: (_a = _this.currentUser) === null || _a === void 0 ? void 0 : _a.id_usuario };
+                    _this.nuevaPoliza = {
+                        movimientos: [],
+                        id_usuario: (_a = _this.currentUser) === null || _a === void 0 ? void 0 : _a.id_usuario
+                    };
                     _this.cargarPolizas();
-                    _this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada correctamente.' });
+                    _this.showToast({
+                        type: 'success',
+                        title: 'Guardado',
+                        message: 'Póliza creada correctamente.'
+                    });
                 },
                 error: function (err) {
                     var _a, _b;
-                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al guardar póliza';
+                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || (err === null || err === void 0 ? void 0 : err.message) ||
+                        'Error al guardar póliza';
                     console.error('Guardar póliza (manual):', err);
-                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
+                    _this.showToast({
+                        type: 'warning',
+                        title: 'Aviso',
+                        message: msg
+                    });
                 }
             });
         }
         else {
             var okHeader = ((_b = this.nuevaPoliza) === null || _b === void 0 ? void 0 : _b.folio) && ((_c = this.nuevaPoliza) === null || _c === void 0 ? void 0 : _c.concepto) && ((_d = this.nuevaPoliza) === null || _d === void 0 ? void 0 : _d.id_tipopoliza) && ((_e = this.nuevaPoliza) === null || _e === void 0 ? void 0 : _e.id_periodo) && ((_f = this.nuevaPoliza) === null || _f === void 0 ? void 0 : _f.id_centro) && ((_g = this.nuevaPoliza) === null || _g === void 0 ? void 0 : _g.id_usuario);
-            var okMotor = this.evento.monto_base != null && this.evento.monto_base > 0 &&
+            var okMotor = this.evento.monto_base != null &&
+                this.evento.monto_base > 0 &&
                 !!this.evento.fecha_operacion &&
                 !!this.evento.id_empresa &&
                 !!this.evento.id_cuenta_contrapartida;
@@ -1392,15 +1678,27 @@ var PolizasComponent = /** @class */ (function () {
             this.api.createPolizaFromEvento(body).subscribe({
                 next: function () {
                     var _a;
-                    _this.nuevaPoliza = { movimientos: [], id_usuario: (_a = _this.currentUser) === null || _a === void 0 ? void 0 : _a.id_usuario };
+                    _this.nuevaPoliza = {
+                        movimientos: [],
+                        id_usuario: (_a = _this.currentUser) === null || _a === void 0 ? void 0 : _a.id_usuario
+                    };
                     _this.cargarPolizas();
-                    _this.showToast({ type: 'success', title: 'Guardado', message: 'Póliza creada con el motor.' });
+                    _this.showToast({
+                        type: 'success',
+                        title: 'Guardado',
+                        message: 'Póliza creada con el motor.'
+                    });
                 },
                 error: function (err) {
                     var _a;
-                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al crear póliza con el motor';
+                    var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) ||
+                        'Error al crear póliza con el motor';
                     console.error('Guardar póliza (motor):', err);
-                    _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
+                    _this.showToast({
+                        type: 'warning',
+                        title: 'Aviso',
+                        message: msg
+                    });
                 }
             });
         }
@@ -1408,12 +1706,17 @@ var PolizasComponent = /** @class */ (function () {
     PolizasComponent.prototype.agregarEventoAPolizaExistente = function (id_poliza) {
         var _this = this;
         var _a, _b, _c;
-        var okMotor = this.evento.monto_base != null && this.evento.monto_base > 0 &&
+        var okMotor = this.evento.monto_base != null &&
+            this.evento.monto_base > 0 &&
             !!this.evento.fecha_operacion &&
             !!this.evento.id_empresa &&
             !!this.evento.id_cuenta_contrapartida;
         if (!okMotor) {
-            this.showToast({ type: 'warning', title: 'Faltan datos', message: 'Completa los datos del evento.' });
+            this.showToast({
+                type: 'warning',
+                title: 'Faltan datos',
+                message: 'Completa los datos del evento.'
+            });
             return;
         }
         var body = {
@@ -1430,13 +1733,22 @@ var PolizasComponent = /** @class */ (function () {
         this.api.expandEventoEnPoliza(id_poliza, body).subscribe({
             next: function (r) {
                 var _a;
-                _this.showToast({ type: 'success', title: 'Agregado', message: "Se agregaron " + ((_a = r === null || r === void 0 ? void 0 : r.count) !== null && _a !== void 0 ? _a : '') + " movimientos a la p\u00F3liza " + id_poliza + "." });
+                _this.showToast({
+                    type: 'success',
+                    title: 'Agregado',
+                    message: "Se agregaron " + ((_a = r === null || r === void 0 ? void 0 : r.count) !== null && _a !== void 0 ? _a : '') + " movimientos a la p\u00F3liza " + id_poliza + "."
+                });
             },
             error: function (err) {
                 var _a;
-                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al agregar evento';
+                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) ||
+                    'Error al agregar evento';
                 console.error('expand-evento:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: msg
+                });
             }
         });
     };
@@ -1476,98 +1788,17 @@ var PolizasComponent = /** @class */ (function () {
     };
     PolizasComponent.prototype.onPeriodoChange = function (_id) {
         var _a;
-        // si el usuario no ha tecleado manualmente, permitimos autollenar
         if (!((_a = this.nuevaPoliza) === null || _a === void 0 ? void 0 : _a.folio))
             this.folioFueEditadoPorUsuario = false;
         this.recomputarFolioSugerido();
     };
     PolizasComponent.prototype.onCentroChange = function (_id) {
         var _a;
-        // id_centro es opcional para el folio; si tu back lo usa por serie, conviene recalcular
         if (!((_a = this.nuevaPoliza) === null || _a === void 0 ? void 0 : _a.folio))
             this.folioFueEditadoPorUsuario = false;
         this.recomputarFolioSugerido();
     };
-    // XML
-    PolizasComponent.prototype.triggerXmlPicker = function (input) {
-        this.uploadXmlError = '';
-        input.value = '';
-        input.click();
-    };
-    PolizasComponent.prototype.onXmlPicked = function (ev) {
-        var _this = this;
-        var _a;
-        var input = ev.target;
-        var file = (_a = input === null || input === void 0 ? void 0 : input.files) === null || _a === void 0 ? void 0 : _a[0];
-        if (!file)
-            return;
-        var isXml = file.type === 'text/xml' ||
-            file.type === 'application/xml' ||
-            /\.xml$/i.test(file.name);
-        if (!isXml) {
-            this.uploadXmlError = 'El archivo debe ser .xml';
-            this.showToast({ type: 'warning', title: 'Archivo no válido', message: this.uploadXmlError });
-            return;
-        }
-        if (file.size > 1 * 1024 * 1024) {
-            this.uploadXmlError = 'El XML excede el tamaño permitido (1 MB).';
-            this.showToast({ type: 'warning', title: 'Archivo pesado', message: this.uploadXmlError });
-            return;
-        }
-        this.selectedXmlName = file.name;
-        this.uploadingXml = true;
-        var ctx = {
-            folio: this.nuevaPoliza.folio,
-            id_periodo: Number(this.nuevaPoliza.id_periodo),
-            id_centro: Number(this.nuevaPoliza.id_centro),
-            id_tipopoliza: Number(this.nuevaPoliza.id_tipopoliza)
-        };
-        this.api.uploadCfdiXml(file, ctx).subscribe({
-            next: function (res) {
-                var _a, _b, _c, _d, _e, _f;
-                var opt = {
-                    uuid: (res === null || res === void 0 ? void 0 : res.uuid) || (res === null || res === void 0 ? void 0 : res.UUID) || '',
-                    folio: (_b = (_a = res === null || res === void 0 ? void 0 : res.folio) !== null && _a !== void 0 ? _a : res === null || res === void 0 ? void 0 : res.Folio) !== null && _b !== void 0 ? _b : null,
-                    fecha: (_d = (_c = res === null || res === void 0 ? void 0 : res.fecha) !== null && _c !== void 0 ? _c : res === null || res === void 0 ? void 0 : res.Fecha) !== null && _d !== void 0 ? _d : null,
-                    total: (_f = (_e = res === null || res === void 0 ? void 0 : res.total) !== null && _e !== void 0 ? _e : res === null || res === void 0 ? void 0 : res.Total) !== null && _f !== void 0 ? _f : null
-                };
-                if (opt.uuid && !_this.cfdiOptions.some(function (x) { return x.uuid === opt.uuid; })) {
-                    _this.cfdiOptions = __spreadArrays(_this.cfdiOptions, [opt]);
-                }
-                if (opt.uuid)
-                    _this.uuidSeleccionado = opt.uuid;
-                _this.showToast({ type: 'success', title: 'XML importado', message: 'El CFDI se importó correctamente.' });
-            },
-            error: function (err) {
-                var _a, _b;
-                console.error('Importar XML:', err);
-                _this.uploadXmlError = (_b = (_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) !== null && _b !== void 0 ? _b : 'Error importando XML';
-                _this.showToast({ type: 'warning', title: 'Aviso', message: _this.uploadXmlError });
-            },
-            complete: function () { return (_this.uploadingXml = false); }
-        });
-    };
-    // UUID compartido
-    PolizasComponent.prototype.onUuidChange = function (uuid) {
-        this.uuidSeleccionado = uuid || undefined;
-    };
-    PolizasComponent.prototype.aplicarUuidAlMovimiento = function (index) {
-        var _a;
-        if (!this.uuidSeleccionado)
-            return;
-        var movs = (_a = this.nuevaPoliza.movimientos) !== null && _a !== void 0 ? _a : [];
-        if (movs[index])
-            movs[index].uuid = this.uuidSeleccionado;
-    };
-    Object.defineProperty(PolizasComponent.prototype, "currentUserLabel", {
-        get: function () {
-            var _a;
-            return (((_a = this.currentUser) === null || _a === void 0 ? void 0 : _a.nombre) || '').toString().trim();
-        },
-        enumerable: false,
-        configurable: true
-    });
-    // Totales
+    //  Totales 
     PolizasComponent.prototype.getTotal = function (p, tipo) {
         var movs = Array.isArray(p === null || p === void 0 ? void 0 : p.movimientos) ? p.movimientos : [];
         return movs
@@ -1581,7 +1812,15 @@ var PolizasComponent = /** @class */ (function () {
         core_1.Component({
             selector: 'app-polizas',
             standalone: true,
-            imports: [common_1.CommonModule, forms_1.FormsModule, polizas_layout_component_1.PolizasLayoutComponent, toast_message_component_component_1.ToastMessageComponent, router_1.RouterModule, modal_seleccion_cuenta_component_1.ModalSeleccionCuentaComponent, modal_component_1.ModalComponent],
+            imports: [
+                common_1.CommonModule,
+                forms_1.FormsModule,
+                polizas_layout_component_1.PolizasLayoutComponent,
+                toast_message_component_component_1.ToastMessageComponent,
+                router_1.RouterModule,
+                modal_seleccion_cuenta_component_1.ModalSeleccionCuentaComponent,
+                modal_component_1.ModalComponent
+            ],
             templateUrl: './polizas.component.html',
             styleUrls: ['./polizas.component.scss']
         })

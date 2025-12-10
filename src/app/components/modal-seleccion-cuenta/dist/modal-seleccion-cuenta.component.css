@@ -196,3 +196,79 @@ input[type=checkbox]:disabled {
 .btn.primary:hover {
   filter: brightness(1.05);
 }
+
+.cuentas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.cuenta-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.cuenta-item:hover:not(:disabled) {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.cuenta-item:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cuenta-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.cuenta-titulo {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.cuenta-codigo {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Seleccionada (similar al renglón activo) */
+.cuenta-seleccionada {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+}
+
+/* Pill de estado */
+.estado-pill {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.estado-activo {
+  background: #bbf7d0;
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.estado-inactivo {
+  background: #fee2e2;
+  border-color: #f97373;
+  color: #b91c1c;
+}

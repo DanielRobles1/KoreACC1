@@ -200,14 +200,15 @@
             <thead>
               <tr>
                 <th>Cuenta</th>
-                <th>Ref. Serie Venta</th>
-                <th>Operación</th>
-                <th>Monto</th>
+                <th>Serie Venta</th>
                 <th>Concepto</th>
                 <th>Fecha</th>
                 <th>Centro Costo</th>
                 <th>UUID</th>
-                <th></th>
+                <th>Acciones</th>
+                <!-- AHORA CARGO Y ABONO COMO ÚLTIMAS DOS COLUMNAS -->
+                <th>Cargo</th>
+                <th>Abono</th>
               </tr>
             </thead>
 
@@ -221,18 +222,6 @@
 
                 <td>
                   <input class="cell-input" [(ngModel)]="mov.ref_serie_venta" name="ref_serie_venta{{i}}" />
-                </td>
-
-                <td>
-                  <select class="cell-input select" [(ngModel)]="mov.operacion" name="operacion{{i}}" required>
-                    <option [ngValue]="''" disabled>Selecciona…</option>
-                    <option [ngValue]="'0'">Cargo</option>
-                    <option [ngValue]="'1'">Abono</option>
-                  </select>
-                </td>
-
-                <td>
-                  <input class="cell-input" type="number" [(ngModel)]="mov.monto" name="monto{{i}}" min="0" step="0.01" required />
                 </td>
 
                 <td>
@@ -265,8 +254,8 @@
                       [title]="mov.uuid ? 'XML asociado' : 'Cargar XML'"
                       (click)="triggerXmlPickerForMovimiento(xmlInputMov, i)">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                           width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 5v14m-7-7h14"/>
+                          width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14m-7-7h14"></path>
                       </svg>
                     </button>
 
@@ -297,9 +286,34 @@
                     </svg>
                   </button>
                 </td>
+
+                <!-- CARGO (penúltima columna) -->
+                <td>
+                  <input
+                    class="cell-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="cargo{{i}}"
+                    [ngModel]="mov.operacion === '0' ? mov.monto : 0"
+                    (ngModelChange)="onCargoChange(i, $event)" />
+                </td>
+
+                <!-- ABONO (última columna) -->
+                <td>
+                  <input
+                    class="cell-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="abono{{i}}"
+                    [ngModel]="mov.operacion === '1' ? mov.monto : 0"
+                    (ngModelChange)="onAbonoChange(i, $event)" />
+                </td>
               </tr>
             </tbody>
           </table>
+
         </div>
 
         <!-- Totales -->
@@ -382,7 +396,7 @@
 <!-- Modal Calculadora IVA -->
 <app-modal
   [open]="modalIvaOpen"
-  [title]="'Calculadora de IVA'"
+  [title]="'Calculadora de IVA'"`
   [size]="'md'"
   [showClose]="true"
   (closed)="cerrarModalIva()"
