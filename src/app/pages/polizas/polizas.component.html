@@ -112,17 +112,16 @@
         </label>
 
         <!-- Centro -->
-        <label>
-          Centro de costo:
-          <select class="field select"
-                  [(ngModel)]="nuevaPoliza.id_centro"
-                  name="id_centro"
-                  required
-                  (ngModelChange)="onCentroChange($event); onCentroCambiadoPropagarSerie(); onCentroSeleccionado()">
-            <option [ngValue]="undefined" disabled>Seleccione…</option>
-            <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
-          </select>
-        </label>
+         <label>
+            Centro de costo:
+            <button
+              type="button"
+              class="field select"
+              name="id_centro"
+              (click)="abrirModalCentro()">
+              {{ labelCentroHeader(nuevaPoliza.id_centro) }}
+            </button>
+          </label>
 
         <label>
           Folio:
@@ -381,6 +380,17 @@
   (cerrado)="cerrarModalCuentas()">
 </app-modal-seleccion-cuenta>
 
+<!-- Modal selección de centro de costo -->
+<app-modal-seleccion-cuenta
+  [open]="modalCentroAbierto"
+  [cuentas]="centrosCostoComoCuentas"
+  [cuentaSeleccionada]="centroSeleccionadoModal"
+  [noPosteablesComoTitulo]="false"
+  [permitirSeleccionNoPosteables]="true"
+  (cuentaConfirmada)="onCentroSeleccionadoModal($event)"
+  (cerrado)="cerrarModalCentro()">
+</app-modal-seleccion-cuenta>
+
 <!-- Toast -->
 <app-toast-message
   [open]="toast.open"
@@ -396,7 +406,7 @@
 <!-- Modal Calculadora IVA -->
 <app-modal
   [open]="modalIvaOpen"
-  [title]="'Calculadora de IVA'"`
+  [title]="'Calculadora de IVA'"
   [size]="'md'"
   [showClose]="true"
   (closed)="cerrarModalIva()"

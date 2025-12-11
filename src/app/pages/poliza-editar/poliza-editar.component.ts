@@ -63,13 +63,19 @@ type CfdiOption = {
 };
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
 
 type CentroCostoItem = {
+  serie_venta: any;
   id_centrocosto: number;
   nombre: string;
   clave?: string | null;
-  serie_venta?: string | null;
+
+  parent_id?: number | null;
+  nivel?: number;
+  esPadre?: boolean;
+  posteable?: boolean | 0 | 1 | '0' | '1' | null;
+  _expandido?: boolean;
 };
 
 @Component({
@@ -155,6 +161,11 @@ export class PolizaEditarComponent implements OnInit {
 
   modalCuentasAbierto = false;
   indiceMovimientoSeleccionado: number | null = null;
+
+  // Modal de centro de costo
+  modalCentroAbierto = false;
+  centroSeleccionadoModal: any = null;
+  centrosCostoComoCuentas: any[] = [];
 
   xmlMovimientoIndex: number | null = null;
   uploadingXml = false;
@@ -688,165 +699,164 @@ export class PolizaEditarComponent implements OnInit {
   }
 
   private inferNivelFromCodigo(codigoRaw: string | null | undefined): number {
-  const codigo = (codigoRaw ?? '').toString();
-  if (!codigo) return 0;
+    const codigo = (codigoRaw ?? '').toString();
+    if (!codigo) return 0;
 
-  // Dejar solo dígitos
-  const digits = codigo.replace(/\D/g, '');
-  if (!digits) return 0;
+    // Dejar solo dígitos
+    const digits = codigo.replace(/\D/g, '');
+    if (!digits) return 0;
 
-  // Quitar ceros de la derecha (relleno)
-  const trimmed = digits.replace(/0+$/g, '');
-  const len = trimmed.length;
+    // Quitar ceros de la derecha (relleno)
+    const trimmed = digits.replace(/0+$/g, '');
+    const len = trimmed.length;
 
-  if (len <= 1) return 0; // 1
-  if (len <= 2) return 1; // 11
-  if (len <= 4) return 2; // 1101
-  if (len <= 6) return 3; // 110101
-  if (len <= 8) return 4; // 11010101
-  return 5;               // 1101010101 o más largo
-}
-// ----------------- Cuentas -----------------
-// ----------------- Cuentas -----------------
-private cargarCuentas() {
-  this.cuentasSvc.getCuentas().subscribe({
-    next: (arr: any) => {
-      // 1) Normalizar respuesta
-      const items = this.normalizeList(arr);
+    if (len <= 1) return 0; // 1
+    if (len <= 2) return 1; // 11
+    if (len <= 4) return 2; // 1101
+    if (len <= 6) return 3; // 110101
+    if (len <= 8) return 4; // 11010101
+    return 5;               // 1101010101 o más largo
+  }
+  // ----------------- Cuentas -----------------
+  private cargarCuentas() {
+    this.cuentasSvc.getCuentas().subscribe({
+      next: (arr: any) => {
+        // 1) Normalizar respuesta
+        const items = this.normalizeList(arr);
 
-      // 2) Construir árbol con parentId
-      type NodoBase = {
-        id: number;
-        codigo: string;
-        nombre: string;
-        parentId: number | null;
-        posteable: boolean;
-        ctaMayor: boolean;
-        hijos: NodoBase[];
-      };
+        // 2) Construir árbol con parentId
+        type NodoBase = {
+          id: number;
+          codigo: string;
+          nombre: string;
+          parentId: number | null;
+          posteable: boolean;
+          ctaMayor: boolean;
+          hijos: NodoBase[];
+        };
 
-      const nodos: NodoBase[] = (items || [])
-        .map((x: any) => {
-          const id = Number(x.id_cuenta ?? x.id ?? x.ID);
-          const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
-          const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
+        const nodos: NodoBase[] = (items || [])
+          .map((x: any) => {
+            const id = Number(x.id_cuenta ?? x.id ?? x.ID);
+            const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
+            const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
 
-          const parentIdRaw = x.parentId ?? x.parent_id ?? null;
-          const parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
+            const parentIdRaw = x.parentId ?? x.parent_id ?? null;
+            const parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
 
-          const posteableRaw =
-            x.posteable ??
-            x.es_posteable ??
-            x.posteable_flag ??
-            x.posteable_indicator;
+            const posteableRaw =
+              x.posteable ??
+              x.es_posteable ??
+              x.posteable_flag ??
+              x.posteable_indicator;
 
-          const ctaMayorRaw =
-            x.ctaMayor ??
-            x.cta_mayor ??
-            x.es_mayor ??
-            x.mayor_flag;
+            const ctaMayorRaw =
+              x.ctaMayor ??
+              x.cta_mayor ??
+              x.es_mayor ??
+              x.mayor_flag;
 
-          const posteable =
-            posteableRaw === true ||
-            posteableRaw === 1 ||
-            posteableRaw === '1';
+            const posteable =
+              posteableRaw === true ||
+              posteableRaw === 1 ||
+              posteableRaw === '1';
 
-          const ctaMayor =
-            ctaMayorRaw === true ||
-            ctaMayorRaw === 1 ||
-            ctaMayorRaw === '1';
+            const ctaMayor =
+              ctaMayorRaw === true ||
+              ctaMayorRaw === 1 ||
+              ctaMayorRaw === '1';
 
-          return <NodoBase>{
-            id,
-            codigo,
-            nombre,
-            parentId,
-            posteable,
-            ctaMayor,
-            hijos: []
-          };
-        })
-        .filter((n: NodoBase) => Number.isFinite(n.id));
+            return <NodoBase>{
+              id,
+              codigo,
+              nombre,
+              parentId,
+              posteable,
+              ctaMayor,
+              hijos: []
+            };
+          })
+          .filter((n: NodoBase) => Number.isFinite(n.id));
 
-      // 3) Enlazar hijos con padres
-      const porId = new Map<number, NodoBase>();
-      nodos.forEach(n => porId.set(n.id, n));
+        // 3) Enlazar hijos con padres
+        const porId = new Map<number, NodoBase>();
+        nodos.forEach(n => porId.set(n.id, n));
 
-      const raices: NodoBase[] = [];
-      porId.forEach(nodo => {
-        if (nodo.parentId) {
-          const padre = porId.get(nodo.parentId);
-          if (padre) {
-            padre.hijos.push(nodo);
+        const raices: NodoBase[] = [];
+        porId.forEach(nodo => {
+          if (nodo.parentId) {
+            const padre = porId.get(nodo.parentId);
+            if (padre) {
+              padre.hijos.push(nodo);
+            } else {
+              raices.push(nodo);
+            }
           } else {
             raices.push(nodo);
           }
-        } else {
-          raices.push(nodo);
-        }
-      });
+        });
 
-      // 4) Ordenar árbol por código
-      const sortTree = (n: NodoBase) => {
-        n.hijos.sort((a, b) =>
+        // 4) Ordenar árbol por código
+        const sortTree = (n: NodoBase) => {
+          n.hijos.sort((a, b) =>
+            a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+          );
+          n.hijos.forEach(h => sortTree(h));
+        };
+
+        raices.sort((a, b) =>
           a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
         );
-        n.hijos.forEach(h => sortTree(h));
-      };
+        raices.forEach(r => sortTree(r));
 
-      raices.sort((a, b) =>
-        a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
-      );
-      raices.forEach(r => sortTree(r));
+        // 5) Aplanar árbol en orden jerárquico con nivel
+        const resultado: Cuenta[] = [];
 
-      // 5) Aplanar árbol en orden jerárquico con nivel
-      const resultado: Cuenta[] = [];
+        const visitar = (nodo: NodoBase, nivel: number) => {
+          const c: Cuenta = {
+            id_cuenta: nodo.id,
+            codigo: nodo.codigo,
+            nombre: nodo.nombre,
+            nivel,
+            esPadre: nodo.ctaMayor && !nodo.posteable,
+            ctaMayor: nodo.ctaMayor,
+            posteable: nodo.posteable
+          };
+          resultado.push(c);
 
-      const visitar = (nodo: NodoBase, nivel: number) => {
-        const c: Cuenta = {
-          id_cuenta: nodo.id,
-          codigo: nodo.codigo,
-          nombre: nodo.nombre,
-          nivel,
-          esPadre: nodo.ctaMayor && !nodo.posteable,
-          ctaMayor: nodo.ctaMayor,
-          posteable: nodo.posteable
+          nodo.hijos.forEach(h => visitar(h, nivel + 1));
         };
-        resultado.push(c);
 
-        nodo.hijos.forEach(h => visitar(h, nivel + 1));
-      };
+        raices.forEach(r => visitar(r, 0));
 
-      raices.forEach(r => visitar(r, 0));
+        // 6) Asignar a this.cuentas y mapas auxiliares
+        this.cuentas = resultado;
 
-      // 6) Asignar a this.cuentas y mapas auxiliares
-      this.cuentas = resultado;
-
-      this.cuentasMap.clear();
-      for (const c of this.cuentas) {
-        if (Number.isFinite(c.id_cuenta)) {
-          this.cuentasMap.set(c.id_cuenta, c);
+        this.cuentasMap.clear();
+        for (const c of this.cuentas) {
+          if (Number.isFinite(c.id_cuenta)) {
+            this.cuentasMap.set(c.id_cuenta, c);
+          }
         }
+
+        // 7) Lo que se manda al modal (misma referencia, con _expandido)
+        this.cuentasParaModal = this.cuentas.map(c => ({
+          ...c,
+          _expandido: !!c.esPadre,          // padres empiezan expandidos (pon false si los quieres colapsados)
+          ctaMayor: !!c.ctaMayor,
+          posteable: this.esPosteable(c),
+        }));
+
+        // 8) Rellenar etiquetas en movimientos existentes
+        this.prefillCuentaQueries();
+
+        console.log('Plan de cuentas (editar, jerárquico):', this.cuentas);
+      },
+      error: (e) => {
+        console.error('Cuentas (editar):', e);
       }
-
-      // 7) Lo que se manda al modal (misma referencia, con _expandido)
-      this.cuentasParaModal = this.cuentas.map(c => ({
-        ...c,
-        _expandido: !!c.esPadre,          // padres empiezan expandidos (pon false si los quieres colapsados)
-        ctaMayor: !!c.ctaMayor,
-        posteable: this.esPosteable(c),
-      }));
-
-      // 8) Rellenar etiquetas en movimientos existentes
-      this.prefillCuentaQueries();
-
-      console.log('Plan de cuentas (editar, jerárquico):', this.cuentas);
-    },
-    error: (e) => {
-      console.error('Cuentas (editar):', e);
-    }
-  });
-}
+    });
+  }
 
 
 
@@ -1084,13 +1094,18 @@ private cargarCuentas() {
   private getCentros(): void {
     const svc: any = this.api as any;
     const fn =
-      svc.getCentrosCosto || svc.listCentrosCosto ||
-      svc.getCentroCostos || svc.listCentroCostos ||
-      svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
+      svc.getCentrosCosto ||
+      svc.listCentrosCosto ||
+      svc.getCentroCostos ||
+      svc.listCentroCostos ||
+      svc.getCentrosDeCosto ||
+      svc.listCentrosDeCosto ||
       svc.getCentros;
 
     if (typeof fn !== 'function') {
-      console.warn('No existe método de API para Centros de Costo; usando vacío.');
+      console.warn(
+        'No existe método de API para Centros de Costo; usando vacío.'
+      );
       this.centrosCosto = [];
       this.centrosCostoMap.clear();
       return;
@@ -1100,24 +1115,194 @@ private cargarCuentas() {
       next: (r: any) => {
         const items = this.normalizeList(r);
 
-        this.centrosCosto = (items || [])
-          .map((x: any) => {
-            const id = Number(x.id_centrocosto ?? x.id_centro ?? x.id ?? x.ID);
-            const serie = String(x.serie_venta ?? x.serie ?? x.codigo ?? '').trim();
-            const nom = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`).trim();
-            const clave = String(x.clave ?? x.codigo ?? '').trim();
-            const etiqueta = serie ? `${serie} — ${nom}` : (clave ? `${clave} — ${nom}` : nom);
-            return { id_centrocosto: id, nombre: etiqueta, clave, serie_venta: serie } as CentroCostoItem;
-          })
-          .filter((cc: CentroCostoItem) => Number.isFinite(cc.id_centrocosto));
+        type RawCentro = CentroCostoItem & { children?: RawCentro[] };
 
-        this.centrosCostoMap = new Map(this.centrosCosto.map(cc => [cc.id_centrocosto, cc]));
+        const crudos: RawCentro[] = (items || [])
+          .map((x: any) => {
+            const id = Number(x.id_centro ?? x.id ?? x.ID);
+            const parentRaw =
+              x.parent_id ??
+              x.parentId ??
+              x.id_centro_padre ??
+              x.centro_padre ??
+              null;
+            const parent_id =
+              parentRaw != null && parentRaw !== ''
+                ? Number(parentRaw)
+                : null;
+
+            const serie = String(
+              x.serie_venta ?? x.serie ?? x.codigo ?? ''
+            ).trim();
+            const nom = String(
+              x.nombre ??
+              x.nombre_centro ??
+              x.descripcion ??
+              x.NOMBRE ??
+              ''
+            ).trim();
+            const clave = String(x.clave ?? x.codigo ?? '').trim();
+            const etiqueta = serie
+              ? `${serie} — ${nom}`
+              : clave
+                ? `${clave} — ${nom}`
+                : nom || `CC ${id}`;
+
+            return {
+              id_centrocosto: id,
+              parent_id,
+              nombre: etiqueta,
+              clave,
+              serie_venta: serie,
+            } as RawCentro;
+          })
+          .filter((cc: RawCentro) => Number.isFinite(cc.id_centrocosto));
+
+        const porId = new Map<number, RawCentro>();
+        crudos.forEach(c => porId.set(c.id_centrocosto, { ...c, children: [] }));
+
+        const raices: RawCentro[] = [];
+        porId.forEach(node => {
+          if (
+            node.parent_id != null &&
+            porId.has(node.parent_id)
+          ) {
+            porId.get(node.parent_id)!.children!.push(node);
+          } else {
+            raices.push(node);
+          }
+        });
+
+        const sortTree = (n: RawCentro) => {
+          n.children!.sort((a, b) => {
+            const ka = `${a.serie_venta} ${a.nombre}`.toLowerCase();
+            const kb = `${b.serie_venta} ${b.nombre}`.toLowerCase();
+            return ka.localeCompare(kb, undefined, { numeric: true });
+          });
+          n.children!.forEach(h => sortTree(h));
+        };
+        raices.sort((a, b) => {
+          const ka = `${a.serie_venta} ${a.nombre}`.toLowerCase();
+          const kb = `${b.serie_venta} ${b.nombre}`.toLowerCase();
+          return ka.localeCompare(kb, undefined, { numeric: true });
+        });
+        raices.forEach(r => sortTree(r));
+
+        const resultado: CentroCostoItem[] = [];
+
+        const visitar = (n: RawCentro, nivel: number) => {
+          const hijos = n.children ?? [];
+          resultado.push({
+            id_centrocosto: n.id_centrocosto,
+            parent_id: n.parent_id,
+            nombre: n.nombre,
+            clave: n.clave,
+            serie_venta: n.serie_venta,
+            nivel,
+            esPadre: hijos.length > 0,
+            posteable: true,
+            _expandido: nivel === 0,
+          });
+
+          hijos.forEach(h => visitar(h, nivel + 1));
+        };
+
+        raices.forEach(r => visitar(r, 0));
+
+        // 4) Guardar en la VM
+        this.centrosCosto = resultado;
+        this.centrosCostoMap = new Map(
+          this.centrosCosto.map(cc => [cc.id_centrocosto, cc])
+        );
+
+        this.centrosCostoComoCuentas = this.centrosCosto.map(cc => ({
+          id_cuenta: cc.id_centrocosto,
+          codigo: cc.clave || cc.serie_venta || '',
+          nombre: cc.nombre,
+          nivel: cc.nivel ?? 0,
+          esPadre: cc.esPadre ?? false,
+          posteable: true,
+          _expandido: cc._expandido ?? (cc.nivel === 0),
+        }));
+
       },
       error: (err: any) => {
         console.error('Centros de Costo:', err);
-        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
+        this.showToast({
+          type: 'warning',
+          title: 'Aviso',
+          message: 'No se pudieron cargar Centros de Costo.',
+        });
         this.centrosCosto = [];
         this.centrosCostoMap.clear();
+      },
+    });
+  }
+
+  labelCentroHeader(id: number | null | undefined): string {
+    if (!id) return 'Seleccione…';
+    const c = this.centrosCosto.find(
+      x => Number(x.id_centrocosto) === Number(id)
+    );
+    return c ? c.nombre : 'Seleccione…';
+  }
+
+  abrirModalCentro(): void {
+    this.modalCentroAbierto = true;
+    this.centroSeleccionadoModal = null;
+  }
+
+  cerrarModalCentro(): void {
+    this.modalCentroAbierto = false;
+  }
+
+  onCentroSeleccionadoModal(cuentaCentro: any): void {
+    const idCentro = Number(
+      cuentaCentro?.id_cuenta ??
+      cuentaCentro?.id_centrocosto ??
+      cuentaCentro?.id ??
+      null
+    );
+
+    if (!Number.isFinite(idCentro)) {
+      this.showToast({
+        type: 'warning',
+        title: 'Centro',
+        message: 'No se pudo determinar el centro seleccionado.'
+      });
+      this.modalCentroAbierto = false;
+      return;
+    }
+    const oldCentro = this.toNumOrNull(this.poliza.id_centro);
+
+    this.poliza.id_centro = idCentro;
+    this.propagarCentroEnMovimientos(oldCentro, idCentro);
+
+    this.modalCentroAbierto = false;
+  }
+
+  private propagarCentroEnMovimientos(oldCentroId: number | null, newCentroId: number): void {
+    const movs = (this.poliza?.movimientos ?? []) as MovimientoUI[];
+    if (!movs.length) return;
+
+    const oldSerie = oldCentroId ? this.getSerieVentaByCcId(oldCentroId) : null;
+    const newSerie = this.getSerieVentaByCcId(newCentroId);
+
+    movs.forEach((m) => {
+      const ccNum = this.toNumOrNull(m.cc);
+
+      if (!ccNum || (oldCentroId && ccNum === oldCentroId)) {
+        m.cc = newCentroId;
+      }
+
+      const refStr = (m.ref_serie_venta ?? '').toString().trim();
+
+      const debeActualizarSerie =
+        !refStr ||
+        (oldSerie && refStr === oldSerie);
+
+      if (newSerie && debeActualizarSerie) {
+        m.ref_serie_venta = newSerie;
       }
     });
   }

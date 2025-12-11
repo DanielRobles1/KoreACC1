@@ -39,12 +39,18 @@ type CentroCostoItem = {
   id_centrocosto: number;
   nombre: string;
   clave?: string | null;
+
+  parent_id?: number | null;
+  nivel?: number;
+  esPadre?: boolean;
+  posteable?: boolean | 0 | 1 | '0' | '1' | null;
+  _expandido?: boolean;
 };
 
 type CuentaLigera = {
   id_cuenta: number;
   codigo: string;
-  nombre: string; 
+  nombre: string;
   nivel?: number;
   esPadre?: boolean;
   posteable?: boolean | 0 | 1 | '0' | '1' | null;
@@ -111,7 +117,7 @@ export class PolizasComponent implements OnInit {
   // Listado
   polizas: Poliza[] = [];
   cuentasQuery = '';
-  ejercicios: any[] = []; 
+  ejercicios: any[] = [];
 
   tiposPoliza: Array<{ id_tipopoliza: number; nombre: string }> = [];
   periodos: Array<{ id_periodo: number; nombre: string }> = [];
@@ -140,6 +146,11 @@ export class PolizasComponent implements OnInit {
   modalCuentasAbierto = false;
   indiceMovimientoSeleccionado: number | null = null;
 
+  // Modal de centro de costo
+  modalCentroAbierto = false;
+  centroSeleccionadoModal: any = null;
+  centrosCostoComoCuentas: any[] = [];
+
   // Toast
   toast = {
     open: false,
@@ -164,22 +175,22 @@ export class PolizasComponent implements OnInit {
     ref_serie_venta: string;
     cc: number | null;
   } = {
-    tipo_operacion: 'ingreso',
-    monto_base: null,
-    fecha_operacion: '',
-    id_empresa: 1,
-    medio_cobro_pago: 'bancos',
-    id_cuenta_contrapartida: null,
-    cliente: '',
-    ref_serie_venta: '',
-    cc: null
-  };
+      tipo_operacion: 'ingreso',
+      monto_base: null,
+      fecha_operacion: '',
+      id_empresa: 1,
+      medio_cobro_pago: 'bancos',
+      id_cuenta_contrapartida: null,
+      cliente: '',
+      ref_serie_venta: '',
+      cc: null
+    };
 
   constructor(
     private api: PolizasService,
     private ejercicioSvc: EjercicioContableService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.cargarEjercicioActivo();
@@ -945,8 +956,8 @@ export class PolizasComponent implements OnInit {
       e.nombre && e.nombre !== '—'
         ? e.nombre
         : e.fecha_inicio && e.fecha_fin
-        ? `${e.fecha_inicio} — ${e.fecha_fin}`
-        : '';
+          ? `${e.fecha_inicio} — ${e.fecha_fin}`
+          : '';
     return nombre || '—';
   }
 
@@ -1018,25 +1029,25 @@ export class PolizasComponent implements OnInit {
           id_periodo: Number(p.id_periodo ?? p.id ?? p.ID),
           id_ejercicio: Number(
             p.id_ejercicio ??
-              p.ejercicio_id ??
-              p.ejercicio ??
-              p.idEjercicio ??
-              p.ID_EJERCICIO ??
-              NaN
+            p.ejercicio_id ??
+            p.ejercicio ??
+            p.idEjercicio ??
+            p.ID_EJERCICIO ??
+            NaN
           ),
           fecha_inicio: fmtDate(
             p.fecha_inicio ??
-              p.fechaInicio ??
-              p.inicio ??
-              p.start_date ??
-              p.fecha_ini
+            p.fechaInicio ??
+            p.inicio ??
+            p.start_date ??
+            p.fecha_ini
           ),
           fecha_fin: fmtDate(
             p.fecha_fin ??
-              p.fechaFin ??
-              p.fin ??
-              p.end_date ??
-              p.fecha_fin
+            p.fechaFin ??
+            p.fin ??
+            p.end_date ??
+            p.fecha_fin
           ),
           _raw: p
         }));
@@ -1063,10 +1074,10 @@ export class PolizasComponent implements OnInit {
           ).trim();
           const nombre = String(
             c.nombre ??
-              c.nombre_centro ??
-              c.descripcion ??
-              c.NOMBRE ??
-              ''
+            c.nombre_centro ??
+            c.descripcion ??
+            c.NOMBRE ??
+            ''
           ).trim();
           const etiqueta =
             serie && nombre
@@ -1110,49 +1121,173 @@ export class PolizasComponent implements OnInit {
       next: (r: any) => {
         const items = this.normalizeList(r);
 
-        this.centrosCosto = (items || [])
+        type RawCentro = CentroCostoItem & { children?: RawCentro[] };
+
+        const crudos: RawCentro[] = (items || [])
           .map((x: any) => {
-            const id = Number(
-              x.id_centro ?? x.id_centro ?? x.id ?? x.ID
-            );
+            const id = Number(x.id_centro ?? x.id ?? x.ID);
+            const parentRaw =
+              x.parent_id ??
+              x.parentId ??
+              x.id_centro_padre ??
+              x.centro_padre ??
+              null;
+            const parent_id =
+              parentRaw != null && parentRaw !== ''
+                ? Number(parentRaw)
+                : null;
+
             const serie = String(
               x.serie_venta ?? x.serie ?? x.codigo ?? ''
             ).trim();
             const nom = String(
-              x.nombre ?? x.descripcion ?? x.NOMBRE ?? `CC ${id}`
+              x.nombre ??
+              x.nombre_centro ??
+              x.descripcion ??
+              x.NOMBRE ??
+              ''
             ).trim();
             const clave = String(x.clave ?? x.codigo ?? '').trim();
             const etiqueta = serie
               ? `${serie} — ${nom}`
               : clave
-              ? `${clave} — ${nom}`
-              : nom;
+                ? `${clave} — ${nom}`
+                : nom || `CC ${id}`;
+
             return {
               id_centrocosto: id,
+              parent_id,
               nombre: etiqueta,
               clave,
-              serie_venta: serie
-            } as CentroCostoItem;
+              serie_venta: serie,
+            } as RawCentro;
           })
-          .filter((cc: CentroCostoItem) =>
-            Number.isFinite(cc.id_centrocosto)
-          );
+          .filter((cc: RawCentro) => Number.isFinite(cc.id_centrocosto));
 
+        const porId = new Map<number, RawCentro>();
+        crudos.forEach(c => porId.set(c.id_centrocosto, { ...c, children: [] }));
+
+        const raices: RawCentro[] = [];
+        porId.forEach(node => {
+          if (
+            node.parent_id != null &&
+            porId.has(node.parent_id)
+          ) {
+            porId.get(node.parent_id)!.children!.push(node);
+          } else {
+            raices.push(node);
+          }
+        });
+
+        const sortTree = (n: RawCentro) => {
+          n.children!.sort((a, b) => {
+            const ka = `${a.serie_venta} ${a.nombre}`.toLowerCase();
+            const kb = `${b.serie_venta} ${b.nombre}`.toLowerCase();
+            return ka.localeCompare(kb, undefined, { numeric: true });
+          });
+          n.children!.forEach(h => sortTree(h));
+        };
+        raices.sort((a, b) => {
+          const ka = `${a.serie_venta} ${a.nombre}`.toLowerCase();
+          const kb = `${b.serie_venta} ${b.nombre}`.toLowerCase();
+          return ka.localeCompare(kb, undefined, { numeric: true });
+        });
+        raices.forEach(r => sortTree(r));
+
+        const resultado: CentroCostoItem[] = [];
+
+        const visitar = (n: RawCentro, nivel: number) => {
+          const hijos = n.children ?? [];
+          resultado.push({
+            id_centrocosto: n.id_centrocosto,
+            parent_id: n.parent_id,
+            nombre: n.nombre,
+            clave: n.clave,
+            serie_venta: n.serie_venta,
+            nivel,
+            esPadre: hijos.length > 0,
+            posteable: true,
+            _expandido: nivel === 0, 
+          });
+
+          hijos.forEach(h => visitar(h, nivel + 1));
+        };
+
+        raices.forEach(r => visitar(r, 0));
+
+        // 4) Guardar en la VM
+        this.centrosCosto = resultado;
         this.centrosCostoMap = new Map(
           this.centrosCosto.map(cc => [cc.id_centrocosto, cc])
         );
+
+        this.centrosCostoComoCuentas = this.centrosCosto.map(cc => ({
+          id_cuenta: cc.id_centrocosto,              
+          codigo: cc.clave || cc.serie_venta || '',  
+          nombre: cc.nombre,
+          nivel: cc.nivel ?? 0,
+          esPadre: cc.esPadre ?? false,
+          posteable: true,
+          _expandido: cc._expandido ?? (cc.nivel === 0),
+        }));
+
       },
       error: (err: any) => {
         console.error('Centros de Costo:', err);
         this.showToast({
           type: 'warning',
           title: 'Aviso',
-          message: 'No se pudieron cargar Centros de Costo.'
+          message: 'No se pudieron cargar Centros de Costo.',
         });
         this.centrosCosto = [];
         this.centrosCostoMap.clear();
-      }
+      },
     });
+  }
+
+
+  labelCentroHeader(id: number | null | undefined): string {
+    if (!id) return 'Seleccione…';
+    const c = this.centrosCosto.find(
+      x => Number(x.id_centrocosto) === Number(id)
+    );
+    return c ? c.nombre : 'Seleccione…';
+  }
+
+  abrirModalCentro(): void {
+    this.modalCentroAbierto = true;
+    this.centroSeleccionadoModal = null;
+  }
+
+  cerrarModalCentro(): void {
+    this.modalCentroAbierto = false;
+  }
+
+  onCentroSeleccionadoModal(cuentaCentro: any): void {
+    const idCentro = Number(
+      cuentaCentro?.id_cuenta ??
+      cuentaCentro?.id_centrocosto ??
+      cuentaCentro?.id ??
+      null
+    );
+
+    if (!Number.isFinite(idCentro)) {
+      this.showToast({
+        type: 'warning',
+        title: 'Centro',
+        message: 'No se pudo determinar el centro seleccionado.'
+      });
+      this.modalCentroAbierto = false;
+      return;
+    }
+
+    this.nuevaPoliza.id_centro = idCentro;
+
+    this.onCentroChange(idCentro);
+    this.onCentroCambiadoPropagarSerie();
+    this.onCentroSeleccionado();
+
+    this.modalCentroAbierto = false;
   }
 
   //  Cuentas 
@@ -1480,9 +1615,8 @@ export class PolizasComponent implements OnInit {
 
         this.showToast({
           title: 'XML asociado',
-          message: `UUID ${uuid} vinculado al movimiento ${
-            index + 1
-          }`,
+          message: `UUID ${uuid} vinculado al movimiento ${index + 1
+            }`,
           type: 'success',
           autoCloseMs: 3500
         });
@@ -2011,9 +2145,8 @@ export class PolizasComponent implements OnInit {
         this.showToast({
           type: 'success',
           title: 'Agregado',
-          message: `Se agregaron ${
-            r?.count ?? ''
-          } movimientos a la póliza ${id_poliza}.`
+          message: `Se agregaron ${r?.count ?? ''
+            } movimientos a la póliza ${id_poliza}.`
         });
       },
       error: err => {

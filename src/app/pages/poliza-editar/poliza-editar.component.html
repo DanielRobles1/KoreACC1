@@ -145,12 +145,15 @@
         </label>
 
         <label>
-          Centro:
-          <select class="field select" [(ngModel)]="poliza.id_centro" name="id_centro">
-            <option [ngValue]="undefined" disabled>Seleccione…</option>
-            <option *ngFor="let c of centros" [ngValue]="c.id_centro">{{ c.nombre }}</option>
-          </select>
-        </label>
+            Centro de costo:
+            <button
+              type="button"
+              class="field select"
+              name="id_centro"
+              (click)="abrirModalCentro()">
+              {{ labelCentroHeader(poliza.id_centro) }}
+            </button>
+          </label>
       </div>
 
       <div class="movs-header">
@@ -413,3 +416,12 @@
   (cerrado)="cerrarModalCuentas()">
 </app-modal-seleccion-cuenta>
 
+<app-modal-seleccion-cuenta
+  [open]="modalCentroAbierto"
+  [cuentas]="centrosCostoComoCuentas"
+  [cuentaSeleccionada]="centroSeleccionadoModal"
+  [noPosteablesComoTitulo]="false"
+  [permitirSeleccionNoPosteables]="true"
+  (cuentaConfirmada)="onCentroSeleccionadoModal($event)"
+  (cerrado)="cerrarModalCentro()">
+</app-modal-seleccion-cuenta>
