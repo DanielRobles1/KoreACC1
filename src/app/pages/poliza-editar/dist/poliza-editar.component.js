@@ -69,6 +69,7 @@ var modal_component_1 = require("@app/components/modal/modal/modal.component");
 var polizas_layout_component_1 = require("@app/components/polizas-layout/polizas-layout.component");
 var toast_message_component_component_1 = require("@app/components/modal/toast-message-component/toast-message-component.component");
 var modal_seleccion_cuenta_component_1 = require("@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component");
+var saving_overlay_component_1 = require("@app/components/saving-overlay/saving-overlay.component");
 var rxjs_1 = require("rxjs");
 var PolizaEditarComponent = /** @class */ (function () {
     function PolizaEditarComponent(route, http, apiSvc, cuentasSvc) {
@@ -92,6 +93,9 @@ var PolizaEditarComponent = /** @class */ (function () {
             autoCloseMs: 3500,
             showClose: true
         };
+        this.saving = false;
+        this.saveTotal = 0;
+        this.saveDone = 0;
         this.currentUser = null;
         this.ejercicioActual = null;
         this.ejercicios = [];
@@ -496,6 +500,12 @@ var PolizaEditarComponent = /** @class */ (function () {
         });
         return okHeader && validos.length > 0;
     };
+    PolizaEditarComponent.prototype.lockBodyScroll = function (on) {
+        try {
+            document.body.style.overflow = on ? 'hidden' : '';
+        }
+        catch (_a) { }
+    };
     PolizaEditarComponent.prototype.actualizarPoliza = function () {
         var _this = this;
         var _a, _b, _c, _d;
@@ -582,29 +592,27 @@ var PolizaEditarComponent = /** @class */ (function () {
                 });
             }); }));
         });
-        this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(
-        //  Toast temprano apenas se registra el encabezado
-        rxjs_1.switchMap(function () {
-            _this.showToast({
-                type: 'success',
-                title: 'Encabezado actualizado',
-                message: 'Guardando movimientos…'
-            });
-            var reqs = __spreadArrays(updateReqs, createReqs);
+        var reqs = __spreadArrays(updateReqs, createReqs);
+        this.saving = true;
+        this.saveTotal = reqs.length;
+        this.saveDone = 0;
+        this.lockBodyScroll(true);
+        this.apiSvc.updatePoliza(this.poliza.id_poliza, payloadHeader).pipe(rxjs_1.switchMap(function () {
+            _this.showToast({ type: 'success', title: 'Encabezado actualizado', message: 'Guardando movimientos…' });
             return (reqs.length
-                ? rxjs_1.from(reqs).pipe(
-                // ejecuta 1 por 1
-                rxjs_1.concatMap(function (obs, idx) { return obs.pipe(rxjs_1.tap(function () {
-                    _this.showToast({
-                        type: 'info',
-                        title: 'Guardando movimientos…',
-                        message: "Procesando " + (idx + 1) + " de " + reqs.length,
-                        autoCloseMs: 1200
-                    });
+                ? rxjs_1.from(reqs).pipe(rxjs_1.concatMap(function (obs) { return obs.pipe(rxjs_1.tap({
+                    next: function () { return _this.saveDone++; },
+                    error: function () { return _this.saveDone++; }
                 })); }), rxjs_1.finalize(function () {
                     _this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
                 }))
                 : rxjs_1.of(null));
+        }), rxjs_1.finalize(function () {
+            _this.saving = false;
+            _this.saveTotal = 0;
+            _this.saveDone = 0;
+            _this.lockBodyScroll(false);
+            _this.updating = false;
         })).subscribe({
             next: function () {
                 var msg = [
@@ -612,17 +620,15 @@ var PolizaEditarComponent = /** @class */ (function () {
                     toUpdate.length ? " Movs actualizados: " + toUpdate.length + "." : '',
                     toCreate.length ? " Movs creados: " + toCreate.length + "." : ''
                 ].join('');
-                // Toast final
                 _this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
                 _this.cargarPoliza(_this.poliza.id_poliza);
             },
             error: function (err) {
-                var _a, _b;
-                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || ((_b = err === null || err === void 0 ? void 0 : err.error) === null || _b === void 0 ? void 0 : _b.error) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al actualizar póliza/movimientos';
+                var _a;
+                var msg = ((_a = err === null || err === void 0 ? void 0 : err.error) === null || _a === void 0 ? void 0 : _a.message) || (err === null || err === void 0 ? void 0 : err.message) || 'Error al actualizar póliza/movimientos';
                 console.error('Actualizar:', err);
                 _this.showToast({ type: 'warning', title: 'Aviso', message: msg });
-            },
-            complete: function () { _this.updating = false; }
+            }
         });
     };
     // Cuentas
@@ -637,7 +643,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 _this.cuentasOrdenadas = list;
                 _this.nivelById = niveles;
                 // Map para búsquedas por id (usa todas)
-                _this.cuentasMap.clear;
+                _this.cuentasMap.clear();
                 for (var _i = 0, _b = _this.cuentas; _i < _b.length; _i++) {
                     var c = _b[_i];
                     _this.cuentasMap.set(c.id, c);
@@ -1692,6 +1698,7 @@ var PolizaEditarComponent = /** @class */ (function () {
                 toast_message_component_component_1.ToastMessageComponent,
                 modal_component_1.ModalComponent,
                 modal_seleccion_cuenta_component_1.ModalSeleccionCuentaComponent,
+                saving_overlay_component_1.SavingOverlayComponent
             ],
             templateUrl: './poliza-editar.component.html',
             styleUrls: ['./poliza-editar.component.scss']
