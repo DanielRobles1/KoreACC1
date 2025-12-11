@@ -107,7 +107,10 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.centrosCosto = [];
         this.centrosCostoMap = new Map();
         this.poliza = { movimientos: [] };
+        /** Plan de cuentas plano (con nivel, esPadre, etc.) */
         this.cuentas = [];
+        /** Lo que se manda directamente al modal (misma referencia siempre) */
+        this.cuentasParaModal = [];
         this.cuentasMap = new Map();
         this.cuentasFiltradas = [];
         this.cuentaOpenIndex = null;
@@ -119,9 +122,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.uploadXmlError = '';
         this.cfdiOptions = [];
         this.lastOrderMap = new Map();
-        this.cuentasOrdenadas = [];
-        this.nivelById = new Map();
-        // madal de confirmacion para eliminar movimiento
+        // ----------------- Confirmación borrar movimiento -----------------
         this.confirmOpen = false;
         this.confirmTitle = 'Eliminar movimiento';
         this.confirmMessage = '¿Seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.';
@@ -152,7 +153,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.cargarCfdiRecientes();
     };
     PolizaEditarComponent.prototype.onSidebarToggle = function (v) { this.sidebarOpen = v; };
-    // Catálogos base
+    // ----------------- Catálogos base -----------------
     PolizaEditarComponent.prototype.cargarCatalogosBase = function () {
         var _this = this;
         // Tipos de póliza
@@ -185,7 +186,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             error: function (e) { return console.error('Centros:', e); }
         });
     };
-    // Ejercicio / Periodos
+    // ----------------- Ejercicio / Periodos -----------------
     PolizaEditarComponent.prototype.cargarEjercicioActivo = function () {
         var _this = this;
         var svc = this.api;
@@ -375,7 +376,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
-    // Póliza + movimientos
+    // ----------------- Póliza + movimientos -----------------
     PolizaEditarComponent.prototype.cargarPoliza = function (id) {
         var _this = this;
         var ORDER_KEY = function (pid) { return "polizaOrder:" + pid; };
@@ -409,11 +410,8 @@ var PolizaEditarComponent = /** @class */ (function () {
                 var movs = ((_b = res === null || res === void 0 ? void 0 : res.movimientos) !== null && _b !== void 0 ? _b : []).map(function (m, idx) {
                     var _a;
                     var mm = _this.normalizeMovimiento(m);
-                    // índice de llegada (para desempate estable)
                     mm._arrival = idx;
-                    // si backend no trae 'orden', usa el índice capturado
                     mm.orden = (typeof (m === null || m === void 0 ? void 0 : m.orden) === 'number') ? Number(m.orden) : idx;
-                    // etiqueta de cuenta si ya está en cache
                     var c = _this.cuentasMap.get(Number(mm.id_cuenta || 0));
                     mm._cuentaQuery = c ? c.codigo + " \u2014 " + c.nombre : ((_a = mm._cuentaQuery) !== null && _a !== void 0 ? _a : '');
                     return mm;
@@ -435,18 +433,15 @@ var PolizaEditarComponent = /** @class */ (function () {
                         return ra.type - rb.type;
                     if (ra.v !== rb.v)
                         return ra.v - rb.v;
-                    // último desempate: arrival
                     var aa = Number(a._arrival) || 0;
                     var ab = Number(b._arrival) || 0;
                     return aa - ab;
                 });
-                // normaliza 'orden' solo si venía vacío/no numérico
                 movs.forEach(function (m, i) {
                     if (!Number.isFinite(Number(m.orden)))
                         m.orden = i;
                 });
                 saveOrder(Number((_c = res === null || res === void 0 ? void 0 : res.id_poliza) !== null && _c !== void 0 ? _c : id), movs);
-                // Asegura id_periodo numérico
                 var idPeriodoRaw = Number(res === null || res === void 0 ? void 0 : res.id_periodo);
                 var idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
                 _this.poliza = {
@@ -506,6 +501,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         }
         catch (_a) { }
     };
+    // ----------------- Actualizar póliza -----------------
     PolizaEditarComponent.prototype.actualizarPoliza = function () {
         var _this = this;
         var _a, _b, _c, _d;
@@ -631,83 +627,128 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
-    // Cuentas
+    PolizaEditarComponent.prototype.inferNivelFromCodigo = function (codigoRaw) {
+        var codigo = (codigoRaw !== null && codigoRaw !== void 0 ? codigoRaw : '').toString();
+        if (!codigo)
+            return 0;
+        // Dejar solo dígitos
+        var digits = codigo.replace(/\D/g, '');
+        if (!digits)
+            return 0;
+        // Quitar ceros de la derecha (relleno)
+        var trimmed = digits.replace(/0+$/g, '');
+        var len = trimmed.length;
+        if (len <= 1)
+            return 0; // 1
+        if (len <= 2)
+            return 1; // 11
+        if (len <= 4)
+            return 2; // 1101
+        if (len <= 6)
+            return 3; // 110101
+        if (len <= 8)
+            return 4; // 11010101
+        return 5; // 1101010101 o más largo
+    };
+    // ----------------- Cuentas -----------------
+    // ----------------- Cuentas -----------------
     PolizaEditarComponent.prototype.cargarCuentas = function () {
         var _this = this;
         this.cuentasSvc.getCuentas().subscribe({
             next: function (arr) {
-                var todas = Array.isArray(arr) ? arr : [];
-                _this.cuentas = todas;
-                //  Ordenar por jerarquía padre→hijo
-                var _a = _this.ordenarYNivelarCuentas(_this.cuentas), list = _a.list, niveles = _a.niveles;
-                _this.cuentasOrdenadas = list;
-                _this.nivelById = niveles;
-                // Map para búsquedas por id (usa todas)
+                // 1) Normalizar respuesta
+                var items = _this.normalizeList(arr);
+                var nodos = (items || [])
+                    .map(function (x) {
+                    var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
+                    var id = Number((_b = (_a = x.id_cuenta) !== null && _a !== void 0 ? _a : x.id) !== null && _b !== void 0 ? _b : x.ID);
+                    var codigo = String((_f = (_d = (_c = x.codigo) !== null && _c !== void 0 ? _c : x.clave) !== null && _d !== void 0 ? _d : x.CODIGO) !== null && _f !== void 0 ? _f : '').trim();
+                    var nombre = String((_j = (_h = (_g = x.nombre) !== null && _g !== void 0 ? _g : x.descripcion) !== null && _h !== void 0 ? _h : x.NOMBRE) !== null && _j !== void 0 ? _j : '').trim();
+                    var parentIdRaw = (_l = (_k = x.parentId) !== null && _k !== void 0 ? _k : x.parent_id) !== null && _l !== void 0 ? _l : null;
+                    var parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
+                    var posteableRaw = (_p = (_o = (_m = x.posteable) !== null && _m !== void 0 ? _m : x.es_posteable) !== null && _o !== void 0 ? _o : x.posteable_flag) !== null && _p !== void 0 ? _p : x.posteable_indicator;
+                    var ctaMayorRaw = (_s = (_r = (_q = x.ctaMayor) !== null && _q !== void 0 ? _q : x.cta_mayor) !== null && _r !== void 0 ? _r : x.es_mayor) !== null && _s !== void 0 ? _s : x.mayor_flag;
+                    var posteable = posteableRaw === true ||
+                        posteableRaw === 1 ||
+                        posteableRaw === '1';
+                    var ctaMayor = ctaMayorRaw === true ||
+                        ctaMayorRaw === 1 ||
+                        ctaMayorRaw === '1';
+                    return {
+                        id: id,
+                        codigo: codigo,
+                        nombre: nombre,
+                        parentId: parentId,
+                        posteable: posteable,
+                        ctaMayor: ctaMayor,
+                        hijos: []
+                    };
+                })
+                    .filter(function (n) { return Number.isFinite(n.id); });
+                // 3) Enlazar hijos con padres
+                var porId = new Map();
+                nodos.forEach(function (n) { return porId.set(n.id, n); });
+                var raices = [];
+                porId.forEach(function (nodo) {
+                    if (nodo.parentId) {
+                        var padre = porId.get(nodo.parentId);
+                        if (padre) {
+                            padre.hijos.push(nodo);
+                        }
+                        else {
+                            raices.push(nodo);
+                        }
+                    }
+                    else {
+                        raices.push(nodo);
+                    }
+                });
+                // 4) Ordenar árbol por código
+                var sortTree = function (n) {
+                    n.hijos.sort(function (a, b) {
+                        return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                    });
+                    n.hijos.forEach(function (h) { return sortTree(h); });
+                };
+                raices.sort(function (a, b) {
+                    return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                });
+                raices.forEach(function (r) { return sortTree(r); });
+                // 5) Aplanar árbol en orden jerárquico con nivel
+                var resultado = [];
+                var visitar = function (nodo, nivel) {
+                    var c = {
+                        id_cuenta: nodo.id,
+                        codigo: nodo.codigo,
+                        nombre: nodo.nombre,
+                        nivel: nivel,
+                        esPadre: nodo.ctaMayor && !nodo.posteable,
+                        ctaMayor: nodo.ctaMayor,
+                        posteable: nodo.posteable
+                    };
+                    resultado.push(c);
+                    nodo.hijos.forEach(function (h) { return visitar(h, nivel + 1); });
+                };
+                raices.forEach(function (r) { return visitar(r, 0); });
+                // 6) Asignar a this.cuentas y mapas auxiliares
+                _this.cuentas = resultado;
                 _this.cuentasMap.clear();
-                for (var _i = 0, _b = _this.cuentas; _i < _b.length; _i++) {
-                    var c = _b[_i];
-                    _this.cuentasMap.set(c.id, c);
+                for (var _i = 0, _a = _this.cuentas; _i < _a.length; _i++) {
+                    var c = _a[_i];
+                    if (Number.isFinite(c.id_cuenta)) {
+                        _this.cuentasMap.set(c.id_cuenta, c);
+                    }
                 }
+                // 7) Lo que se manda al modal (misma referencia, con _expandido)
+                _this.cuentasParaModal = _this.cuentas.map(function (c) { return (__assign(__assign({}, c), { _expandido: !!c.esPadre, ctaMayor: !!c.ctaMayor, posteable: _this.esPosteable(c) })); });
+                // 8) Rellenar etiquetas en movimientos existentes
                 _this.prefillCuentaQueries();
+                console.log('Plan de cuentas (editar, jerárquico):', _this.cuentas);
             },
-            error: function (e) { return console.error('Cuentas:', e); }
+            error: function (e) {
+                console.error('Cuentas (editar):', e);
+            }
         });
-    };
-    PolizaEditarComponent.prototype.keyCodigo = function (codigo) {
-        var s = (codigo !== null && codigo !== void 0 ? codigo : '').toString();
-        return s
-            .split(/(\d+)/g)
-            .map(function (seg) { return (/^\d+$/.test(seg) ? seg.padStart(8, '0') : seg.toLowerCase()); })
-            .join('');
-    };
-    /** Ordena por jerarquía padre e hijo */
-    PolizaEditarComponent.prototype.ordenarYNivelarCuentas = function (todas) {
-        var _this = this;
-        var _a, _b;
-        var byId = new Map();
-        for (var _i = 0, todas_1 = todas; _i < todas_1.length; _i++) {
-            var c = todas_1[_i];
-            byId.set(c.id, c);
-        }
-        // Agrupar hijos por parentId
-        var children = new Map();
-        for (var _c = 0, todas_2 = todas; _c < todas_2.length; _c++) {
-            var c = todas_2[_c];
-            var pid = (_a = c.parentId) !== null && _a !== void 0 ? _a : null;
-            if (pid != null && byId.has(pid)) {
-                var arr = (_b = children.get(pid)) !== null && _b !== void 0 ? _b : [];
-                arr.push(c);
-                children.set(pid, arr);
-            }
-        }
-        // Raíces: sin parentId o con parentId no encontrado
-        var roots = todas.filter(function (c) { return c.parentId == null || !byId.has(c.parentId); });
-        // Orden por código amigable
-        var sortFn = function (a, b) {
-            return _this.keyCodigo(a.codigo).localeCompare(_this.keyCodigo(b.codigo));
-        };
-        roots.sort(sortFn);
-        for (var _d = 0, children_1 = children; _d < children_1.length; _d++) {
-            var _f = children_1[_d], arr = _f[1];
-            arr.sort(sortFn);
-        }
-        var out = [];
-        var niveles = new Map();
-        var dfs = function (n, nivel) {
-            var _a;
-            out.push(n);
-            niveles.set(n.id, nivel);
-            var kids = (_a = children.get(n.id)) !== null && _a !== void 0 ? _a : [];
-            for (var _i = 0, kids_1 = kids; _i < kids_1.length; _i++) {
-                var k = kids_1[_i];
-                dfs(k, nivel + 1);
-            }
-        };
-        for (var _g = 0, roots_1 = roots; _g < roots_1.length; _g++) {
-            var r = roots_1[_g];
-            dfs(r, 0);
-        }
-        return { list: out, niveles: niveles };
     };
     PolizaEditarComponent.prototype.prefillCuentaQueries = function () {
         var _this = this;
@@ -771,8 +812,6 @@ var PolizaEditarComponent = /** @class */ (function () {
             ((_a = _this.poliza.movimientos) !== null && _a !== void 0 ? _a : ) = [];
             splice(i, 1);
             _this.cuentasFiltradas.splice(i, 1);
-            _this.deletingIndexSet["delete"](i);
-            // Re-normaliza el 'orden' tras eliminar
             ((_b = _this.poliza.movimientos) !== null && _b !== void 0 ? _b : []).forEach(function (m, idx) { m.orden = idx; });
         };
         if (!idMov) {
@@ -793,7 +832,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
-    //cfdi recientes
+    // ----------------- CFDI recientes + XML -----------------
     PolizaEditarComponent.prototype.cargarCfdiRecientes = function () {
         var _this = this;
         var _a, _b;
@@ -957,7 +996,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             }
         });
     };
-    // Centros de costo
+    // ----------------- Centros de costo -----------------
     PolizaEditarComponent.prototype.getCentros = function () {
         var _this = this;
         var svc = this.api;
@@ -1003,7 +1042,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         var serie = (_b = (_a = cc) === null || _a === void 0 ? void 0 : _a.serie_venta) !== null && _b !== void 0 ? _b : null;
         return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
     };
-    // Helpers de error
+    // ----------------- Helpers de error -----------------
     PolizaEditarComponent.prototype.extractHttpErrorMessage = function (err) {
         var _a, _b, _c;
         var e = err || {};
@@ -1040,25 +1079,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             movs[index].ref_serie_venta = serie;
         }
     };
-    Object.defineProperty(PolizaEditarComponent.prototype, "cuentasParaModal", {
-        get: function () {
-            var _this = this;
-            var fuente = this.cuentasOrdenadas.length ? this.cuentasOrdenadas : this.cuentas;
-            return (fuente || []).map(function (c) {
-                var _a;
-                return ({
-                    id_cuenta: c.id,
-                    codigo: c.codigo,
-                    nombre: c.nombre,
-                    posteable: _this.esPosteable(c),
-                    nivel: (_a = _this.nivelById.get(c.id)) !== null && _a !== void 0 ? _a : 0
-                });
-            });
-        },
-        enumerable: false,
-        configurable: true
-    });
-    // }UTIL: descarga de archivos 
+    // ----------------- Exportar / utilidades de archivo -----------------
     PolizaEditarComponent.prototype.descargarBlob = function (blob, filename) {
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -1129,7 +1150,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         var folio = (_b = (_a = p === null || p === void 0 ? void 0 : p.folio) !== null && _a !== void 0 ? _a : p === null || p === void 0 ? void 0 : p.id_poliza) !== null && _b !== void 0 ? _b : '';
         return ((_g = (_f = (_d = (_c = p === null || p === void 0 ? void 0 : p.nombre) !== null && _c !== void 0 ? _c : p === null || p === void 0 ? void 0 : p.titulo) !== null && _d !== void 0 ? _d : p === null || p === void 0 ? void 0 : p.descripcion) !== null && _f !== void 0 ? _f : p === null || p === void 0 ? void 0 : p.concepto) !== null && _g !== void 0 ? _g : (folio ? "P\u00F3liza " + folio : 'Póliza'));
     };
-    //  PERIODO: relación o fallback por id 
     PolizaEditarComponent.prototype.periodoLabelById = function (id) {
         var _a, _b;
         if (!Number.isFinite(Number(id)))
@@ -1155,7 +1175,6 @@ var PolizaEditarComponent = /** @class */ (function () {
                 return iniF + " \u2014";
             return iniF + " \u2014 " + finF;
         }
-        // Fallback por id_periodo
         return this.periodoLabelById(this.toNumOrNull(p === null || p === void 0 ? void 0 : p.id_periodo));
     };
     PolizaEditarComponent.prototype.resolveCuenta = function (m) {
@@ -1172,7 +1191,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         var _a = this.resolveCuenta(m), codigo = _a.codigo, nombre = _a.nombre;
         return nombre ? codigo + " \u2014 " + nombre : codigo;
     };
-    //  Helpers de presentación 
     PolizaEditarComponent.prototype.fmtMoney = function (v) {
         var n = Number(v !== null && v !== void 0 ? v : 0);
         return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(n);
@@ -1439,7 +1457,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             });
         });
     };
-    // Modal cuentas
+    // ----------------- Modal cuentas -----------------
     PolizaEditarComponent.prototype.abrirModalCuentas = function (index) {
         this.indiceMovimientoSeleccionado = index;
         this.modalCuentasAbierto = true;
@@ -1499,12 +1517,12 @@ var PolizaEditarComponent = /** @class */ (function () {
         var m = movs[i];
         if (!m)
             return;
-        m.id_cuenta = Number(c.id);
+        m.id_cuenta = Number(c.id_cuenta);
         m._cuentaQuery = c.codigo + " \u2014 " + c.nombre;
         this.cuentasFiltradas[i] = [];
         this.cuentaOpenIndex = null;
     };
-    // Helpers
+    // ----------------- Totales / helpers generales -----------------
     PolizaEditarComponent.prototype.getTotal = function (tipo) {
         var _a;
         var movs = Array.isArray((_a = this.poliza) === null || _a === void 0 ? void 0 : _a.movimientos) ? this.poliza.movimientos : [];
@@ -1543,7 +1561,7 @@ var PolizaEditarComponent = /** @class */ (function () {
         var dt = new Date(s);
         if (isNaN(dt.getTime()))
             return s;
-        return dt.getFullYear() + "-" + this.pad2(dt.getMonth() + 1) + "-" + this.pad2(dt.getDate());
+        return dt.getFullYear() + "-" + this.pad2(d.getMonth() + 1) + "-" + this.pad2(d.getDate());
     };
     PolizaEditarComponent.prototype.toNumOrNull = function (v) {
         return (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
@@ -1593,7 +1611,7 @@ var PolizaEditarComponent = /** @class */ (function () {
             this.toast.position = opts.position;
         this.toast.open = true;
     };
-    // Usuario actual
+    // ----------------- Usuario actual -----------------
     PolizaEditarComponent.prototype.normalizeUsuario = function (u) {
         var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3;
         if (!u || typeof u !== 'object')

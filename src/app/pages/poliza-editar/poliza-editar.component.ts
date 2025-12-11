@@ -13,16 +13,29 @@ import { PolizasService } from '@app/services/polizas.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
-import { catchError, of, switchMap, throwError, firstValueFrom, finalize, from, concatMap, tap } from 'rxjs';
+import {
+  catchError,
+  of,
+  switchMap,
+  throwError,
+  firstValueFrom,
+  finalize,
+  from,
+  concatMap,
+  tap
+} from 'rxjs';
 
+/** <- forma compatible con el servicio y el modal */
 type Cuenta = {
-  id: number;
+  id_cuenta: number;
   codigo: string;
   nombre: string;
-  ctaMayor: boolean;
-  parentId: number | null;
+  nivel: number;
+  esPadre: boolean;
+  ctaMayor?: boolean;
   posteable?: boolean | number | '1' | '0' | string;
 };
+
 type Ejercicio = {
   id_ejercicio: number;
   nombre?: string | null;
@@ -30,6 +43,7 @@ type Ejercicio = {
   fecha_fin?: string | null;
   activo?: boolean | number | '1' | '0';
 };
+
 type MovimientoUI = Movimiento & {
   _cuentaQuery?: string;
   id_movimiento?: number;
@@ -40,6 +54,7 @@ type MovimientoUI = Movimiento & {
 type PolizaUI = Omit<Poliza, 'movimientos'> & {
   movimientos: MovimientoUI[];
 };
+
 type CfdiOption = {
   uuid: string;
   folio?: string | null;
@@ -48,7 +63,7 @@ type CfdiOption = {
 };
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
 
 type CentroCostoItem = {
   id_centrocosto: number;
@@ -100,7 +115,6 @@ export class PolizaEditarComponent implements OnInit {
   saveTotal = 0;
   saveDone = 0;
 
-
   currentUser: UsuarioLigero | null = null;
 
   ejercicioActual: Ejercicio | null = null;
@@ -130,7 +144,11 @@ export class PolizaEditarComponent implements OnInit {
     updated_at?: string;
   } = { movimientos: [] };
 
+  /** Plan de cuentas plano (con nivel, esPadre, etc.) */
   cuentas: Cuenta[] = [];
+  /** Lo que se manda directamente al modal (misma referencia siempre) */
+  cuentasParaModal: any[] = [];
+
   cuentasMap = new Map<number, Cuenta>();
   cuentasFiltradas: Cuenta[][] = [];
   cuentaOpenIndex: number | null = null;
@@ -175,7 +193,7 @@ export class PolizaEditarComponent implements OnInit {
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
-  // Catálogos base
+  // ----------------- Catálogos base -----------------
   private cargarCatalogosBase() {
     // Tipos de póliza
     this.http.get<any>(`${this.apiBase}/tipo-poliza`).subscribe({
@@ -205,7 +223,7 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // Ejercicio / Periodos
+  // ----------------- Ejercicio / Periodos -----------------
   private cargarEjercicioActivo(): void {
     const svc: any = this.api;
     const fn =
@@ -394,7 +412,7 @@ export class PolizaEditarComponent implements OnInit {
     return nombre || '—';
   }
 
-  // Póliza + movimientos
+  // ----------------- Póliza + movimientos -----------------
   cargarPoliza(id: number) {
     const ORDER_KEY = (pid: number) => `polizaOrder:${pid}`;
 
@@ -423,14 +441,10 @@ export class PolizaEditarComponent implements OnInit {
         const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any, idx: number) => {
           const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
 
-          // índice de llegada (para desempate estable)
           (mm as any)._arrival = idx;
-
-          // si backend no trae 'orden', usa el índice capturado
           mm.orden = (typeof m?.orden === 'number') ? Number(m.orden) : idx;
 
-          // etiqueta de cuenta si ya está en cache
-          const c = this.cuentasMap.get(Number(mm.id_cuenta || 0));
+          const c = this.cuentasMap.get(Number((mm as any).id_cuenta || 0));
           (mm as any)._cuentaQuery = c ? `${c.codigo} — ${c.nombre}` : ((mm as any)._cuentaQuery ?? '');
 
           return mm;
@@ -449,20 +463,17 @@ export class PolizaEditarComponent implements OnInit {
           const ra = rank(a), rb = rank(b);
           if (ra.type !== rb.type) return ra.type - rb.type;
           if (ra.v !== rb.v) return ra.v - rb.v;
-          // último desempate: arrival
           const aa = Number((a as any)._arrival) || 0;
           const ab = Number((b as any)._arrival) || 0;
           return aa - ab;
         });
 
-        // normaliza 'orden' solo si venía vacío/no numérico
         movs.forEach((m, i) => {
           if (!Number.isFinite(Number(m.orden))) m.orden = i;
         });
 
         saveOrder(Number(res?.id_poliza ?? id), movs);
 
-        // Asegura id_periodo numérico
         const idPeriodoRaw = Number(res?.id_periodo);
         const idPeriodo = Number.isFinite(idPeriodoRaw) ? idPeriodoRaw : undefined;
 
@@ -494,18 +505,16 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-
-
   private normalizeMovimiento(m: any): MovimientoUI {
     const base: MovimientoUI = {
       id_cuenta: this.toNumOrNull(m?.id_cuenta),
       ref_serie_venta: this.toStrOrNull(m?.ref_serie_venta) ?? '',
-      operacion: (m?.operacion ?? '').toString(), // "0" | "1"
+      operacion: (m?.operacion ?? '').toString(),
       monto: this.toNumOrNull(m?.monto),
       cliente: this.toStrOrNull(m?.cliente) ?? '',
       fecha: this.toDateOrNull(m?.fecha) ?? '',
       cc: this.toNumOrNull(m?.cc),
-      uuid: this.toStrOrNull(m?.uuid) ?? null, //  CFDI UUID
+      uuid: this.toStrOrNull(m?.uuid) ?? null,
       id_poliza: this.toNumOrNull(m?.id_poliza) ?? undefined,
       ...(m?.id_movimiento != null ? { id_movimiento: Number(m.id_movimiento) } : {})
     } as any;
@@ -539,7 +548,7 @@ export class PolizaEditarComponent implements OnInit {
     } catch { }
   }
 
-
+  // ----------------- Actualizar póliza -----------------
   actualizarPoliza(): void {
     if (!this.poliza?.id_poliza) {
       this.showToast({ type: 'warning', title: 'Aviso', message: 'No se encontró el ID de la póliza.' });
@@ -601,7 +610,7 @@ export class PolizaEditarComponent implements OnInit {
         fecha: this.toDateOrNull(m.fecha),
         cc: this.toNumOrNull(m.cc),
         uuid: this.toStrOrNull(m.uuid),
-        orden: this.toNumOrNull(m.orden), //  enviar orden
+        orden: this.toNumOrNull(m.orden),
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: m.id_movimiento
@@ -620,7 +629,7 @@ export class PolizaEditarComponent implements OnInit {
         fecha: this.toDateOrNull(m.fecha),
         cc: this.toNumOrNull(m.cc),
         uuid: this.toStrOrNull(m.uuid),
-        orden: this.toNumOrNull(m.orden), //  enviar orden
+        orden: this.toNumOrNull(m.orden),
       }).pipe(
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: undefined
@@ -643,7 +652,7 @@ export class PolizaEditarComponent implements OnInit {
             concatMap((obs) => obs.pipe(
               tap({
                 next: () => this.saveDone++,
-                error: () => this.saveDone++ 
+                error: () => this.saveDone++
               })
             )),
             finalize(() => {
@@ -678,79 +687,170 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // Cuentas
-  private cargarCuentas() {
-    this.cuentasSvc.getCuentas().subscribe({
-      next: (arr) => {
-        const todas = Array.isArray(arr) ? arr : [];
+  private inferNivelFromCodigo(codigoRaw: string | null | undefined): number {
+  const codigo = (codigoRaw ?? '').toString();
+  if (!codigo) return 0;
 
-        this.cuentas = todas;
+  // Dejar solo dígitos
+  const digits = codigo.replace(/\D/g, '');
+  if (!digits) return 0;
 
-        //  Ordenar por jerarquía padre→hijo
-        const { list, niveles } = this.ordenarYNivelarCuentas(this.cuentas);
-        this.cuentasOrdenadas = list;
-        this.nivelById = niveles;
+  // Quitar ceros de la derecha (relleno)
+  const trimmed = digits.replace(/0+$/g, '');
+  const len = trimmed.length;
 
-        // Map para búsquedas por id (usa todas)
-        this.cuentasMap.clear();
-        for (const c of this.cuentas) this.cuentasMap.set(c.id, c);
+  if (len <= 1) return 0; // 1
+  if (len <= 2) return 1; // 11
+  if (len <= 4) return 2; // 1101
+  if (len <= 6) return 3; // 110101
+  if (len <= 8) return 4; // 11010101
+  return 5;               // 1101010101 o más largo
+}
+// ----------------- Cuentas -----------------
+// ----------------- Cuentas -----------------
+private cargarCuentas() {
+  this.cuentasSvc.getCuentas().subscribe({
+    next: (arr: any) => {
+      // 1) Normalizar respuesta
+      const items = this.normalizeList(arr);
 
-        this.prefillCuentaQueries();
-      },
-      error: (e) => console.error('Cuentas:', e)
-    });
-  }
+      // 2) Construir árbol con parentId
+      type NodoBase = {
+        id: number;
+        codigo: string;
+        nombre: string;
+        parentId: number | null;
+        posteable: boolean;
+        ctaMayor: boolean;
+        hijos: NodoBase[];
+      };
 
-  private cuentasOrdenadas: Cuenta[] = [];
-  private nivelById = new Map<number, number>();
+      const nodos: NodoBase[] = (items || [])
+        .map((x: any) => {
+          const id = Number(x.id_cuenta ?? x.id ?? x.ID);
+          const codigo = String(x.codigo ?? x.clave ?? x.CODIGO ?? '').trim();
+          const nombre = String(x.nombre ?? x.descripcion ?? x.NOMBRE ?? '').trim();
 
-  private keyCodigo(codigo: string | null | undefined): string {
-    const s = (codigo ?? '').toString();
-    return s
-      .split(/(\d+)/g)
-      .map(seg => (/^\d+$/.test(seg) ? seg.padStart(8, '0') : seg.toLowerCase()))
-      .join('');
-  }
+          const parentIdRaw = x.parentId ?? x.parent_id ?? null;
+          const parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
 
-  /** Ordena por jerarquía padre e hijo */
-  private ordenarYNivelarCuentas(todas: Cuenta[]): { list: Cuenta[]; niveles: Map<number, number> } {
-    const byId = new Map<number, Cuenta>();
-    for (const c of todas) byId.set(c.id, c);
+          const posteableRaw =
+            x.posteable ??
+            x.es_posteable ??
+            x.posteable_flag ??
+            x.posteable_indicator;
 
-    // Agrupar hijos por parentId
-    const children = new Map<number, Cuenta[]>();
-    for (const c of todas) {
-      const pid = c.parentId ?? null;
-      if (pid != null && byId.has(pid)) {
-        const arr = children.get(pid) ?? [];
-        arr.push(c);
-        children.set(pid, arr);
+          const ctaMayorRaw =
+            x.ctaMayor ??
+            x.cta_mayor ??
+            x.es_mayor ??
+            x.mayor_flag;
+
+          const posteable =
+            posteableRaw === true ||
+            posteableRaw === 1 ||
+            posteableRaw === '1';
+
+          const ctaMayor =
+            ctaMayorRaw === true ||
+            ctaMayorRaw === 1 ||
+            ctaMayorRaw === '1';
+
+          return <NodoBase>{
+            id,
+            codigo,
+            nombre,
+            parentId,
+            posteable,
+            ctaMayor,
+            hijos: []
+          };
+        })
+        .filter((n: NodoBase) => Number.isFinite(n.id));
+
+      // 3) Enlazar hijos con padres
+      const porId = new Map<number, NodoBase>();
+      nodos.forEach(n => porId.set(n.id, n));
+
+      const raices: NodoBase[] = [];
+      porId.forEach(nodo => {
+        if (nodo.parentId) {
+          const padre = porId.get(nodo.parentId);
+          if (padre) {
+            padre.hijos.push(nodo);
+          } else {
+            raices.push(nodo);
+          }
+        } else {
+          raices.push(nodo);
+        }
+      });
+
+      // 4) Ordenar árbol por código
+      const sortTree = (n: NodoBase) => {
+        n.hijos.sort((a, b) =>
+          a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+        );
+        n.hijos.forEach(h => sortTree(h));
+      };
+
+      raices.sort((a, b) =>
+        a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+      );
+      raices.forEach(r => sortTree(r));
+
+      // 5) Aplanar árbol en orden jerárquico con nivel
+      const resultado: Cuenta[] = [];
+
+      const visitar = (nodo: NodoBase, nivel: number) => {
+        const c: Cuenta = {
+          id_cuenta: nodo.id,
+          codigo: nodo.codigo,
+          nombre: nodo.nombre,
+          nivel,
+          esPadre: nodo.ctaMayor && !nodo.posteable,
+          ctaMayor: nodo.ctaMayor,
+          posteable: nodo.posteable
+        };
+        resultado.push(c);
+
+        nodo.hijos.forEach(h => visitar(h, nivel + 1));
+      };
+
+      raices.forEach(r => visitar(r, 0));
+
+      // 6) Asignar a this.cuentas y mapas auxiliares
+      this.cuentas = resultado;
+
+      this.cuentasMap.clear();
+      for (const c of this.cuentas) {
+        if (Number.isFinite(c.id_cuenta)) {
+          this.cuentasMap.set(c.id_cuenta, c);
+        }
       }
+
+      // 7) Lo que se manda al modal (misma referencia, con _expandido)
+      this.cuentasParaModal = this.cuentas.map(c => ({
+        ...c,
+        _expandido: !!c.esPadre,          // padres empiezan expandidos (pon false si los quieres colapsados)
+        ctaMayor: !!c.ctaMayor,
+        posteable: this.esPosteable(c),
+      }));
+
+      // 8) Rellenar etiquetas en movimientos existentes
+      this.prefillCuentaQueries();
+
+      console.log('Plan de cuentas (editar, jerárquico):', this.cuentas);
+    },
+    error: (e) => {
+      console.error('Cuentas (editar):', e);
     }
+  });
+}
 
-    // Raíces: sin parentId o con parentId no encontrado
-    const roots = todas.filter(c => c.parentId == null || !byId.has(c.parentId));
 
-    // Orden por código amigable
-    const sortFn = (a: Cuenta, b: Cuenta) =>
-      this.keyCodigo(a.codigo).localeCompare(this.keyCodigo(b.codigo));
 
-    roots.sort(sortFn);
-    for (const [, arr] of children) arr.sort(sortFn);
 
-    const out: Cuenta[] = [];
-    const niveles = new Map<number, number>();
-
-    const dfs = (n: Cuenta, nivel: number) => {
-      out.push(n);
-      niveles.set(n.id, nivel);
-      const kids = children.get(n.id) ?? [];
-      for (const k of kids) dfs(k, nivel + 1);
-    };
-
-    for (const r of roots) dfs(r, 0);
-    return { list: out, niveles };
-  }
 
   private prefillCuentaQueries() {
     const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
@@ -778,8 +878,7 @@ export class PolizaEditarComponent implements OnInit {
     this.cuentasFiltradas.push([]);
   }
 
-
-  // madal de confirmacion para eliminar movimiento
+  // ----------------- Confirmación borrar movimiento -----------------
   confirmOpen = false;
   confirmTitle = 'Eliminar movimiento';
   confirmMessage = '¿Seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.';
@@ -814,8 +913,6 @@ export class PolizaEditarComponent implements OnInit {
     const finish = () => {
       (this.poliza.movimientos ??= []).splice(i, 1);
       this.cuentasFiltradas.splice(i, 1);
-      this.deletingIndexSet.delete(i);
-      // Re-normaliza el 'orden' tras eliminar
       (this.poliza.movimientos ?? []).forEach((m, idx) => { (m as MovimientoUI).orden = idx; });
     };
 
@@ -838,7 +935,7 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  //cfdi recientes
+  // ----------------- CFDI recientes + XML -----------------
   private cargarCfdiRecientes(): void {
     const svc: any = this.apiSvc as any;
     const fn =
@@ -983,7 +1080,7 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // Centros de costo
+  // ----------------- Centros de costo -----------------
   private getCentros(): void {
     const svc: any = this.api as any;
     const fn =
@@ -1024,6 +1121,7 @@ export class PolizaEditarComponent implements OnInit {
       }
     });
   }
+
   private getSerieVentaByCcId(ccId?: number | null): string | null {
     if (ccId == null) return null;
     const cc = this.centrosCostoMap.get(Number(ccId));
@@ -1031,7 +1129,7 @@ export class PolizaEditarComponent implements OnInit {
     return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
   }
 
-  // Helpers de error
+  // ----------------- Helpers de error -----------------
   private extractHttpErrorMessage(err: any): string {
     const e = err || {};
     const tryPaths = [
@@ -1071,18 +1169,7 @@ export class PolizaEditarComponent implements OnInit {
     }
   }
 
-  get cuentasParaModal() {
-    const fuente = this.cuentasOrdenadas.length ? this.cuentasOrdenadas : this.cuentas;
-    return (fuente || []).map(c => ({
-      id_cuenta: c.id,
-      codigo: c.codigo,
-      nombre: c.nombre,
-      posteable: this.esPosteable(c),
-      nivel: this.nivelById.get(c.id) ?? 0,
-    }));
-  }
-
-  // }UTIL: descarga de archivos 
+  // ----------------- Exportar / utilidades de archivo -----------------
   private descargarBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1139,7 +1226,7 @@ export class PolizaEditarComponent implements OnInit {
     return `${head}\n${body}\n${tail}\n`;
   }
 
-  // Índice perezoso por id_cuenta -> {codigo, nombre}
+  // ----------------- Índices / helpers de presentación -----------------
   private cuentasIndex?: Record<string | number, { codigo: string; nombre?: string }>;
 
   private ensureCuentasIndex() {
@@ -1153,6 +1240,7 @@ export class PolizaEditarComponent implements OnInit {
       if (id != null) this.cuentasIndex[id] = { codigo: String(codigo), nombre: nombre || undefined };
     }
   }
+
   private resolvePolizaNombre(p: any) {
     const folio = p?.folio ?? p?.id_poliza ?? '';
     return (
@@ -1164,7 +1252,6 @@ export class PolizaEditarComponent implements OnInit {
     );
   }
 
-  //  PERIODO: relación o fallback por id 
   private periodoLabelById(id?: number | null): string {
     if (!Number.isFinite(Number(id))) return '';
     const p = this.allPeriodos.find(x => Number(x.id_periodo) === Number(id));
@@ -1187,7 +1274,6 @@ export class PolizaEditarComponent implements OnInit {
       if (iniF && !finF) return `${iniF} —`;
       return `${iniF} — ${finF}`;
     }
-    // Fallback por id_periodo
     return this.periodoLabelById(this.toNumOrNull(p?.id_periodo));
   }
 
@@ -1211,7 +1297,6 @@ export class PolizaEditarComponent implements OnInit {
     return nombre ? `${codigo} — ${nombre}` : codigo;
   }
 
-  //  Helpers de presentación 
   private fmtMoney(v: any) {
     const n = Number(v ?? 0);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(n);
@@ -1240,7 +1325,6 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // Índice id_tipopoliza -> descripcion
   private tiposPolizaIndex?: Record<string | number, string>;
   private ensureTiposPolizaIndex() {
     if (this.tiposPolizaIndex) return;
@@ -1408,15 +1492,15 @@ export class PolizaEditarComponent implements OnInit {
       (ws as any)['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
 
       (ws as any)['!cols'] = [
-        { wch: 4 },  // #
-        { wch: 16 }, // Cuenta
-        { wch: 12 }, // Operación
-        { wch: 14 }, // Monto
-        { wch: 44 }, // Cliente / Concepto
-        { wch: 12 }, // Fecha
-        { wch: 8 },  // CC
-        { wch: 16 }, // Serie Venta
-        { wch: 40 }, // UUID
+        { wch: 4 },
+        { wch: 16 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 44 },
+        { wch: 12 },
+        { wch: 8 },
+        { wch: 16 },
+        { wch: 40 },
       ];
 
       const headerStartRow = 3;
@@ -1439,7 +1523,7 @@ export class PolizaEditarComponent implements OnInit {
       const dif = this.getDiferencia();
       const totalsRow = lastDataRow + 2;
 
-      XLSX.utils.sheet_add_aoa(ws, [
+      (XLSX as any).utils.sheet_add_aoa(ws, [
         ['Totales'],
         ['Cargos', cargos],
         ['Abonos', abonos],
@@ -1447,14 +1531,14 @@ export class PolizaEditarComponent implements OnInit {
       ], { origin: `A${totalsRow}` });
 
       ['B' + (totalsRow + 1), 'B' + (totalsRow + 2), 'B' + (totalsRow + 3)].forEach(addr => {
-        const c = ws[addr]; if (c) c.z = '"$"#,##0.00';
+        const c = (ws as any)[addr]; if (c) c.z = '"$"#,##0.00';
       });
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, hojaNombre);
+      const wb = (XLSX as any).utils.book_new();
+      (XLSX as any).utils.book_append_sheet(wb, ws, hojaNombre);
 
       const XLSXMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const wbout = (XLSX as any).write(wb, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([wbout], { type: XLSXMime });
       this.descargarBlob(blob, `Poliza-${folio || 'sin_folio'}.xlsx`);
 
@@ -1464,7 +1548,7 @@ export class PolizaEditarComponent implements OnInit {
     }
   }
 
-  // Modal cuentas
+  // ----------------- Modal cuentas -----------------
   abrirModalCuentas(index: number): void {
     this.indiceMovimientoSeleccionado = index;
     this.modalCuentasAbierto = true;
@@ -1515,13 +1599,13 @@ export class PolizaEditarComponent implements OnInit {
   selectCuenta(i: number, c: Cuenta) {
     const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
     const m = movs[i]; if (!m) return;
-    m.id_cuenta = Number(c.id);
+    m.id_cuenta = Number(c.id_cuenta);
     m._cuentaQuery = `${c.codigo} — ${c.nombre}`;
     this.cuentasFiltradas[i] = [];
     this.cuentaOpenIndex = null;
   }
 
-  // Helpers
+  // ----------------- Totales / helpers generales -----------------
   getTotal(tipo: '0' | '1'): number {
     const movs = Array.isArray(this.poliza?.movimientos) ? this.poliza!.movimientos! : [];
     return movs
@@ -1551,7 +1635,7 @@ export class PolizaEditarComponent implements OnInit {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const dt = new Date(s);
     if (isNaN(dt.getTime())) return s;
-    return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
+    return `${dt.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
   }
   private toNumOrNull(v: any): number | null {
     return (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
@@ -1594,7 +1678,7 @@ export class PolizaEditarComponent implements OnInit {
   }
   onToastClosed = () => { this.toast.open = false; };
 
-  // Usuario actual
+  // ----------------- Usuario actual -----------------
   private normalizeUsuario(u: any): UsuarioLigero | null {
     if (!u || typeof u !== 'object') return null;
     const raw = (u.user ?? u.data ?? u.currentUser ?? u) || {};
