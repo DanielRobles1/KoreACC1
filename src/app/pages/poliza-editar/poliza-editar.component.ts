@@ -10,8 +10,10 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-cuenta/modal-seleccion-cuenta.component';
 
 import { PolizasService } from '@app/services/polizas.service';
+import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
+import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta } from '@app/utils/fecha-utils';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
 import {
   catchError,
@@ -22,7 +24,8 @@ import {
   finalize,
   from,
   concatMap,
-  tap
+  tap,
+  forkJoin
 } from 'rxjs';
 
 /** <- forma compatible con el servicio y el modal */
@@ -42,6 +45,7 @@ type Ejercicio = {
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
   activo?: boolean | number | '1' | '0';
+  anio?: number | null;
 };
 
 type MovimientoUI = Movimiento & {
@@ -181,6 +185,7 @@ export class PolizaEditarComponent implements OnInit {
     private http: HttpClient,
     private apiSvc: PolizasService,
     private cuentasSvc: CuentasService,
+    private ejercicioSvc: EjercicioContableService,
   ) { }
 
   ngOnInit(): void {
@@ -234,64 +239,95 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
+  private isAbierto(e: any): boolean {
+    const v = e?.esta_abierto ?? e?.activo ?? e?.activo_flag ?? e?.is_open;
+    if (v === true || v === 1 || v === '1') return true;
+    if (typeof v === 'string') return v.trim().toLowerCase() === 'true';
+    return false;
+  }
+
   // ----------------- Ejercicio / Periodos -----------------
   private cargarEjercicioActivo(): void {
-    const svc: any = this.api;
-    const fn =
-      svc.getEjercicioActivo ||
-      svc.fetchEjercicioActivo ||
-      svc.getEjercicio ||
-      svc.fetchEjercicio ||
-      svc.listEjercicios ||
-      svc.getEjercicios;
+    this.ejercicioSvc
+      .listEjerciciosAbiertos({ esta_abierto: true })
+      .subscribe({
+        next: (res: any) => {
+          const raw = Array.isArray(res)
+            ? res
+            : res?.rows ?? res?.data ?? res ?? [];
+          const hoy = new Date();
+          const anioActual = hoy.getFullYear();
 
-    if (typeof fn !== 'function') {
-      console.warn('⚠ No existe método de API para Ejercicio.');
-      this.ejercicioActual = null;
-      this.ejercicios = [];
-      return;
-    }
+          const activos = raw.filter((e: any) => this.isAbierto(e));
 
-    const isList = (fn === svc.listEjercicios || fn === svc.getEjercicios);
+          this.ejercicios = activos.map((e: any) => {
+            const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
+            const fi0 = e.fecha_inicio ?? e.inicio ?? e.start_date ?? null;
+            const ff0 = e.fecha_fin ?? e.fin ?? e.end_date ?? null;
+            const anio = Number(
+              e.anio ?? e.year ?? (fi0 ? new Date(fi0).getFullYear() : NaN)
+            );
 
-    fn.call(svc).subscribe({
-      next: (r: any) => {
-        const items = isList ? this.normalizeList(r) : [r];
-
-        this.ejercicios = items
-          .map((e: any) => this.normalizeEjercicio(e))
-          .filter((e: Ejercicio | null): e is Ejercicio => !!e)
-          .filter((e: Ejercicio) => {
-            const activoFlag = e.activo === true || e.activo === 1 || e.activo === '1';
-            const hoy = this.todayISO();
-            const fi = this.fmtDate(e.fecha_inicio);
-            const ff = this.fmtDate(e.fecha_fin);
-            const dentroDeFechas = !!(fi && ff && fi <= hoy && hoy <= ff && fi !== '—' && ff !== '—');
-            return activoFlag || dentroDeFechas;
+            return <Ejercicio>{
+              id_ejercicio: id,
+              nombre: e.nombre ?? e.descripcion ?? null,
+              fecha_inicio: fmtDate(fi0),
+              fecha_fin: fmtDate(ff0),
+              activo: true,
+              anio: Number.isFinite(anio) ? anio : null
+            };
           });
 
-        const elegido =
-          items.find((x: any) => x?.is_selected) ??
-          items.find((x: any) => {
-            const fi = this.fmtDate(x?.fecha_inicio ?? x?.inicio);
-            const ff = this.fmtDate(x?.fecha_fin ?? x?.fin);
-            const hoy = this.todayISO();
-            return fi && ff && fi !== '—' && ff !== '—' && fi <= hoy && hoy <= ff;
-          }) ??
-          items[0];
+          if (!this.ejercicios.length) {
+            console.warn('⚠ No se encontraron ejercicios activos.');
+            this.ejercicioActual = null;
+            this.ejercicioActualId = undefined as any;
+            this.showToast({
+              type: 'info',
+              title: 'Sin ejercicios abiertos',
+              message: 'No hay ejercicios abiertos para seleccionar.'
+            });
+            this.periodos = [];
+            return;
+          }
 
-        this.ejercicioActual = this.normalizeEjercicio(elegido);
-        this.ejercicioActualId = Number(this.ejercicioActual?.id_ejercicio ?? NaN);
+          let elegido: Ejercicio | null =
+            (this.ejercicios.find(
+              (e: any) => e.is_selected
+            ) as Ejercicio | undefined) ??
+            this.ejercicios.find(e => e.anio === anioActual) ??
+            (this.ejercicios.length === 1 ? this.ejercicios[0] : null);
 
-        this.applyPeriodoFilter();
-      },
-      error: (err: any) => {
-        console.error('❌ Error al cargar ejercicio:', err);
-        this.ejercicioActual = null;
-        this.ejercicios = [];
-        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo cargar el ejercicio actual.' });
-      }
-    });
+          if (!elegido) {
+            elegido =
+              this.ejercicios.find(e => {
+                const fi = e.fecha_inicio ? new Date(e.fecha_inicio) : null;
+                const ff = e.fecha_fin ? new Date(e.fecha_fin) : null;
+                if (!fi && !ff) return false;
+                const t = hoy.getTime();
+                const ti = fi ? fi.getTime() : -Infinity;
+                const tf = ff ? ff.getTime() : Infinity;
+                return t >= ti && t <= tf;
+              }) ?? this.ejercicios[0];
+          }
+
+          this.ejercicioActual = elegido!;
+          this.ejercicioActualId = elegido!.id_ejercicio;
+
+          console.log(' Ejercicio elegido (nueva póliza):', this.ejercicioActual);
+
+          this.applyPeriodoFilter();
+        },
+        error: (err: any) => {
+          console.error('❌ Error al cargar ejercicios:', err);
+          this.showToast({
+            type: 'warning',
+            title: 'Aviso',
+            message: 'No se pudieron cargar los ejercicios contables.'
+          });
+          this.ejercicioActual = null;
+        }
+      });
   }
 
   public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
@@ -623,6 +659,7 @@ export class PolizaEditarComponent implements OnInit {
         uuid: this.toStrOrNull(m.uuid),
         orden: this.toNumOrNull(m.orden),
       }).pipe(
+        tap({ next: () => this.saveDone++, error: () => this.saveDone++ }),
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: m.id_movimiento
         })))
@@ -642,6 +679,7 @@ export class PolizaEditarComponent implements OnInit {
         uuid: this.toStrOrNull(m.uuid),
         orden: this.toNumOrNull(m.orden),
       }).pipe(
+        tap({ next: () => this.saveDone++, error: () => this.saveDone++ }),
         catchError(err => throwError(() => this.annotateError(err, {
           i, uuid: m.uuid ?? null, id_mov: undefined
         })))
@@ -657,21 +695,7 @@ export class PolizaEditarComponent implements OnInit {
     this.apiSvc.updatePoliza(this.poliza.id_poliza!, payloadHeader).pipe(
       switchMap(() => {
         this.showToast({ type: 'success', title: 'Encabezado actualizado', message: 'Guardando movimientos…' });
-
-        return (reqs.length
-          ? from(reqs).pipe(
-            concatMap((obs) => obs.pipe(
-              tap({
-                next: () => this.saveDone++,
-                error: () => this.saveDone++
-              })
-            )),
-            finalize(() => {
-              this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos guardados.' });
-            })
-          )
-          : of(null)
-        );
+        return reqs.length ? forkJoin(reqs) : of(null);
       }),
       finalize(() => {
         this.saving = false;
@@ -688,7 +712,10 @@ export class PolizaEditarComponent implements OnInit {
           toCreate.length ? ` Movs creados: ${toCreate.length}.` : ''
         ].join('');
         this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
-        this.cargarPoliza(this.poliza!.id_poliza!);
+
+        if (toCreate.length > 0) {
+          this.cargarPoliza(this.poliza!.id_poliza!);
+        }
       },
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Error al actualizar póliza/movimientos';
@@ -1956,4 +1983,6 @@ export class PolizaEditarComponent implements OnInit {
     };
     tryNext(0);
   }
+
+  trackByEjercicioId = (_: number, e: any) => e?.id_ejercicio;
 }

@@ -26,14 +26,14 @@
 
           <select
             [(ngModel)]="ejercicioActualId"
-            [disabled]="true"
+            [disabled]="false"
             (ngModelChange)="onEjercicioSeleccionado($event)"
             name="ejercicioSeleccionado"
             style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
             aria-label="Seleccionar ejercicio"
           >
-            <option *ngFor="let e of ejercicios" [ngValue]="e.id_ejercicio">
-              {{ e.nombre }} ({{ e.fecha_inicio || '—' }} — {{ e.fecha_fin || '—' }})
+            <option *ngFor="let e of ejercicios; trackBy: trackByEjercicioId" [ngValue]="e.id_ejercicio">
+              {{ e.anio || (e.fecha_inicio ? (e.fecha_inicio | date:'yyyy') : '—') }}
             </option>
           </select>
           <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
