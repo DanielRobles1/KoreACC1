@@ -117,6 +117,12 @@ var PolizasComponent = /** @class */ (function () {
         // Modal de cuentas
         this.modalCuentasAbierto = false;
         this.indiceMovimientoSeleccionado = null;
+        // Modal de centro de costo
+        this.modalCentroAbierto = false;
+        this.centroSeleccionadoModal = null;
+        this.centrosCostoComoCuentas = [];
+        // ✅ NUEVO: para reutilizar el mismo modal de centro, pero aplicado a un movimiento
+        this.centroMovimientoIndexSeleccionado = null;
         // Toast
         this.toast = {
             open: false,
@@ -940,29 +946,90 @@ var PolizasComponent = /** @class */ (function () {
         fn.call(this.api).subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
-                _this.centrosCosto = (items || [])
+                var crudos = (items || [])
                     .map(function (x) {
-                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-                    var id = Number((_c = (_b = (_a = x.id_centro) !== null && _a !== void 0 ? _a : x.id_centro) !== null && _b !== void 0 ? _b : x.id) !== null && _c !== void 0 ? _c : x.ID);
-                    var serie = String((_f = (_e = (_d = x.serie_venta) !== null && _d !== void 0 ? _d : x.serie) !== null && _e !== void 0 ? _e : x.codigo) !== null && _f !== void 0 ? _f : '').trim();
-                    var nom = String((_j = (_h = (_g = x.nombre) !== null && _g !== void 0 ? _g : x.descripcion) !== null && _h !== void 0 ? _h : x.NOMBRE) !== null && _j !== void 0 ? _j : "CC " + id).trim();
-                    var clave = String((_l = (_k = x.clave) !== null && _k !== void 0 ? _k : x.codigo) !== null && _l !== void 0 ? _l : '').trim();
+                    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+                    var id = Number((_b = (_a = x.id_centro) !== null && _a !== void 0 ? _a : x.id) !== null && _b !== void 0 ? _b : x.ID);
+                    var parentRaw = (_f = (_e = (_d = (_c = x.parent_id) !== null && _c !== void 0 ? _c : x.parentId) !== null && _d !== void 0 ? _d : x.id_centro_padre) !== null && _e !== void 0 ? _e : x.centro_padre) !== null && _f !== void 0 ? _f : null;
+                    var parent_id = parentRaw != null && parentRaw !== ''
+                        ? Number(parentRaw)
+                        : null;
+                    var serie = String((_j = (_h = (_g = x.serie_venta) !== null && _g !== void 0 ? _g : x.serie) !== null && _h !== void 0 ? _h : x.codigo) !== null && _j !== void 0 ? _j : '').trim();
+                    var nom = String((_o = (_m = (_l = (_k = x.nombre) !== null && _k !== void 0 ? _k : x.nombre_centro) !== null && _l !== void 0 ? _l : x.descripcion) !== null && _m !== void 0 ? _m : x.NOMBRE) !== null && _o !== void 0 ? _o : '').trim();
+                    var clave = String((_q = (_p = x.clave) !== null && _p !== void 0 ? _p : x.codigo) !== null && _q !== void 0 ? _q : '').trim();
                     var etiqueta = serie
                         ? serie + " \u2014 " + nom
                         : clave
                             ? clave + " \u2014 " + nom
-                            : nom;
+                            : nom || "CC " + id;
                     return {
                         id_centrocosto: id,
+                        parent_id: parent_id,
                         nombre: etiqueta,
                         clave: clave,
                         serie_venta: serie
                     };
                 })
-                    .filter(function (cc) {
-                    return Number.isFinite(cc.id_centrocosto);
+                    .filter(function (cc) { return Number.isFinite(cc.id_centrocosto); });
+                var porId = new Map();
+                crudos.forEach(function (c) { return porId.set(c.id_centrocosto, __assign(__assign({}, c), { children: [] })); });
+                var raices = [];
+                porId.forEach(function (node) {
+                    if (node.parent_id != null &&
+                        porId.has(node.parent_id)) {
+                        porId.get(node.parent_id).children.push(node);
+                    }
+                    else {
+                        raices.push(node);
+                    }
                 });
+                var sortTree = function (n) {
+                    n.children.sort(function (a, b) {
+                        var ka = (a.serie_venta + " " + a.nombre).toLowerCase();
+                        var kb = (b.serie_venta + " " + b.nombre).toLowerCase();
+                        return ka.localeCompare(kb, undefined, { numeric: true });
+                    });
+                    n.children.forEach(function (h) { return sortTree(h); });
+                };
+                raices.sort(function (a, b) {
+                    var ka = (a.serie_venta + " " + a.nombre).toLowerCase();
+                    var kb = (b.serie_venta + " " + b.nombre).toLowerCase();
+                    return ka.localeCompare(kb, undefined, { numeric: true });
+                });
+                raices.forEach(function (r) { return sortTree(r); });
+                var resultado = [];
+                var visitar = function (n, nivel) {
+                    var _a;
+                    var hijos = (_a = n.children) !== null && _a !== void 0 ? _a : [];
+                    resultado.push({
+                        id_centrocosto: n.id_centrocosto,
+                        parent_id: n.parent_id,
+                        nombre: n.nombre,
+                        clave: n.clave,
+                        serie_venta: n.serie_venta,
+                        nivel: nivel,
+                        esPadre: hijos.length > 0,
+                        posteable: true,
+                        _expandido: nivel === 0
+                    });
+                    hijos.forEach(function (h) { return visitar(h, nivel + 1); });
+                };
+                raices.forEach(function (r) { return visitar(r, 0); });
+                // 4) Guardar en la VM
+                _this.centrosCosto = resultado;
                 _this.centrosCostoMap = new Map(_this.centrosCosto.map(function (cc) { return [cc.id_centrocosto, cc]; }));
+                _this.centrosCostoComoCuentas = _this.centrosCosto.map(function (cc) {
+                    var _a, _b, _c;
+                    return ({
+                        id_cuenta: cc.id_centrocosto,
+                        codigo: cc.clave || cc.serie_venta || '',
+                        nombre: cc.nombre,
+                        nivel: (_a = cc.nivel) !== null && _a !== void 0 ? _a : 0,
+                        esPadre: (_b = cc.esPadre) !== null && _b !== void 0 ? _b : false,
+                        posteable: true,
+                        _expandido: (_c = cc._expandido) !== null && _c !== void 0 ? _c : (cc.nivel === 0)
+                    });
+                });
             },
             error: function (err) {
                 console.error('Centros de Costo:', err);
@@ -975,6 +1042,65 @@ var PolizasComponent = /** @class */ (function () {
                 _this.centrosCostoMap.clear();
             }
         });
+    };
+    PolizasComponent.prototype.labelCentroHeader = function (id) {
+        if (!id)
+            return 'Seleccione…';
+        var c = this.centrosCosto.find(function (x) { return Number(x.id_centrocosto) === Number(id); });
+        return c ? c.nombre : 'Seleccione…';
+    };
+    PolizasComponent.prototype.abrirModalCentro = function () {
+        this.modalCentroAbierto = true;
+        this.centroSeleccionadoModal = null;
+        // ✅ encabezado
+        this.centroMovimientoIndexSeleccionado = null;
+    };
+    // ✅ NUEVO: abre el mismo modal pero para un movimiento específico
+    PolizasComponent.prototype.abrirModalCentroMovimiento = function (i) {
+        var _a, _b, _c;
+        this.centroMovimientoIndexSeleccionado = i;
+        var mov = (_b = (_a = this.nuevaPoliza) === null || _a === void 0 ? void 0 : _a.movimientos) === null || _b === void 0 ? void 0 : _b[i];
+        var ccActual = (_c = mov === null || mov === void 0 ? void 0 : mov.cc) !== null && _c !== void 0 ? _c : null;
+        this.centroSeleccionadoModal =
+            (this.centrosCostoComoCuentas || []).find(function (c) { return Number(c === null || c === void 0 ? void 0 : c.id_cuenta) === Number(ccActual); }) || null;
+        this.modalCentroAbierto = true;
+    };
+    PolizasComponent.prototype.cerrarModalCentro = function () {
+        this.modalCentroAbierto = false;
+        // ✅ limpiar estado del modal
+        this.centroMovimientoIndexSeleccionado = null;
+    };
+    PolizasComponent.prototype.onCentroSeleccionadoModal = function (cuentaCentro) {
+        var _a, _b, _c, _d;
+        var idCentro = Number((_c = (_b = (_a = cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id_cuenta) !== null && _a !== void 0 ? _a : cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id_centrocosto) !== null && _b !== void 0 ? _b : cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id) !== null && _c !== void 0 ? _c : null);
+        if (!Number.isFinite(idCentro)) {
+            this.showToast({
+                type: 'warning',
+                title: 'Centro',
+                message: 'No se pudo determinar el centro seleccionado.'
+            });
+            this.modalCentroAbierto = false;
+            this.centroMovimientoIndexSeleccionado = null;
+            return;
+        }
+        // ✅ SI EL MODAL SE ABRIÓ DESDE UN MOVIMIENTO
+        if (this.centroMovimientoIndexSeleccionado != null) {
+            var i = this.centroMovimientoIndexSeleccionado;
+            if ((_d = this.nuevaPoliza.movimientos) === null || _d === void 0 ? void 0 : _d[i]) {
+                this.nuevaPoliza.movimientos[i].cc = idCentro;
+                // Mantiene tu función existente (serie_venta auto)
+                this.onMovimientoCcChange(i, idCentro);
+            }
+            this.modalCentroAbierto = false;
+            this.centroMovimientoIndexSeleccionado = null;
+            return;
+        }
+        // ✅ SI NO, ES EL ENCABEZADO (comportamiento original)
+        this.nuevaPoliza.id_centro = idCentro;
+        this.onCentroChange(idCentro);
+        this.onCentroCambiadoPropagarSerie();
+        this.onCentroSeleccionado();
+        this.modalCentroAbierto = false;
     };
     //  Cuentas 
     PolizasComponent.prototype.cargarCuentas = function () {

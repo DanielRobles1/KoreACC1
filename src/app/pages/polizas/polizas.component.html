@@ -112,16 +112,16 @@
         </label>
 
         <!-- Centro -->
-         <label>
-            Centro de costo:
-            <button
-              type="button"
-              class="field select"
-              name="id_centro"
-              (click)="abrirModalCentro()">
-              {{ labelCentroHeader(nuevaPoliza.id_centro) }}
-            </button>
-          </label>
+        <label>
+          Centro de costo:
+          <button
+            type="button"
+            class="field select"
+            name="id_centro"
+            (click)="abrirModalCentro()">
+            {{ labelCentroHeader(nuevaPoliza.id_centro) }}
+          </button>
+        </label>
 
         <label>
           Folio:
@@ -204,10 +204,9 @@
                 <th>Fecha</th>
                 <th>Centro Costo</th>
                 <th>UUID</th>
-                <th>Acciones</th>
-                <!-- AHORA CARGO Y ABONO COMO ÚLTIMAS DOS COLUMNAS -->
                 <th>Cargo</th>
                 <th>Abono</th>
+                <th>Acciones</th>
               </tr>
             </thead>
 
@@ -231,17 +230,14 @@
                   <input class="cell-input cell-date" type="date" [(ngModel)]="mov.fecha" name="fecha{{i}}" />
                 </td>
 
+                
                 <td>
-                  <select
+                  <button
+                    type="button"
                     class="cell-input select"
-                    [(ngModel)]="mov.cc"
-                    name="cc{{i}}"
-                    (ngModelChange)="onMovimientoCcChange(i, $event)">
-                    <option [ngValue]="null">— Selecciona CC —</option>
-                    <option *ngFor="let cc of centrosCosto" [ngValue]="cc.id_centrocosto">
-                      {{ cc.nombre }}
-                    </option>
-                  </select>
+                    (click)="abrirModalCentroMovimiento(i)">
+                    {{ labelCentroHeader(mov.cc) }}
+                  </button>
                 </td>
 
                 <td class="uuid-cell">
@@ -269,6 +265,28 @@
                   </div>
                 </td>
 
+                <td>
+                  <input
+                    class="cell-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="cargo{{i}}"
+                    [ngModel]="mov.operacion === '0' ? mov.monto : 0"
+                    (ngModelChange)="onCargoChange(i, $event)" />
+                </td>
+
+                <td>
+                  <input
+                    class="cell-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="abono{{i}}"
+                    [ngModel]="mov.operacion === '1' ? mov.monto : 0"
+                    (ngModelChange)="onAbonoChange(i, $event)" />
+                </td>
+
                 <td class="actions-cell">
                   <button
                     type="button"
@@ -286,29 +304,6 @@
                   </button>
                 </td>
 
-                <!-- CARGO (penúltima columna) -->
-                <td>
-                  <input
-                    class="cell-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    name="cargo{{i}}"
-                    [ngModel]="mov.operacion === '0' ? mov.monto : 0"
-                    (ngModelChange)="onCargoChange(i, $event)" />
-                </td>
-
-                <!-- ABONO (última columna) -->
-                <td>
-                  <input
-                    class="cell-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    name="abono{{i}}"
-                    [ngModel]="mov.operacion === '1' ? mov.monto : 0"
-                    (ngModelChange)="onAbonoChange(i, $event)" />
-                </td>
               </tr>
             </tbody>
           </table>

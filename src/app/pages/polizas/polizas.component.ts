@@ -151,6 +151,9 @@ export class PolizasComponent implements OnInit {
   centroSeleccionadoModal: any = null;
   centrosCostoComoCuentas: any[] = [];
 
+  // ✅ NUEVO: para reutilizar el mismo modal de centro, pero aplicado a un movimiento
+  centroMovimientoIndexSeleccionado: number | null = null;
+
   // Toast
   toast = {
     open: false,
@@ -175,16 +178,16 @@ export class PolizasComponent implements OnInit {
     ref_serie_venta: string;
     cc: number | null;
   } = {
-      tipo_operacion: 'ingreso',
-      monto_base: null,
-      fecha_operacion: '',
-      id_empresa: 1,
-      medio_cobro_pago: 'bancos',
-      id_cuenta_contrapartida: null,
-      cliente: '',
-      ref_serie_venta: '',
-      cc: null
-    };
+    tipo_operacion: 'ingreso',
+    monto_base: null,
+    fecha_operacion: '',
+    id_empresa: 1,
+    medio_cobro_pago: 'bancos',
+    id_cuenta_contrapartida: null,
+    cliente: '',
+    ref_serie_venta: '',
+    cc: null
+  };
 
   constructor(
     private api: PolizasService,
@@ -227,7 +230,6 @@ export class PolizasComponent implements OnInit {
     }
     this.cerrarModalCuentas();
   }
-
 
   private showToast(opts: {
     message: string;
@@ -465,7 +467,6 @@ export class PolizasComponent implements OnInit {
   get currentUserLabel(): string {
     return (this.currentUser?.nombre || '').toString().trim();
   }
-
 
   onBaseTipoChange(value: 'sin' | 'con'): void {
     this.iva.baseTipo = value;
@@ -1207,7 +1208,7 @@ export class PolizasComponent implements OnInit {
             nivel,
             esPadre: hijos.length > 0,
             posteable: true,
-            _expandido: nivel === 0, 
+            _expandido: nivel === 0,
           });
 
           hijos.forEach(h => visitar(h, nivel + 1));
@@ -1222,8 +1223,8 @@ export class PolizasComponent implements OnInit {
         );
 
         this.centrosCostoComoCuentas = this.centrosCosto.map(cc => ({
-          id_cuenta: cc.id_centrocosto,              
-          codigo: cc.clave || cc.serie_venta || '',  
+          id_cuenta: cc.id_centrocosto,
+          codigo: cc.clave || cc.serie_venta || '',
           nombre: cc.nombre,
           nivel: cc.nivel ?? 0,
           esPadre: cc.esPadre ?? false,
@@ -1245,7 +1246,6 @@ export class PolizasComponent implements OnInit {
     });
   }
 
-
   labelCentroHeader(id: number | null | undefined): string {
     if (!id) return 'Seleccione…';
     const c = this.centrosCosto.find(
@@ -1257,10 +1257,29 @@ export class PolizasComponent implements OnInit {
   abrirModalCentro(): void {
     this.modalCentroAbierto = true;
     this.centroSeleccionadoModal = null;
+
+    // ✅ encabezado
+    this.centroMovimientoIndexSeleccionado = null;
+  }
+
+  // ✅ NUEVO: abre el mismo modal pero para un movimiento específico
+  abrirModalCentroMovimiento(i: number): void {
+    this.centroMovimientoIndexSeleccionado = i;
+
+    const mov = this.nuevaPoliza?.movimientos?.[i];
+    const ccActual = mov?.cc ?? null;
+
+    this.centroSeleccionadoModal =
+      (this.centrosCostoComoCuentas || []).find((c: any) => Number(c?.id_cuenta) === Number(ccActual)) || null;
+
+    this.modalCentroAbierto = true;
   }
 
   cerrarModalCentro(): void {
     this.modalCentroAbierto = false;
+
+    // ✅ limpiar estado del modal
+    this.centroMovimientoIndexSeleccionado = null;
   }
 
   onCentroSeleccionadoModal(cuentaCentro: any): void {
@@ -1278,9 +1297,27 @@ export class PolizasComponent implements OnInit {
         message: 'No se pudo determinar el centro seleccionado.'
       });
       this.modalCentroAbierto = false;
+      this.centroMovimientoIndexSeleccionado = null;
       return;
     }
 
+    // ✅ SI EL MODAL SE ABRIÓ DESDE UN MOVIMIENTO
+    if (this.centroMovimientoIndexSeleccionado != null) {
+      const i = this.centroMovimientoIndexSeleccionado;
+
+      if (this.nuevaPoliza.movimientos?.[i]) {
+        this.nuevaPoliza.movimientos[i].cc = idCentro;
+
+        // Mantiene tu función existente (serie_venta auto)
+        this.onMovimientoCcChange(i, idCentro);
+      }
+
+      this.modalCentroAbierto = false;
+      this.centroMovimientoIndexSeleccionado = null;
+      return;
+    }
+
+    // ✅ SI NO, ES EL ENCABEZADO (comportamiento original)
     this.nuevaPoliza.id_centro = idCentro;
 
     this.onCentroChange(idCentro);
