@@ -869,7 +869,7 @@ export class PolizaEditarComponent implements OnInit {
         // 7) Lo que se manda al modal (misma referencia, con _expandido)
         this.cuentasParaModal = this.cuentas.map(c => ({
           ...c,
-          _expandido: !!c.esPadre,          // padres empiezan expandidos (pon false si los quieres colapsados)
+          _expandido: !!c.esPadre,          
           ctaMayor: !!c.ctaMayor,
           posteable: this.esPosteable(c),
         }));

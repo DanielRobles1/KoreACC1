@@ -116,6 +116,10 @@ var PolizaEditarComponent = /** @class */ (function () {
         this.cuentaOpenIndex = null;
         this.modalCuentasAbierto = false;
         this.indiceMovimientoSeleccionado = null;
+        // Modal de centro de costo
+        this.modalCentroAbierto = false;
+        this.centroSeleccionadoModal = null;
+        this.centrosCostoComoCuentas = [];
         this.xmlMovimientoIndex = null;
         this.uploadingXml = false;
         this.selectedXmlName = '';
@@ -651,7 +655,6 @@ var PolizaEditarComponent = /** @class */ (function () {
         return 5; // 1101010101 o más largo
     };
     // ----------------- Cuentas -----------------
-    // ----------------- Cuentas -----------------
     PolizaEditarComponent.prototype.cargarCuentas = function () {
         var _this = this;
         this.cuentasSvc.getCuentas().subscribe({
@@ -1000,9 +1003,12 @@ var PolizaEditarComponent = /** @class */ (function () {
     PolizaEditarComponent.prototype.getCentros = function () {
         var _this = this;
         var svc = this.api;
-        var fn = svc.getCentrosCosto || svc.listCentrosCosto ||
-            svc.getCentroCostos || svc.listCentroCostos ||
-            svc.getCentrosDeCosto || svc.listCentrosDeCosto ||
+        var fn = svc.getCentrosCosto ||
+            svc.listCentrosCosto ||
+            svc.getCentroCostos ||
+            svc.listCentroCostos ||
+            svc.getCentrosDeCosto ||
+            svc.listCentrosDeCosto ||
             svc.getCentros;
         if (typeof fn !== 'function') {
             console.warn('No existe método de API para Centros de Costo; usando vacío.');
@@ -1013,24 +1019,152 @@ var PolizaEditarComponent = /** @class */ (function () {
         fn.call(this.api).subscribe({
             next: function (r) {
                 var items = _this.normalizeList(r);
-                _this.centrosCosto = (items || [])
+                var crudos = (items || [])
                     .map(function (x) {
-                    var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m;
-                    var id = Number((_c = (_b = (_a = x.id_centrocosto) !== null && _a !== void 0 ? _a : x.id_centro) !== null && _b !== void 0 ? _b : x.id) !== null && _c !== void 0 ? _c : x.ID);
-                    var serie = String((_g = (_f = (_d = x.serie_venta) !== null && _d !== void 0 ? _d : x.serie) !== null && _f !== void 0 ? _f : x.codigo) !== null && _g !== void 0 ? _g : '').trim();
-                    var nom = String((_k = (_j = (_h = x.nombre) !== null && _h !== void 0 ? _h : x.descripcion) !== null && _j !== void 0 ? _j : x.NOMBRE) !== null && _k !== void 0 ? _k : "CC " + id).trim();
-                    var clave = String((_m = (_l = x.clave) !== null && _l !== void 0 ? _l : x.codigo) !== null && _m !== void 0 ? _m : '').trim();
-                    var etiqueta = serie ? serie + " \u2014 " + nom : (clave ? clave + " \u2014 " + nom : nom);
-                    return { id_centrocosto: id, nombre: etiqueta, clave: clave, serie_venta: serie };
+                    var _a, _b, _c, _d, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
+                    var id = Number((_b = (_a = x.id_centro) !== null && _a !== void 0 ? _a : x.id) !== null && _b !== void 0 ? _b : x.ID);
+                    var parentRaw = (_g = (_f = (_d = (_c = x.parent_id) !== null && _c !== void 0 ? _c : x.parentId) !== null && _d !== void 0 ? _d : x.id_centro_padre) !== null && _f !== void 0 ? _f : x.centro_padre) !== null && _g !== void 0 ? _g : null;
+                    var parent_id = parentRaw != null && parentRaw !== ''
+                        ? Number(parentRaw)
+                        : null;
+                    var serie = String((_k = (_j = (_h = x.serie_venta) !== null && _h !== void 0 ? _h : x.serie) !== null && _j !== void 0 ? _j : x.codigo) !== null && _k !== void 0 ? _k : '').trim();
+                    var nom = String((_p = (_o = (_m = (_l = x.nombre) !== null && _l !== void 0 ? _l : x.nombre_centro) !== null && _m !== void 0 ? _m : x.descripcion) !== null && _o !== void 0 ? _o : x.NOMBRE) !== null && _p !== void 0 ? _p : '').trim();
+                    var clave = String((_r = (_q = x.clave) !== null && _q !== void 0 ? _q : x.codigo) !== null && _r !== void 0 ? _r : '').trim();
+                    var etiqueta = serie
+                        ? serie + " \u2014 " + nom
+                        : clave
+                            ? clave + " \u2014 " + nom
+                            : nom || "CC " + id;
+                    return {
+                        id_centrocosto: id,
+                        parent_id: parent_id,
+                        nombre: etiqueta,
+                        clave: clave,
+                        serie_venta: serie
+                    };
                 })
                     .filter(function (cc) { return Number.isFinite(cc.id_centrocosto); });
+                var porId = new Map();
+                crudos.forEach(function (c) { return porId.set(c.id_centrocosto, __assign(__assign({}, c), { children: [] })); });
+                var raices = [];
+                porId.forEach(function (node) {
+                    if (node.parent_id != null &&
+                        porId.has(node.parent_id)) {
+                        porId.get(node.parent_id).children.push(node);
+                    }
+                    else {
+                        raices.push(node);
+                    }
+                });
+                var sortTree = function (n) {
+                    n.children.sort(function (a, b) {
+                        var ka = (a.serie_venta + " " + a.nombre).toLowerCase();
+                        var kb = (b.serie_venta + " " + b.nombre).toLowerCase();
+                        return ka.localeCompare(kb, undefined, { numeric: true });
+                    });
+                    n.children.forEach(function (h) { return sortTree(h); });
+                };
+                raices.sort(function (a, b) {
+                    var ka = (a.serie_venta + " " + a.nombre).toLowerCase();
+                    var kb = (b.serie_venta + " " + b.nombre).toLowerCase();
+                    return ka.localeCompare(kb, undefined, { numeric: true });
+                });
+                raices.forEach(function (r) { return sortTree(r); });
+                var resultado = [];
+                var visitar = function (n, nivel) {
+                    var _a;
+                    var hijos = (_a = n.children) !== null && _a !== void 0 ? _a : [];
+                    resultado.push({
+                        id_centrocosto: n.id_centrocosto,
+                        parent_id: n.parent_id,
+                        nombre: n.nombre,
+                        clave: n.clave,
+                        serie_venta: n.serie_venta,
+                        nivel: nivel,
+                        esPadre: hijos.length > 0,
+                        posteable: true,
+                        _expandido: nivel === 0
+                    });
+                    hijos.forEach(function (h) { return visitar(h, nivel + 1); });
+                };
+                raices.forEach(function (r) { return visitar(r, 0); });
+                // 4) Guardar en la VM
+                _this.centrosCosto = resultado;
                 _this.centrosCostoMap = new Map(_this.centrosCosto.map(function (cc) { return [cc.id_centrocosto, cc]; }));
+                _this.centrosCostoComoCuentas = _this.centrosCosto.map(function (cc) {
+                    var _a, _b, _c;
+                    return ({
+                        id_cuenta: cc.id_centrocosto,
+                        codigo: cc.clave || cc.serie_venta || '',
+                        nombre: cc.nombre,
+                        nivel: (_a = cc.nivel) !== null && _a !== void 0 ? _a : 0,
+                        esPadre: (_b = cc.esPadre) !== null && _b !== void 0 ? _b : false,
+                        posteable: true,
+                        _expandido: (_c = cc._expandido) !== null && _c !== void 0 ? _c : (cc.nivel === 0)
+                    });
+                });
             },
             error: function (err) {
                 console.error('Centros de Costo:', err);
-                _this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
+                _this.showToast({
+                    type: 'warning',
+                    title: 'Aviso',
+                    message: 'No se pudieron cargar Centros de Costo.'
+                });
                 _this.centrosCosto = [];
                 _this.centrosCostoMap.clear();
+            }
+        });
+    };
+    PolizaEditarComponent.prototype.labelCentroHeader = function (id) {
+        if (!id)
+            return 'Seleccione…';
+        var c = this.centrosCosto.find(function (x) { return Number(x.id_centrocosto) === Number(id); });
+        return c ? c.nombre : 'Seleccione…';
+    };
+    PolizaEditarComponent.prototype.abrirModalCentro = function () {
+        this.modalCentroAbierto = true;
+        this.centroSeleccionadoModal = null;
+    };
+    PolizaEditarComponent.prototype.cerrarModalCentro = function () {
+        this.modalCentroAbierto = false;
+    };
+    PolizaEditarComponent.prototype.onCentroSeleccionadoModal = function (cuentaCentro) {
+        var _a, _b, _c;
+        var idCentro = Number((_c = (_b = (_a = cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id_cuenta) !== null && _a !== void 0 ? _a : cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id_centrocosto) !== null && _b !== void 0 ? _b : cuentaCentro === null || cuentaCentro === void 0 ? void 0 : cuentaCentro.id) !== null && _c !== void 0 ? _c : null);
+        if (!Number.isFinite(idCentro)) {
+            this.showToast({
+                type: 'warning',
+                title: 'Centro',
+                message: 'No se pudo determinar el centro seleccionado.'
+            });
+            this.modalCentroAbierto = false;
+            return;
+        }
+        var oldCentro = this.toNumOrNull(this.poliza.id_centro);
+        this.poliza.id_centro = idCentro;
+        this.propagarCentroEnMovimientos(oldCentro, idCentro);
+        this.modalCentroAbierto = false;
+    };
+    PolizaEditarComponent.prototype.propagarCentroEnMovimientos = function (oldCentroId, newCentroId) {
+        var _this = this;
+        var _a, _b;
+        var movs = ((_b = (_a = this.poliza) === null || _a === void 0 ? void 0 : _a.movimientos) !== null && _b !== void 0 ? _b : []);
+        if (!movs.length)
+            return;
+        var oldSerie = oldCentroId ? this.getSerieVentaByCcId(oldCentroId) : null;
+        var newSerie = this.getSerieVentaByCcId(newCentroId);
+        movs.forEach(function (m) {
+            var _a;
+            var ccNum = _this.toNumOrNull(m.cc);
+            if (!ccNum || (oldCentroId && ccNum === oldCentroId)) {
+                m.cc = newCentroId;
+            }
+            var refStr = ((_a = m.ref_serie_venta) !== null && _a !== void 0 ? _a : '').toString().trim();
+            var debeActualizarSerie = !refStr ||
+                (oldSerie && refStr === oldSerie);
+            if (newSerie && debeActualizarSerie) {
+                m.ref_serie_venta = newSerie;
             }
         });
     };

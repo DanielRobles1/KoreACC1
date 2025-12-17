@@ -72,7 +72,7 @@
   /* importante para que no “asome” contenido */
 }
 
-/* cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+/*0 cuando esté colapsado, ancho 0 -> el contenido se expande solo */
 .layout.is-collapsed .sidebar {
   --sidebar-w: 0px;
   border-right: none;
