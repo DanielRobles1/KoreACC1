@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -13,22 +14,10 @@ import { PolizasService } from '@app/services/polizas.service';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
-import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta } from '@app/utils/fecha-utils';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
-import {
-  catchError,
-  of,
-  switchMap,
-  throwError,
-  firstValueFrom,
-  finalize,
-  from,
-  concatMap,
-  tap,
-  forkJoin
-} from 'rxjs';
 
-/** <- forma compatible con el servicio y el modal */
+import { catchError, finalize, forkJoin, of, switchMap, tap, throwError, firstValueFrom } from 'rxjs';
+
 type Cuenta = {
   id_cuenta: number;
   codigo: string;
@@ -67,7 +56,7 @@ type CfdiOption = {
 };
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
 
 type CentroCostoItem = {
   serie_venta: any;
@@ -130,6 +119,7 @@ export class PolizaEditarComponent implements OnInit {
   ejercicioActual: Ejercicio | null = null;
   ejercicioActualId!: number;
   ejercicios: Ejercicio[] = [];
+
   private allPeriodos: Array<{
     id_periodo: number;
     id_ejercicio: number | null;
@@ -137,6 +127,7 @@ export class PolizaEditarComponent implements OnInit {
     fecha_fin?: string | null;
     _raw?: any;
   }> = [];
+
   periodos: Array<{ id_periodo: number; nombre: string }> = [];
   compareById = (a: any, b: any) => a && b && a.id_periodo === b.id_periodo;
 
@@ -154,9 +145,7 @@ export class PolizaEditarComponent implements OnInit {
     updated_at?: string;
   } = { movimientos: [] };
 
-  /** Plan de cuentas plano (con nivel, esPadre, etc.) */
   cuentas: Cuenta[] = [];
-  /** Lo que se manda directamente al modal (misma referencia siempre) */
   cuentasParaModal: any[] = [];
 
   cuentasMap = new Map<number, Cuenta>();
@@ -170,6 +159,8 @@ export class PolizaEditarComponent implements OnInit {
   modalCentroAbierto = false;
   centroSeleccionadoModal: any = null;
   centrosCostoComoCuentas: any[] = [];
+
+  centroMovimientoIndex: number | null = null;
 
   xmlMovimientoIndex: number | null = null;
   uploadingXml = false;
@@ -189,8 +180,8 @@ export class PolizaEditarComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.cargarCatalogosBase();      // Tipos y Centros
-    this.getCentros();               // Centros de costo
+    this.cargarCatalogosBase();   // Tipos y Centros
+    this.getCentros();            // Centros de costo
 
     this.id_poliza = Number(this.route.snapshot.paramMap.get('id'));
     if (!Number.isFinite(this.id_poliza)) {
@@ -199,19 +190,18 @@ export class PolizaEditarComponent implements OnInit {
       return;
     }
 
+    // Carga base
     this.cargarPeriodosAll();
     this.cargarEjercicioActivo();
-    this.cargarPoliza(this.id_poliza);
-    this.cargarCuentas();
     this.cargarUsuarioActual();
     this.cargarCfdiRecientes();
+
+    this.cargarCuentas(() => this.cargarPoliza(this.id_poliza));
   }
 
   onSidebarToggle(v: boolean) { this.sidebarOpen = v; }
 
-  // ----------------- Catálogos base -----------------
   private cargarCatalogosBase() {
-    // Tipos de póliza
     this.http.get<any>(`${this.apiBase}/tipo-poliza`).subscribe({
       next: (r) => {
         const arr = this.normalizeList(r);
@@ -223,7 +213,6 @@ export class PolizaEditarComponent implements OnInit {
       error: (e) => console.error('Tipos de póliza:', e)
     });
 
-    // Centros
     this.http.get<any>(`${this.apiBase}/centros`).subscribe({
       next: (r) => {
         const arr = this.normalizeList(r);
@@ -246,15 +235,12 @@ export class PolizaEditarComponent implements OnInit {
     return false;
   }
 
-  // ----------------- Ejercicio / Periodos -----------------
   private cargarEjercicioActivo(): void {
     this.ejercicioSvc
       .listEjerciciosAbiertos({ esta_abierto: true })
       .subscribe({
         next: (res: any) => {
-          const raw = Array.isArray(res)
-            ? res
-            : res?.rows ?? res?.data ?? res ?? [];
+          const raw = Array.isArray(res) ? res : res?.rows ?? res?.data ?? res ?? [];
           const hoy = new Date();
           const anioActual = hoy.getFullYear();
 
@@ -264,22 +250,19 @@ export class PolizaEditarComponent implements OnInit {
             const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
             const fi0 = e.fecha_inicio ?? e.inicio ?? e.start_date ?? null;
             const ff0 = e.fecha_fin ?? e.fin ?? e.end_date ?? null;
-            const anio = Number(
-              e.anio ?? e.year ?? (fi0 ? new Date(fi0).getFullYear() : NaN)
-            );
+            const anio = Number(e.anio ?? e.year ?? (fi0 ? new Date(fi0).getFullYear() : NaN));
 
             return <Ejercicio>{
               id_ejercicio: id,
               nombre: e.nombre ?? e.descripcion ?? null,
-              fecha_inicio: fmtDate(fi0),
-              fecha_fin: fmtDate(ff0),
+              fecha_inicio: this.fmtDate(fi0),
+              fecha_fin: this.fmtDate(ff0),
               activo: true,
               anio: Number.isFinite(anio) ? anio : null
             };
           });
 
           if (!this.ejercicios.length) {
-            console.warn('⚠ No se encontraron ejercicios activos.');
             this.ejercicioActual = null;
             this.ejercicioActualId = undefined as any;
             this.showToast({
@@ -292,9 +275,7 @@ export class PolizaEditarComponent implements OnInit {
           }
 
           let elegido: Ejercicio | null =
-            (this.ejercicios.find(
-              (e: any) => e.is_selected
-            ) as Ejercicio | undefined) ??
+            (this.ejercicios.find((e: any) => e.is_selected) as Ejercicio | undefined) ??
             this.ejercicios.find(e => e.anio === anioActual) ??
             (this.ejercicios.length === 1 ? this.ejercicios[0] : null);
 
@@ -314,8 +295,6 @@ export class PolizaEditarComponent implements OnInit {
           this.ejercicioActual = elegido!;
           this.ejercicioActualId = elegido!.id_ejercicio;
 
-          console.log(' Ejercicio elegido (nueva póliza):', this.ejercicioActual);
-
           this.applyPeriodoFilter();
         },
         error: (err: any) => {
@@ -328,14 +307,6 @@ export class PolizaEditarComponent implements OnInit {
           this.ejercicioActual = null;
         }
       });
-  }
-
-  public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
-    const v = c?.posteable;
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'number') return v === 1;
-    if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
-    return false;
   }
 
   onEjercicioSeleccionado(id: any) {
@@ -352,21 +323,18 @@ export class PolizaEditarComponent implements OnInit {
 
   private guardarEjercicioSeleccionado(id_ejercicio: number) {
     const svc: any = this.api;
-    if (typeof svc.selectEjercicio !== 'function') {
-      console.warn('⚠ No hay método API selectEjercicio(). Se continúa sin persistir selección.');
-    } else {
-      svc.selectEjercicio(id_ejercicio).subscribe({
-        next: () => this.showToast({
-          type: 'success',
-          title: 'Ejercicio actualizado',
-          message: `Se guardó el ejercicio ${id_ejercicio} como activo.`
-        }),
-        error: (err: any) => {
-          console.error('❌ Error al guardar ejercicio seleccionado:', err);
-          this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
-        }
-      });
-    }
+    if (typeof svc.selectEjercicio !== 'function') return;
+
+    svc.selectEjercicio(id_ejercicio).subscribe({
+      next: () => this.showToast({
+        type: 'success',
+        title: 'Ejercicio actualizado',
+        message: `Se guardó el ejercicio ${id_ejercicio} como activo.`
+      }),
+      error: () => {
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudo actualizar el ejercicio seleccionado.' });
+      }
+    });
   }
 
   private cargarPeriodosAll() {
@@ -386,10 +354,7 @@ export class PolizaEditarComponent implements OnInit {
           }));
           this.applyPeriodoFilter();
         },
-        error: (err: any) => {
-          console.error('Periodos(svc):', err);
-          this.cargarPeriodosAllHttp();
-        }
+        error: () => this.cargarPeriodosAllHttp()
       });
       return;
     }
@@ -429,7 +394,7 @@ export class PolizaEditarComponent implements OnInit {
       const ejIni = this.fmtDate(ej.fecha_inicio ?? null);
       const ejFin = this.fmtDate(ej.fecha_fin ?? null);
 
-      filtrados = this.allPeriodos.filter(p => Number.isFinite(p.id_ejercicio) && p.id_ejercicio === idEj);
+      filtrados = this.allPeriodos.filter(p => Number.isFinite(p.id_ejercicio as any) && p.id_ejercicio === idEj);
 
       if (filtrados.length === 0 && ejIni && ejFin && ejIni !== '—' && ejFin !== '—') {
         filtrados = this.allPeriodos.filter(p => {
@@ -452,14 +417,6 @@ export class PolizaEditarComponent implements OnInit {
     }));
   }
 
-  get ejercicioLabel(): string {
-    const e = this.ejercicioActual;
-    if (!e) return '—';
-    const nombre = (e.nombre && e.nombre !== '—') ? e.nombre : (e.fecha_inicio && e.fecha_fin ? `${e.fecha_inicio} — ${e.fecha_fin}` : '');
-    return nombre || '—';
-  }
-
-  // ----------------- Póliza + movimientos -----------------
   cargarPoliza(id: number) {
     const ORDER_KEY = (pid: number) => `polizaOrder:${pid}`;
 
@@ -487,7 +444,6 @@ export class PolizaEditarComponent implements OnInit {
 
         const movs: MovimientoUI[] = (res?.movimientos ?? []).map((m: any, idx: number) => {
           const mm: MovimientoUI = this.normalizeMovimiento(m) as MovimientoUI;
-
           (mm as any)._arrival = idx;
           mm.orden = (typeof m?.orden === 'number') ? Number(m.orden) : idx;
 
@@ -590,9 +546,37 @@ export class PolizaEditarComponent implements OnInit {
   }
 
   private lockBodyScroll(on: boolean) {
-    try {
-      document.body.style.overflow = on ? 'hidden' : '';
-    } catch { }
+    try { document.body.style.overflow = on ? 'hidden' : ''; } catch { }
+  }
+
+  onCargoChange(i: number, value: any) {
+    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
+    const m = movs[i];
+    if (!m) return;
+
+    const n = this.toNumOrNull(value);
+    if (n == null || n <= 0) {
+      if (String(m.operacion) === '0') m.monto = null;
+      if ((this.toNumOrNull(m.monto) ?? 0) <= 0) m.operacion = '';
+      return;
+    }
+    m.operacion = '0';
+    m.monto = n;
+  }
+
+  onAbonoChange(i: number, value: any) {
+    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
+    const m = movs[i];
+    if (!m) return;
+
+    const n = this.toNumOrNull(value);
+    if (n == null || n <= 0) {
+      if (String(m.operacion) === '1') m.monto = null;
+      if ((this.toNumOrNull(m.monto) ?? 0) <= 0) m.operacion = '';
+      return;
+    }
+    m.operacion = '1';
+    m.monto = n;
   }
 
   // ----------------- Actualizar póliza -----------------
@@ -610,7 +594,6 @@ export class PolizaEditarComponent implements OnInit {
     }
 
     const p = this.poliza;
-
     (p.movimientos ?? []).forEach((m, idx) => { m.orden = idx; });
 
     this.lastOrderMap.clear();
@@ -627,7 +610,6 @@ export class PolizaEditarComponent implements OnInit {
       folio: this.toStrOrNull(p.folio)!,
       concepto: this.toStrOrNull(p.concepto)!,
     };
-    console.log('Periodo seleccionado:', payloadHeader.id_periodo);
 
     const movs = (p.movimientos ?? []) as MovimientoUI[];
 
@@ -660,9 +642,7 @@ export class PolizaEditarComponent implements OnInit {
         orden: this.toNumOrNull(m.orden),
       }).pipe(
         tap({ next: () => this.saveDone++, error: () => this.saveDone++ }),
-        catchError(err => throwError(() => this.annotateError(err, {
-          i, uuid: m.uuid ?? null, id_mov: m.id_movimiento
-        })))
+        catchError(err => throwError(() => this.annotateError(err, { i, uuid: m.uuid ?? null, id_mov: m.id_movimiento })))
       )
     );
 
@@ -680,9 +660,7 @@ export class PolizaEditarComponent implements OnInit {
         orden: this.toNumOrNull(m.orden),
       }).pipe(
         tap({ next: () => this.saveDone++, error: () => this.saveDone++ }),
-        catchError(err => throwError(() => this.annotateError(err, {
-          i, uuid: m.uuid ?? null, id_mov: undefined
-        })))
+        catchError(err => throwError(() => this.annotateError(err, { i, uuid: m.uuid ?? null, id_mov: undefined })))
       )
     );
 
@@ -693,10 +671,7 @@ export class PolizaEditarComponent implements OnInit {
     this.lockBodyScroll(true);
 
     this.apiSvc.updatePoliza(this.poliza.id_poliza!, payloadHeader).pipe(
-      switchMap(() => {
-        this.showToast({ type: 'success', title: 'Encabezado actualizado', message: 'Guardando movimientos…' });
-        return reqs.length ? forkJoin(reqs) : of(null);
-      }),
+      switchMap(() => reqs.length ? forkJoin(reqs) : of(null)),
       finalize(() => {
         this.saving = false;
         this.saveTotal = 0;
@@ -706,16 +681,8 @@ export class PolizaEditarComponent implements OnInit {
       })
     ).subscribe({
       next: () => {
-        const msg = [
-          `Póliza actualizada.`,
-          toUpdate.length ? ` Movs actualizados: ${toUpdate.length}.` : '',
-          toCreate.length ? ` Movs creados: ${toCreate.length}.` : ''
-        ].join('');
-        this.showToast({ type: 'success', title: 'Listo', message: msg.trim() });
-
-        if (toCreate.length > 0) {
-          this.cargarPoliza(this.poliza!.id_poliza!);
-        }
+        this.showToast({ type: 'success', title: 'Listo', message: 'Póliza actualizada correctamente.' });
+        if (toCreate.length > 0) this.cargarPoliza(this.poliza!.id_poliza!);
       },
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'Error al actualizar póliza/movimientos';
@@ -725,33 +692,20 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  private inferNivelFromCodigo(codigoRaw: string | null | undefined): number {
-    const codigo = (codigoRaw ?? '').toString();
-    if (!codigo) return 0;
-
-    // Dejar solo dígitos
-    const digits = codigo.replace(/\D/g, '');
-    if (!digits) return 0;
-
-    // Quitar ceros de la derecha (relleno)
-    const trimmed = digits.replace(/0+$/g, '');
-    const len = trimmed.length;
-
-    if (len <= 1) return 0; // 1
-    if (len <= 2) return 1; // 11
-    if (len <= 4) return 2; // 1101
-    if (len <= 6) return 3; // 110101
-    if (len <= 8) return 4; // 11010101
-    return 5;               // 1101010101 o más largo
+  //  Cuentas 
+  public esPosteable(c: Partial<Pick<Cuenta, 'posteable'>> | any): boolean {
+    const v = c?.posteable;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return v === 1;
+    if (typeof v === 'string') return v === '1' || v.toLowerCase() === 'true';
+    return false;
   }
-  // ----------------- Cuentas -----------------
-  private cargarCuentas() {
+
+  private cargarCuentas(onDone?: () => void) {
     this.cuentasSvc.getCuentas().subscribe({
       next: (arr: any) => {
-        // 1) Normalizar respuesta
         const items = this.normalizeList(arr);
 
-        // 2) Construir árbol con parentId
         type NodoBase = {
           id: number;
           codigo: string;
@@ -771,41 +725,16 @@ export class PolizaEditarComponent implements OnInit {
             const parentIdRaw = x.parentId ?? x.parent_id ?? null;
             const parentId = parentIdRaw != null ? Number(parentIdRaw) : null;
 
-            const posteableRaw =
-              x.posteable ??
-              x.es_posteable ??
-              x.posteable_flag ??
-              x.posteable_indicator;
+            const posteableRaw = x.posteable ?? x.es_posteable ?? x.posteable_flag ?? x.posteable_indicator;
+            const ctaMayorRaw = x.ctaMayor ?? x.cta_mayor ?? x.es_mayor ?? x.mayor_flag;
 
-            const ctaMayorRaw =
-              x.ctaMayor ??
-              x.cta_mayor ??
-              x.es_mayor ??
-              x.mayor_flag;
+            const posteable = posteableRaw === true || posteableRaw === 1 || posteableRaw === '1';
+            const ctaMayor = ctaMayorRaw === true || ctaMayorRaw === 1 || ctaMayorRaw === '1';
 
-            const posteable =
-              posteableRaw === true ||
-              posteableRaw === 1 ||
-              posteableRaw === '1';
-
-            const ctaMayor =
-              ctaMayorRaw === true ||
-              ctaMayorRaw === 1 ||
-              ctaMayorRaw === '1';
-
-            return <NodoBase>{
-              id,
-              codigo,
-              nombre,
-              parentId,
-              posteable,
-              ctaMayor,
-              hijos: []
-            };
+            return <NodoBase>{ id, codigo, nombre, parentId, posteable, ctaMayor, hijos: [] };
           })
           .filter((n: NodoBase) => Number.isFinite(n.id));
 
-        // 3) Enlazar hijos con padres
         const porId = new Map<number, NodoBase>();
         nodos.forEach(n => porId.set(n.id, n));
 
@@ -813,32 +742,22 @@ export class PolizaEditarComponent implements OnInit {
         porId.forEach(nodo => {
           if (nodo.parentId) {
             const padre = porId.get(nodo.parentId);
-            if (padre) {
-              padre.hijos.push(nodo);
-            } else {
-              raices.push(nodo);
-            }
+            if (padre) padre.hijos.push(nodo);
+            else raices.push(nodo);
           } else {
             raices.push(nodo);
           }
         });
 
-        // 4) Ordenar árbol por código
         const sortTree = (n: NodoBase) => {
-          n.hijos.sort((a, b) =>
-            a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
-          );
+          n.hijos.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
           n.hijos.forEach(h => sortTree(h));
         };
 
-        raices.sort((a, b) =>
-          a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
-        );
+        raices.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
         raices.forEach(r => sortTree(r));
 
-        // 5) Aplanar árbol en orden jerárquico con nivel
         const resultado: Cuenta[] = [];
-
         const visitar = (nodo: NodoBase, nivel: number) => {
           const c: Cuenta = {
             id_cuenta: nodo.id,
@@ -850,44 +769,32 @@ export class PolizaEditarComponent implements OnInit {
             posteable: nodo.posteable
           };
           resultado.push(c);
-
           nodo.hijos.forEach(h => visitar(h, nivel + 1));
         };
-
         raices.forEach(r => visitar(r, 0));
 
-        // 6) Asignar a this.cuentas y mapas auxiliares
         this.cuentas = resultado;
 
         this.cuentasMap.clear();
-        for (const c of this.cuentas) {
-          if (Number.isFinite(c.id_cuenta)) {
-            this.cuentasMap.set(c.id_cuenta, c);
-          }
-        }
+        for (const c of this.cuentas) this.cuentasMap.set(c.id_cuenta, c);
 
-        // 7) Lo que se manda al modal (misma referencia, con _expandido)
         this.cuentasParaModal = this.cuentas.map(c => ({
           ...c,
-          _expandido: !!c.esPadre,          
+          _expandido: !!c.esPadre,
           ctaMayor: !!c.ctaMayor,
           posteable: this.esPosteable(c),
         }));
 
-        // 8) Rellenar etiquetas en movimientos existentes
         this.prefillCuentaQueries();
 
-        console.log('Plan de cuentas (editar, jerárquico):', this.cuentas);
+        if (onDone) onDone();
       },
       error: (e) => {
         console.error('Cuentas (editar):', e);
+        if (onDone) onDone();
       }
     });
   }
-
-
-
-
 
   private prefillCuentaQueries() {
     const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
@@ -915,7 +822,6 @@ export class PolizaEditarComponent implements OnInit {
     this.cuentasFiltradas.push([]);
   }
 
-  // ----------------- Confirmación borrar movimiento -----------------
   confirmOpen = false;
   confirmTitle = 'Eliminar movimiento';
   confirmMessage = '¿Seguro que deseas eliminar este movimiento? Esta acción no se puede deshacer.';
@@ -928,10 +834,7 @@ export class PolizaEditarComponent implements OnInit {
     this.confirmIndex = index;
     this.confirmOpen = true;
   }
-  closeConfirm() {
-    this.confirmOpen = false;
-    this.confirmIndex = null;
-  }
+  closeConfirm() { this.confirmOpen = false; this.confirmIndex = null; }
   cancelConfirm() { this.closeConfirm(); }
 
   confirmProceed() {
@@ -951,6 +854,7 @@ export class PolizaEditarComponent implements OnInit {
       (this.poliza.movimientos ??= []).splice(i, 1);
       this.cuentasFiltradas.splice(i, 1);
       (this.poliza.movimientos ?? []).forEach((m, idx) => { (m as MovimientoUI).orden = idx; });
+      this.deletingIndexSet.delete(i);
     };
 
     if (!idMov) {
@@ -972,11 +876,9 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  // ----------------- CFDI recientes + XML -----------------
   private cargarCfdiRecientes(): void {
     const svc: any = this.apiSvc as any;
-    const fn =
-      svc.listCfdi || svc.getCfdi || svc.getCfdiRecientes || svc.listCfdiRecientes;
+    const fn = svc.listCfdi || svc.getCfdi || svc.getCfdiRecientes || svc.listCfdiRecientes;
 
     const handle = (arr: any[]) => {
       this.cfdiOptions = (arr || [])
@@ -991,21 +893,12 @@ export class PolizaEditarComponent implements OnInit {
 
     if (typeof fn === 'function') {
       fn.call(svc, { limit: 100 })?.subscribe?.({
-        next: (r: any) => {
-          const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
-          handle(arr);
-        },
-        error: (err: any) => {
-          console.warn('CFDI recientes:', err);
-          this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar CFDI recientes.' });
-        }
+        next: (r: any) => handle(Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? [])),
+        error: () => this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar CFDI recientes.' })
       });
     } else {
       this.http.get<any>(`${this.apiBase}/cfdis?limit=100`).subscribe({
-        next: (r) => {
-          const arr = Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? []);
-          handle(arr);
-        },
+        next: (r) => handle(Array.isArray(r) ? r : (r?.rows ?? r?.data ?? r?.items ?? r ?? [])),
         error: () => { }
       });
     }
@@ -1055,9 +948,7 @@ export class PolizaEditarComponent implements OnInit {
         this.showToast({ title: 'Aviso', message: 'El servidor no devolvió UUID.', type: 'warning' });
       } else {
         const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
-        if (!movs[index]) {
-          (this.poliza.movimientos ??= [])[index] = {} as any;
-        }
+        if (!movs[index]) (this.poliza.movimientos ??= [])[index] = {} as any;
         movs[index].uuid = uuid;
 
         if (!this.cfdiOptions.some(x => x.uuid === uuid)) {
@@ -1076,48 +967,20 @@ export class PolizaEditarComponent implements OnInit {
     }
   }
 
-  onUuidChange(uuid?: string) {
-    this.uuidSeleccionado = uuid || undefined;
-  }
+  onMovimientoCcChange(index: number, ccId: any): void {
+    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
+    if (!movs[index]) return;
 
-  aplicarUuidAlMovimiento(index: number) {
-    if (!this.uuidSeleccionado) return;
+    const ccNum = this.toNumOrNull(ccId);
+    movs[index].cc = ccNum;
 
-    const movs = (this.poliza?.movimientos as any[]) || [];
-    const mov = movs[index];
-    if (!mov) return;
-
-    const uuid = this.uuidSeleccionado;
-    mov.uuid = uuid;
-
-    const idMov = Number(mov?.id_movimiento);
-    if (Number.isFinite(idMov) && this.poliza?.id_poliza) {
-      this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, [idMov]).subscribe({
-        next: () => {
-          this.showToast({ type: 'success', title: 'UUID aplicado', message: `Se aplicó ${uuid} al movimiento #${index + 1}.` });
-        },
-        error: (err) => {
-          const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
-          this.showToast({ type: 'warning', title: 'Aviso', message: msg });
-        }
-      });
-    } else {
-      this.showToast({ type: 'info', title: 'UUID aplicado', message: `Se aplicó ${uuid}. Se guardará al actualizar la póliza.` });
+    const serie = this.getSerieVentaByCcId(ccNum ?? undefined);
+    if (serie && (!movs[index].ref_serie_venta || !String(movs[index].ref_serie_venta).trim())) {
+      movs[index].ref_serie_venta = serie;
     }
   }
 
-  vincularUuidAMovimientosExistentes(uuid: string, movimientoIds: number[]) {
-    if (!this.poliza?.id_poliza || !uuid || !movimientoIds?.length) return;
-    this.apiSvc.linkUuidToMovimientos(this.poliza.id_poliza, uuid, movimientoIds).subscribe({
-      next: () => this.showToast({ type: 'success', title: 'UUID vinculado', message: `Se vinculó ${uuid} a ${movimientoIds.length} movimientos.` }),
-      error: (err) => {
-        const msg = err?.error?.message || err?.message || 'No se pudo vincular el UUID en servidor.';
-        this.showToast({ type: 'warning', title: 'Aviso', message: msg });
-      }
-    });
-  }
-
-  // ----------------- Centros de costo -----------------
+  //  Centros de costo 
   private getCentros(): void {
     const svc: any = this.api as any;
     const fn =
@@ -1130,9 +993,6 @@ export class PolizaEditarComponent implements OnInit {
       svc.getCentros;
 
     if (typeof fn !== 'function') {
-      console.warn(
-        'No existe método de API para Centros de Costo; usando vacío.'
-      );
       this.centrosCosto = [];
       this.centrosCostoMap.clear();
       return;
@@ -1147,33 +1007,14 @@ export class PolizaEditarComponent implements OnInit {
         const crudos: RawCentro[] = (items || [])
           .map((x: any) => {
             const id = Number(x.id_centro ?? x.id ?? x.ID);
-            const parentRaw =
-              x.parent_id ??
-              x.parentId ??
-              x.id_centro_padre ??
-              x.centro_padre ??
-              null;
-            const parent_id =
-              parentRaw != null && parentRaw !== ''
-                ? Number(parentRaw)
-                : null;
+            const parentRaw = x.parent_id ?? x.parentId ?? x.id_centro_padre ?? x.centro_padre ?? null;
+            const parent_id = (parentRaw != null && parentRaw !== '') ? Number(parentRaw) : null;
 
-            const serie = String(
-              x.serie_venta ?? x.serie ?? x.codigo ?? ''
-            ).trim();
-            const nom = String(
-              x.nombre ??
-              x.nombre_centro ??
-              x.descripcion ??
-              x.NOMBRE ??
-              ''
-            ).trim();
+            const serie = String(x.serie_venta ?? x.serie ?? x.codigo ?? '').trim();
+            const nom = String(x.nombre ?? x.nombre_centro ?? x.descripcion ?? x.NOMBRE ?? '').trim();
             const clave = String(x.clave ?? x.codigo ?? '').trim();
-            const etiqueta = serie
-              ? `${serie} — ${nom}`
-              : clave
-                ? `${clave} — ${nom}`
-                : nom || `CC ${id}`;
+
+            const etiqueta = serie ? `${serie} — ${nom}` : (clave ? `${clave} — ${nom}` : (nom || `CC ${id}`));
 
             return {
               id_centrocosto: id,
@@ -1190,14 +1031,8 @@ export class PolizaEditarComponent implements OnInit {
 
         const raices: RawCentro[] = [];
         porId.forEach(node => {
-          if (
-            node.parent_id != null &&
-            porId.has(node.parent_id)
-          ) {
-            porId.get(node.parent_id)!.children!.push(node);
-          } else {
-            raices.push(node);
-          }
+          if (node.parent_id != null && porId.has(node.parent_id)) porId.get(node.parent_id)!.children!.push(node);
+          else raices.push(node);
         });
 
         const sortTree = (n: RawCentro) => {
@@ -1216,7 +1051,6 @@ export class PolizaEditarComponent implements OnInit {
         raices.forEach(r => sortTree(r));
 
         const resultado: CentroCostoItem[] = [];
-
         const visitar = (n: RawCentro, nivel: number) => {
           const hijos = n.children ?? [];
           resultado.push({
@@ -1230,17 +1064,12 @@ export class PolizaEditarComponent implements OnInit {
             posteable: true,
             _expandido: nivel === 0,
           });
-
           hijos.forEach(h => visitar(h, nivel + 1));
         };
-
         raices.forEach(r => visitar(r, 0));
 
-        // 4) Guardar en la VM
         this.centrosCosto = resultado;
-        this.centrosCostoMap = new Map(
-          this.centrosCosto.map(cc => [cc.id_centrocosto, cc])
-        );
+        this.centrosCostoMap = new Map(this.centrosCosto.map(cc => [cc.id_centrocosto, cc]));
 
         this.centrosCostoComoCuentas = this.centrosCosto.map(cc => ({
           id_cuenta: cc.id_centrocosto,
@@ -1251,15 +1080,9 @@ export class PolizaEditarComponent implements OnInit {
           posteable: true,
           _expandido: cc._expandido ?? (cc.nivel === 0),
         }));
-
       },
-      error: (err: any) => {
-        console.error('Centros de Costo:', err);
-        this.showToast({
-          type: 'warning',
-          title: 'Aviso',
-          message: 'No se pudieron cargar Centros de Costo.',
-        });
+      error: () => {
+        this.showToast({ type: 'warning', title: 'Aviso', message: 'No se pudieron cargar Centros de Costo.' });
         this.centrosCosto = [];
         this.centrosCostoMap.clear();
       },
@@ -1268,44 +1091,58 @@ export class PolizaEditarComponent implements OnInit {
 
   labelCentroHeader(id: number | null | undefined): string {
     if (!id) return 'Seleccione…';
-    const c = this.centrosCosto.find(
-      x => Number(x.id_centrocosto) === Number(id)
-    );
+    const c = this.centrosCosto.find(x => Number(x.id_centrocosto) === Number(id));
     return c ? c.nombre : 'Seleccione…';
   }
 
+  labelCentroCostoMov(id: any): string {
+    const ccNum = this.toNumOrNull(id);
+    if (ccNum == null) return '';
+    const c = this.centrosCostoMap.get(Number(ccNum)) || this.centrosCosto.find(x => Number(x.id_centrocosto) === Number(ccNum));
+    return c ? c.nombre : '';
+  }
+
   abrirModalCentro(): void {
+    this.centroMovimientoIndex = null; // ✅ importante
     this.modalCentroAbierto = true;
-    this.centroSeleccionadoModal = null;
+    this.centroSeleccionadoModal = this.poliza?.id_centro ?? null;
+  }
+
+  abrirModalCentroMovimiento(i: number): void {
+    this.centroMovimientoIndex = i;
+    const movs = (this.poliza?.movimientos ?? []) as MovimientoUI[];
+    this.centroSeleccionadoModal = movs[i]?.cc ?? null;
+    this.modalCentroAbierto = true;
   }
 
   cerrarModalCentro(): void {
     this.modalCentroAbierto = false;
+    this.centroMovimientoIndex = null; // ✅ reset
   }
 
   onCentroSeleccionadoModal(cuentaCentro: any): void {
-    const idCentro = Number(
-      cuentaCentro?.id_cuenta ??
-      cuentaCentro?.id_centrocosto ??
-      cuentaCentro?.id ??
-      null
-    );
-
+    const idCentro = Number(cuentaCentro?.id_cuenta ?? cuentaCentro?.id_centrocosto ?? cuentaCentro?.id ?? null);
     if (!Number.isFinite(idCentro)) {
-      this.showToast({
-        type: 'warning',
-        title: 'Centro',
-        message: 'No se pudo determinar el centro seleccionado.'
-      });
-      this.modalCentroAbierto = false;
+      this.showToast({ type: 'warning', title: 'Centro', message: 'No se pudo determinar el centro seleccionado.' });
+      this.cerrarModalCentro();
       return;
     }
-    const oldCentro = this.toNumOrNull(this.poliza.id_centro);
 
+    if (this.centroMovimientoIndex != null) {
+      const i = this.centroMovimientoIndex;
+      const movs = (this.poliza?.movimientos ?? []) as MovimientoUI[];
+      if (movs[i]) {
+        movs[i].cc = idCentro;
+        this.onMovimientoCcChange(i, idCentro);
+      }
+      this.cerrarModalCentro();
+      return;
+    }
+
+    const oldCentro = this.toNumOrNull(this.poliza.id_centro);
     this.poliza.id_centro = idCentro;
     this.propagarCentroEnMovimientos(oldCentro, idCentro);
-
-    this.modalCentroAbierto = false;
+    this.cerrarModalCentro();
   }
 
   private propagarCentroEnMovimientos(oldCentroId: number | null, newCentroId: number): void {
@@ -1318,19 +1155,12 @@ export class PolizaEditarComponent implements OnInit {
     movs.forEach((m) => {
       const ccNum = this.toNumOrNull(m.cc);
 
-      if (!ccNum || (oldCentroId && ccNum === oldCentroId)) {
-        m.cc = newCentroId;
-      }
+      if (!ccNum || (oldCentroId && ccNum === oldCentroId)) m.cc = newCentroId;
 
       const refStr = (m.ref_serie_venta ?? '').toString().trim();
+      const debeActualizarSerie = !refStr || (oldSerie && refStr === oldSerie);
 
-      const debeActualizarSerie =
-        !refStr ||
-        (oldSerie && refStr === oldSerie);
-
-      if (newSerie && debeActualizarSerie) {
-        m.ref_serie_venta = newSerie;
-      }
+      if (newSerie && debeActualizarSerie) m.ref_serie_venta = newSerie;
     });
   }
 
@@ -1341,47 +1171,45 @@ export class PolizaEditarComponent implements OnInit {
     return (typeof serie === 'string' && serie.trim()) ? String(serie).trim() : null;
   }
 
-  // ----------------- Helpers de error -----------------
-  private extractHttpErrorMessage(err: any): string {
-    const e = err || {};
-    const tryPaths = [
-      e.error?.message,
-      e.error?.error,
-      e.error?.details,
-      e.message,
-      (typeof e.error === 'string' ? e.error : ''),
-      (typeof e === 'string' ? e : '')
-    ].filter(Boolean);
+  //  Modal cuentas 
+  abrirModalCuentas(index: number): void {
+    this.indiceMovimientoSeleccionado = index;
+    this.modalCuentasAbierto = true;
+  }
+  cerrarModalCuentas(): void {
+    this.modalCuentasAbierto = false;
+    this.indiceMovimientoSeleccionado = null;
+  }
+  onCuentaSeleccionadaModal(cuenta: { id_cuenta: number; codigo: string; nombre: string }): void {
+    if (this.indiceMovimientoSeleccionado == null) return;
+    const movs = (this.poliza?.movimientos || []) as any[];
+    const i = this.indiceMovimientoSeleccionado;
+    if (!movs[i]) return;
 
-    let msg = tryPaths.find(Boolean) || 'Error desconocido.';
-    if (typeof msg !== 'string') msg = JSON.stringify(msg);
-
-    if (/cfdi|uuid|comprobante/i.test(msg)) {
-      return `CFDI/UUID: ${msg}`;
-    }
-    return msg;
+    movs[i].id_cuenta = Number(cuenta.id_cuenta);
+    movs[i]._cuentaQuery = `${cuenta.codigo} — ${cuenta.nombre}`;
+    this.cerrarModalCuentas();
   }
 
-  private annotateError(err: any, ctx: { i: number; uuid?: string | null; id_mov?: number | undefined }) {
-    const normalized = new Error(this.extractHttpErrorMessage(err));
-    (normalized as any).__ctx = ctx;
-    return normalized;
+  labelCuenta(id?: number | null): string {
+    if (!Number.isFinite(Number(id))) return '';
+    const c = this.cuentasMap.get(Number(id));
+    return c ? `${c.codigo} — ${c.nombre}` : '';
   }
 
-  onMovimientoCcChange(index: number, ccId: any): void {
-    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
-    if (!movs[index]) return;
+  //  Totales 
+  getTotal(tipo: '0' | '1'): number {
+    const movs = Array.isArray(this.poliza?.movimientos) ? this.poliza!.movimientos! : [];
+    return movs
+      .filter(m => String(m.operacion) === tipo)
+      .reduce((s, m) => s + (Number(m.monto) || 0), 0);
+  }
+  getDiferencia(): number { return this.getTotal('0') - this.getTotal('1'); }
 
-    const ccNum = this.toNumOrNull(ccId);
-    movs[index].cc = ccNum;
-
-    const serie = this.getSerieVentaByCcId(ccNum ?? undefined);
-    if (serie && (!movs[index].ref_serie_venta || !String(movs[index].ref_serie_venta).trim())) {
-      movs[index].ref_serie_venta = serie;
-    }
+  get currentUserLabel(): string {
+    return (this.currentUser?.nombre || '').toString().trim();
   }
 
-  // ----------------- Exportar / utilidades de archivo -----------------
   private descargarBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1403,112 +1231,6 @@ export class PolizaEditarComponent implements OnInit {
       .replace(/>/g, '&gt;');
   }
 
-  private buildPolizaXMLInterno(): string {
-    const p = this.poliza || {};
-    const movs = (p.movimientos || []) as any[];
-
-    const head = [
-      '<?xml version="1.0" encoding="UTF-8"?>',
-      `<Poliza id="${this.xmlEscape(p.id_poliza)}" folio="${this.xmlEscape(p.folio)}"`,
-      `        tipo="${this.xmlEscape(p.id_tipopoliza)}" periodo="${this.xmlEscape(p.id_periodo)}"`,
-      `        centro="${this.xmlEscape(p.id_centro)}" usuario="${this.xmlEscape(p.id_usuario)}">`,
-      `  <Concepto>${this.xmlEscape(p.concepto)}</Concepto>`,
-      `  <FechaCreacion>${this.xmlEscape(p.fecha_creacion || p.created_at)}</FechaCreacion>`,
-      `  <Movimientos>`
-    ].join('\n');
-
-    const body = movs.map((m, i) => [
-      `    <Movimiento index="${i + 1}">`,
-      `      <Cuenta id="${this.xmlEscape(m.id_cuenta)}"/>`,
-      `      <Operacion>${this.xmlEscape(m.operacion)}</Operacion>`,
-      `      <Monto>${this.xmlEscape(m.monto)}</Monto>`,
-      `      <Cliente>${this.xmlEscape(m.cliente)}</Cliente>`,
-      `      <Fecha>${this.xmlEscape(m.fecha)}</Fecha>`,
-      `      <CentroCosto>${this.xmlEscape(m.cc)}</CentroCosto>`,
-      `      <RefSerieVenta>${this.xmlEscape(m.ref_serie_venta)}</RefSerieVenta>`,
-      `      <UUID>${this.xmlEscape(m.uuid)}</UUID>`,
-      `    </Movimiento>`
-    ].join('\n')).join('\n');
-
-    const tail = [
-      `  </Movimientos>`,
-      `</Poliza>`
-    ].join('\n');
-
-    return `${head}\n${body}\n${tail}\n`;
-  }
-
-  // ----------------- Índices / helpers de presentación -----------------
-  private cuentasIndex?: Record<string | number, { codigo: string; nombre?: string }>;
-
-  private ensureCuentasIndex() {
-    if (this.cuentasIndex) return;
-    const src = (this as any).cuentas || (this as any).allCuentas || [];
-    this.cuentasIndex = {};
-    for (const c of src || []) {
-      const id = c.id_cuenta ?? c.id ?? c.pk ?? c.codigo;
-      const codigo = c.codigo ?? c.code ?? c.clave ?? String(id ?? '');
-      const nombre = c.nombre ?? c.descripcion ?? c.name ?? '';
-      if (id != null) this.cuentasIndex[id] = { codigo: String(codigo), nombre: nombre || undefined };
-    }
-  }
-
-  private resolvePolizaNombre(p: any) {
-    const folio = p?.folio ?? p?.id_poliza ?? '';
-    return (
-      p?.nombre ??
-      p?.titulo ??
-      p?.descripcion ??
-      p?.concepto ??
-      (folio ? `Póliza ${folio}` : 'Póliza')
-    );
-  }
-
-  private periodoLabelById(id?: number | null): string {
-    if (!Number.isFinite(Number(id))) return '';
-    const p = this.allPeriodos.find(x => Number(x.id_periodo) === Number(id));
-    if (!p) return '';
-    const ini = p.fecha_inicio ?? '—';
-    const fin = p.fecha_fin ?? '—';
-    return `${ini} — ${fin}`;
-  }
-
-  private resolvePeriodoRango(p: any) {
-    const per = p?.Periodo ?? p?.periodo ?? {};
-    const ini = per?.fecha_inicio ?? per?.inicio ?? p?.periodo_inicio ?? p?.fecha_inicio ?? null;
-    const fin = per?.fecha_fin ?? per?.fin ?? p?.periodo_fin ?? p?.fecha_fin ?? null;
-
-    const iniF = ini ? this.fmtDate(ini) : '';
-    const finF = fin ? this.fmtDate(fin) : '';
-
-    if (iniF || finF) {
-      if (!iniF && finF) return `— ${finF}`;
-      if (iniF && !finF) return `${iniF} —`;
-      return `${iniF} — ${finF}`;
-    }
-    return this.periodoLabelById(this.toNumOrNull(p?.id_periodo));
-  }
-
-  private resolveCuenta(m: any) {
-    this.ensureCuentasIndex();
-    const fromMovCodigo =
-      m?.cuenta?.codigo ?? m?.codigo_cuenta ?? m?.cuenta_codigo ?? m?.Cuenta?.codigo ?? null;
-    const fromMovNombre =
-      m?.cuenta?.nombre ?? m?.cuenta_nombre ?? m?.Cuenta?.nombre ?? null;
-
-    const fromIndex = (m?.id_cuenta != null && this.cuentasIndex?.[m.id_cuenta]) ? this.cuentasIndex![m.id_cuenta] : undefined;
-
-    const codigo = String(fromMovCodigo ?? fromIndex?.codigo ?? m?.id_cuenta ?? '');
-    const nombre = String(fromMovNombre ?? fromIndex?.nombre ?? '') || undefined;
-
-    return { codigo, nombre };
-  }
-
-  private cuentaEtiqueta(m: any) {
-    const { codigo, nombre } = this.resolveCuenta(m);
-    return nombre ? `${codigo} — ${nombre}` : codigo;
-  }
-
   private fmtMoney(v: any) {
     const n = Number(v ?? 0);
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(n);
@@ -1522,10 +1244,12 @@ export class PolizaEditarComponent implements OnInit {
   private buildTablaMovimientosPresentacion() {
     const movs = (this.poliza?.movimientos ?? []) as any[];
     return movs.map((m: any, i: number) => {
-      const { codigo } = this.resolveCuenta(m);
+      const c = this.cuentasMap.get(Number(m.id_cuenta));
+      const codigo = c?.codigo ?? String(m.id_cuenta ?? '');
+      const nombre = c?.nombre ?? '';
       return {
         '#': i + 1,
-        'Cuenta': codigo,
+        'Cuenta': nombre ? `${codigo} — ${nombre}` : codigo,
         'Operación': this.opLabel(m.operacion),
         'Monto': Number(m.monto ?? 0),
         'Cliente / Concepto': this.safeStr(m.cliente || m.concepto),
@@ -1537,33 +1261,13 @@ export class PolizaEditarComponent implements OnInit {
     });
   }
 
-  private tiposPolizaIndex?: Record<string | number, string>;
-  private ensureTiposPolizaIndex() {
-    if (this.tiposPolizaIndex) return;
-    const src = (this as any).tiposPoliza || (this as any).catalogoTipos || [];
-    this.tiposPolizaIndex = {};
-    for (const t of src || []) {
-      const id = t.id_tipopoliza ?? t.id ?? t.pk;
-      const desc = t.descripcion ?? t.nombre ?? t.label ?? '';
-      if (id != null) this.tiposPolizaIndex[id] = String(desc || id);
-    }
-  }
-  private resolveTipoLabel(p: any) {
-    const fromRel = p?.TipoPoliza?.descripcion ?? p?.TipoPoliza?.nombre ?? null;
-    this.ensureTiposPolizaIndex();
-    const fromIdx = (p?.id_tipopoliza != null) ? this.tiposPolizaIndex?.[p.id_tipopoliza] : null;
-    return fromRel || fromIdx || String(p?.id_tipopoliza ?? '');
-  }
-
-  private centrosSerieMap = new Map<number, string>();
-
   private headerPolizaProfesional() {
     const p: any = this.poliza || {};
     return {
-      'Póliza': this.resolvePolizaNombre(p),
+      'Póliza': p?.folio ?? p?.id_poliza ?? '',
       'Folio': p.folio ?? '',
-      'Tipo': this.resolveTipoLabel(p),
-      'Periodo': this.resolvePeriodoRango(p),
+      'Tipo': p.id_tipopoliza ?? '',
+      'Periodo': p.id_periodo ?? '',
       'Centro (id_centro)': p.id_centro ?? '',
       'Usuario (id_usuario)': p.id_usuario ?? '',
       'Concepto': p.concepto ?? '',
@@ -1610,12 +1314,6 @@ export class PolizaEditarComponent implements OnInit {
         styles: { fontSize: 9, cellPadding: 6, overflow: 'linebreak' },
         headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
         theme: 'striped',
-        columnStyles: {
-          0: { cellWidth: 90 },
-          1: { cellWidth: 165 },
-          2: { cellWidth: 90 },
-          3: { cellWidth: 170 },
-        },
         margin: { left, right: left },
       });
 
@@ -1632,23 +1330,7 @@ export class PolizaEditarComponent implements OnInit {
         styles: { fontSize: 8, cellPadding: 4, overflow: 'linebreak' },
         headStyles: { fillColor: [245, 245, 245], textColor: 20, fontStyle: 'bold' },
         theme: 'striped',
-        columnStyles: {
-          0: { halign: 'right', cellWidth: 22 },
-          1: { cellWidth: 60 },
-          2: { cellWidth: 50 },
-          3: { halign: 'right', cellWidth: 58 },
-          4: { cellWidth: 140 },
-          5: { cellWidth: 50 },
-          6: { cellWidth: 32 },
-          7: { cellWidth: 56 },
-          8: { cellWidth: 47 },
-        },
         margin: { left, right: left },
-        didDrawPage: () => {
-          const page = `${doc.getCurrentPageInfo().pageNumber} / ${doc.getNumberOfPages()}`;
-          doc.setFontSize(9); doc.setTextColor(120);
-          doc.text(page, doc.internal.pageSize.getWidth() - left, doc.internal.pageSize.getHeight() - 20, { align: 'right' });
-        },
       });
 
       const finalY = (doc as any).lastAutoTable?.finalY ?? startY;
@@ -1699,26 +1381,15 @@ export class PolizaEditarComponent implements OnInit {
         ...movBody
       ];
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const ws = (XLSX as any).utils.aoa_to_sheet(aoa);
 
       (ws as any)['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
-
       (ws as any)['!cols'] = [
-        { wch: 4 },
-        { wch: 16 },
-        { wch: 12 },
-        { wch: 14 },
-        { wch: 44 },
-        { wch: 12 },
-        { wch: 8 },
-        { wch: 16 },
-        { wch: 40 },
+        { wch: 4 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 44 },
+        { wch: 12 }, { wch: 8 }, { wch: 16 }, { wch: 40 },
       ];
 
-      const headerStartRow = 3;
-      const headerRows = headerPairs.length;
-      const sepRow = headerStartRow + headerRows;
-      const movHeaderRow = sepRow + 1;
+      const movHeaderRow = headerPairs.length + 4;
       const firstDataRow = movHeaderRow + 1;
       const lastDataRow = movHeaderRow + movBody.length;
 
@@ -1742,10 +1413,6 @@ export class PolizaEditarComponent implements OnInit {
         ['Diferencia', dif],
       ], { origin: `A${totalsRow}` });
 
-      ['B' + (totalsRow + 1), 'B' + (totalsRow + 2), 'B' + (totalsRow + 3)].forEach(addr => {
-        const c = (ws as any)[addr]; if (c) c.z = '"$"#,##0.00';
-      });
-
       const wb = (XLSX as any).utils.book_new();
       (XLSX as any).utils.book_append_sheet(wb, ws, hojaNombre);
 
@@ -1760,160 +1427,47 @@ export class PolizaEditarComponent implements OnInit {
     }
   }
 
-  // ----------------- Modal cuentas -----------------
-  abrirModalCuentas(index: number): void {
-    this.indiceMovimientoSeleccionado = index;
-    this.modalCuentasAbierto = true;
-  }
-  cerrarModalCuentas(): void {
-    this.modalCuentasAbierto = false;
-    this.indiceMovimientoSeleccionado = null;
-  }
-  onCuentaSeleccionadaModal(cuenta: { id_cuenta: number; codigo: string; nombre: string }): void {
-    if (this.indiceMovimientoSeleccionado == null) return;
-    const movs = (this.poliza?.movimientos || []) as any[];
-    const i = this.indiceMovimientoSeleccionado;
-    if (!movs[i]) return;
+  private extractHttpErrorMessage(err: any): string {
+    const e = err || {};
+    const tryPaths = [
+      e.error?.message,
+      e.error?.error,
+      e.error?.details,
+      e.message,
+      (typeof e.error === 'string' ? e.error : ''),
+      (typeof e === 'string' ? e : '')
+    ].filter(Boolean);
 
-    movs[i].id_cuenta = Number(cuenta.id_cuenta);
-    movs[i]._cuentaQuery = `${cuenta.codigo} — ${cuenta.nombre}`;
-    this.cerrarModalCuentas();
+    let msg = tryPaths.find(Boolean) || 'Error desconocido.';
+    if (typeof msg !== 'string') msg = JSON.stringify(msg);
+
+    if (/cfdi|uuid|comprobante/i.test(msg)) return `CFDI/UUID: ${msg}`;
+    return msg;
   }
 
-  labelCuenta(id?: number | null): string {
-    if (!Number.isFinite(Number(id))) return '';
-    const c = this.cuentasMap.get(Number(id));
-    return c ? `${c.codigo} — ${c.nombre}` : '';
+  private annotateError(err: any, ctx: { i: number; uuid?: string | null; id_mov?: number | undefined }) {
+    const normalized = new Error(this.extractHttpErrorMessage(err));
+    (normalized as any).__ctx = ctx;
+    return normalized;
   }
 
-  onCuentaQueryChange(i: number) {
-    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
-    const q = (movs[i]?._cuentaQuery || '').trim().toLowerCase();
-    if (!q) { this.cuentasFiltradas[i] = this.cuentas.slice(0, 20); return; }
-
-    const hits = this.cuentas.filter(c =>
-      (c.codigo && c.codigo.toLowerCase().includes(q)) ||
-      (c.nombre && c.nombre.toLowerCase().includes(q))
-    );
-    const starts = hits.filter(c => c.codigo?.toLowerCase().startsWith(q));
-    const rest = hits.filter(c => !c.codigo?.toLowerCase().startsWith(q));
-    this.cuentasFiltradas[i] = [...starts, ...rest].slice(0, 50);
-  }
-  openCuenta(i: number) {
-    this.cuentaOpenIndex = i;
-    this.onCuentaQueryChange(i);
-  }
-  closeCuenta(i: number) {
-    setTimeout(() => {
-      if (this.cuentaOpenIndex === i) this.cuentaOpenIndex = null;
-    }, 120);
-  }
-  selectCuenta(i: number, c: Cuenta) {
-    const movs = (this.poliza?.movimientos as MovimientoUI[]) || [];
-    const m = movs[i]; if (!m) return;
-    m.id_cuenta = Number(c.id_cuenta);
-    m._cuentaQuery = `${c.codigo} — ${c.nombre}`;
-    this.cuentasFiltradas[i] = [];
-    this.cuentaOpenIndex = null;
-  }
-
-  // ----------------- Totales / helpers generales -----------------
-  getTotal(tipo: '0' | '1'): number {
-    const movs = Array.isArray(this.poliza?.movimientos) ? this.poliza!.movimientos! : [];
-    return movs
-      .filter(m => String(m.operacion) === tipo)
-      .reduce((s, m) => s + (Number(m.monto) || 0), 0);
-  }
-  getDiferencia(): number { return this.getTotal('0') - this.getTotal('1'); }
-
-  canGuardarEstilo(): 'ok' | 'warn' | 'bad' {
-    const dif = Math.abs(this.getDiferencia());
-    if (this.getTotal('0') === 0 && this.getTotal('1') === 0) return 'warn';
-    if (dif < 0.0001) return 'ok';
-    return 'bad';
-  }
-  get currentUserLabel(): string {
-    return (this.currentUser?.nombre || '').toString().trim();
-  }
-
-  private pad2(n: number) { return String(n).padStart(2, '0'); }
-  private todayISO(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
-  }
-  private fmtDate(d: any): string {
-    if (!d) return '—';
-    const s = String(d);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const dt = new Date(s);
-    if (isNaN(dt.getTime())) return s;
-    return `${dt.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
-  }
-  private toNumOrNull(v: any): number | null {
-    return (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
-  }
-  private toStrOrNull(v: any): string | null {
-    return v == null ? null : (String(v).trim() || null);
-  }
-  private toDateOrNull(v: any): string | null {
-    if (!v) return null;
-    const s = String(v);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return null;
-    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
-  }
-  private normalizeList(res: any) {
-    return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? res ?? []);
-  }
-  private normalizeEjercicio(e: any): Ejercicio | null {
-    if (!e) return null;
-    const id = Number(e.id_ejercicio ?? e.id ?? e.ID);
-    if (!Number.isFinite(id)) return null;
-    const nombre = String(e.nombre ?? e.descripcion ?? e.year ?? e.ejercicio ?? '').trim();
-    return {
-      id_ejercicio: id,
-      nombre: nombre || undefined,
-      fecha_inicio: this.fmtDate(e.fecha_inicio ?? e.inicio ?? e.fechaInicio),
-      fecha_fin: this.fmtDate(e.fecha_fin ?? e.fin ?? e.fechaFin),
-      activo: Boolean(e.activo ?? e.esta_abierto) as any
-    };
-  }
-
-  private showToast(opts: { message: string; type?: ToastType; title?: string; autoCloseMs?: number; position?: ToastPosition }) {
-    this.toast.message = opts.message;
-    this.toast.type = opts.type ?? 'info';
-    this.toast.title = opts.title ?? '';
-    if (opts.autoCloseMs != null) this.toast.autoCloseMs = opts.autoCloseMs;
-    if (opts.position) this.toast.position = opts.position;
-    this.toast.open = true;
-  }
-  onToastClosed = () => { this.toast.open = false; };
-
-  // ----------------- Usuario actual -----------------
+  //  Usuario actual 
   private normalizeUsuario(u: any): UsuarioLigero | null {
     if (!u || typeof u !== 'object') return null;
     const raw = (u.user ?? u.data ?? u.currentUser ?? u) || {};
     const s = (v: any) => (v ?? '').toString().trim();
+
     const rawId = raw.id_usuario ?? raw.idUsuario ?? raw.user_id ?? raw.id ?? raw.ID ?? raw.sub ?? raw.uid;
-    const toNum = (v: any): number => {
-      if (typeof v === 'number') return v;
-      if (v == null) return NaN;
-      const n = Number(String(v).replace(/[^\d.-]/g, ''));
-      return n;
-    };
-    const idNum = toNum(rawId);
-    const nombreBase = s(
-      raw.nombre ?? raw.name ?? raw.full_name ?? raw.fullName ??
-      raw.display_name ?? raw.displayName ?? raw.username ??
-      raw.preferred_username ?? raw.nombres ?? raw.given_name ?? raw.first_name
-    );
+    const idNum = Number(String(rawId ?? '').replace(/[^\d.-]/g, ''));
+
+    const nombreBase = s(raw.nombre ?? raw.name ?? raw.full_name ?? raw.fullName ?? raw.display_name ?? raw.displayName ?? raw.username);
     const apP = s(raw.apellido_p ?? raw.apellidoP ?? raw.apellido ?? raw.apellidos ?? raw.last_name ?? raw.family_name);
     const apM = s(raw.apellido_m ?? raw.apellidoM);
 
     let nombre = [nombreBase, apP, apM].filter(Boolean).join(' ').trim();
     const emailRaw = s(raw.email ?? raw.correo ?? raw.mail);
     const email = emailRaw ? emailRaw.toLowerCase() : undefined;
+
     if (!nombre) {
       const alias = email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '';
       if (alias) nombre = alias;
@@ -1928,61 +1482,60 @@ export class PolizaEditarComponent implements OnInit {
 
   private cargarUsuarioActual() {
     const svc: any = this.apiSvc as any;
-    const fn =
-      svc.getCurrentUser ||
-      svc.me ||
-      svc.getUsuarioActual ||
-      svc.getUser ||
-      svc.getUsuario;
+    const fn = svc.getCurrentUser || svc.me || svc.getUsuarioActual || svc.getUser || svc.getUsuario;
 
     if (typeof fn === 'function') {
       fn.call(svc).subscribe({
         next: (r: any) => { this.currentUser = this.normalizeUsuario(r); },
-        error: (_e: any) => { this.cargarUsuarioPorFallback(); }
+        error: () => { this.currentUser = null; }
       });
       return;
     }
-    this.cargarUsuarioPorFallback();
-  }
-
-  private cargarUsuarioPorFallback() {
-    const base = this.apiBase;
-    const candidates = [
-      `${base}/usuarios/me`,
-      `${base}/users/me`,
-      `${base}/me`,
-    ];
-    const opts: any = {};
-
-    const onResolved = (r: any) => {
-      const user = this.normalizeUsuario(r);
-      if (user) {
-        this.currentUser = user;
-        const idNum = Number(user.id_usuario);
-        if (Number.isFinite(idNum) && !this.poliza?.id_usuario) {
-          (this.poliza as any).id_usuario = idNum;
-        }
-      }
-    };
-
-    const tryNext = (i: number) => {
-      if (i >= candidates.length) {
-        const uid = this.toNumOrNull(this.poliza?.id_usuario);
-        if (uid) {
-          this.http.get<any>(`${base}/usuarios/${uid}`, opts).subscribe({
-            next: onResolved,
-            error: () => { /* sin usuario; lo dejamos en null */ }
-          });
-        }
-        return;
-      }
-      this.http.get<any>(candidates[i], opts).subscribe({
-        next: onResolved,
-        error: () => tryNext(i + 1)
-      });
-    };
-    tryNext(0);
+    this.currentUser = null;
   }
 
   trackByEjercicioId = (_: number, e: any) => e?.id_ejercicio;
+
+  private pad2(n: number) { return String(n).padStart(2, '0'); }
+
+  private fmtDate(d: any): string {
+    if (!d) return '—';
+    const s = String(d);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const dt = new Date(s);
+    if (isNaN(dt.getTime())) return s;
+    return `${dt.getFullYear()}-${this.pad2(dt.getMonth() + 1)}-${this.pad2(dt.getDate())}`;
+  }
+
+  private toNumOrNull(v: any): number | null {
+    return (v === '' || v == null || isNaN(Number(v))) ? null : Number(v);
+  }
+
+  private toStrOrNull(v: any): string | null {
+    return v == null ? null : (String(v).trim() || null);
+  }
+
+  private toDateOrNull(v: any): string | null {
+    if (!v) return null;
+    const s = String(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${this.pad2(d.getMonth() + 1)}-${this.pad2(d.getDate())}`;
+  }
+
+  private normalizeList(res: any) {
+    return Array.isArray(res) ? res : (res?.rows ?? res?.data ?? res?.items ?? res?.result ?? res ?? []);
+  }
+
+  private showToast(opts: { message: string; type?: ToastType; title?: string; autoCloseMs?: number; position?: ToastPosition }) {
+    this.toast.message = opts.message;
+    this.toast.type = opts.type ?? 'info';
+    this.toast.title = opts.title ?? '';
+    if (opts.autoCloseMs != null) this.toast.autoCloseMs = opts.autoCloseMs;
+    if (opts.position) this.toast.position = opts.position;
+    this.toast.open = true;
+  }
+
+  onToastClosed = () => { this.toast.open = false; };
 }
