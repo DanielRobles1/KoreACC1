@@ -1,0 +1,426 @@
+<app-polizas-layout [open]="sidebarOpen" (openChange)="onSidebarToggle($event)">
+  <!-- Contenido principal -->
+  <div class="polizas-container" *ngIf="!loading; else loadingTpl">
+    <div class="poliza-header">
+      <div class="title-wrap">
+        <a [routerLink]="['/poliza-home']" style="text-decoration:none;">
+          <button type="button" aria-label="Volver" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+        </a>
+
+        <h3 class="poliza-title">Editar póliza</h3>
+        <h4 class="section-title">Cabecera de póliza</h4>
+
+        <div class="meta-grid">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M3 4h18v2H3zM8 10h13v2H8zM8 16h13v2H8zM3 10h2v2H3zM3 16h2v2H3z"></path>
+          </svg>
+          <strong>Ejercicio:</strong>
+
+          <select
+            [(ngModel)]="ejercicioActualId"
+            [disabled]="false"
+            (ngModelChange)="onEjercicioSeleccionado($event)"
+            name="ejercicioSeleccionado"
+            style="margin-left: 0.5rem; background: transparent; border: none; color: #565656;"
+            aria-label="Seleccionar ejercicio"
+          >
+            <option *ngFor="let e of ejercicios; trackBy: trackByEjercicioId" [ngValue]="e.id_ejercicio">
+              {{ e.anio || (e.fecha_inicio ? (e.fecha_inicio | date:'yyyy') : '—') }}
+            </option>
+          </select>
+          <span *ngIf="!ejercicios?.length" style="margin-left: 0.5rem;">—</span>
+
+          <span *ngIf="poliza?.fecha_creacion" class="meta-chip muted">
+            Creada: {{ poliza.fecha_creacion }}
+          </span>
+
+          <span
+            class="status-badge"
+            [ngClass]="{
+              'warn': poliza?.estado === 'Por revisar',
+              'ok': poliza?.estado === 'Aprobada'
+            }"
+          >
+            <svg
+              *ngIf="poliza?.estado === 'Por revisar'"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <circle cx="12" cy="16" r="1"></circle>
+            </svg>
+
+            <svg
+              *ngIf="poliza?.estado === 'Aprobada'"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M20 6L9 17l-5-5"></path>
+            </svg>
+
+            {{ poliza?.estado || 'Por revisar' }}
+          </span>
+
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span class="user-name">{{ currentUserLabel || 'Usuario' }}</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn" type="button" (click)="exportarPDFPoliza()">Exportar PDF</button>
+        <button class="btn" type="button" (click)="exportarExcelPoliza()">Exportar Excel</button>
+        <button type="button" class="btn ghost sm" (click)="cargarPoliza(id_poliza)">↻ Recargar</button>
+        <button type="button" class="btn primary" [disabled]="updating || !puedeActualizar()" (click)="actualizarPoliza()">
+          {{ updating ? 'Actualizando…' : 'Actualizar póliza' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <form class="form-poliza">
+      <div class="form-grid compact">
+        <label>
+          Folio:
+          <input class="field" [(ngModel)]="poliza.folio" name="folio" />
+        </label>
+
+        <label>
+          Concepto:
+          <input class="field" [(ngModel)]="poliza.concepto" name="concepto" />
+        </label>
+
+        <label>
+          Tipo póliza:
+          <select class="field select" [(ngModel)]="poliza.id_tipopoliza" name="id_tipopoliza">
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let t of tiposPoliza" [ngValue]="t.id_tipopoliza">{{ t.nombre }}</option>
+          </select>
+        </label>
+
+        <label>
+          Periodo:
+          <select
+            name="id_periodo"
+            class="field select"
+            [(ngModel)]="poliza.id_periodo"
+            aria-label="Seleccionar periodo"
+          >
+            <option [ngValue]="undefined" disabled>Seleccione…</option>
+            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">
+              {{ p.nombre }}
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Centro de costo:
+          <button
+            type="button"
+            class="field select"
+            name="id_centro"
+            (click)="abrirModalCentro()">
+            {{ labelCentroHeader(poliza.id_centro) }}
+          </button>
+        </label>
+      </div>
+
+      <div class="movs-header">
+        <h4 class="section-title">Movimientos</h4>
+
+        <button type="button" class="btn pill" (click)="agregarMovimiento()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            width="18"
+            height="18"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="icon">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Agregar movimiento
+        </button>
+      </div>
+
+      <div class="tabla-wrapper">
+        <table class="tabla-movimientos">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Serie Venta</th>
+
+              <th>Concepto</th>
+              <th>Fecha</th>
+              <th>Centro Costo</th>
+              <th>UUID</th>
+
+              <th>Cargo</th>
+              <th>Abono</th>
+
+              <th class="actions-cell"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let mov of poliza.movimientos ?? []; let i = index; trackBy: trackByMov">
+              <td class="cuenta-cell">
+                <button type="button" class="btn small" (click)="abrirModalCuentas(i)">
+                  {{ labelCuenta(mov.id_cuenta) || 'Seleccionar cuenta…' }}
+                </button>
+              </td>
+
+              <td>
+                <input
+                  class="cell-input"
+                  [(ngModel)]="mov.ref_serie_venta"
+                  name="ref_serie_venta{{ i }}" />
+              </td>
+
+              <!-- Concepto -->
+              <td>
+                <input
+                  class="cell-input"
+                  [(ngModel)]="mov.cliente"
+                  name="cliente{{ i }}" />
+              </td>
+
+              <!-- Fecha -->
+              <td>
+                <input
+                  class="cell-input cell-date"
+                  type="date"
+                  [(ngModel)]="mov.fecha"
+                  name="fecha{{ i }}" />
+              </td>
+
+              <!-- Centro Costo  -->
+              <td>
+                <button
+                  type="button"
+                  class="cell-input select"
+                  (click)="abrirModalCentroMovimiento(i)"
+                  [title]="labelCentroCostoMov(mov.cc) || 'Seleccionar CC'">
+                  {{ labelCentroCostoMov(mov.cc) || '— Selecciona CC —' }}
+                </button>
+              </td>
+
+              <!-- UUID -->
+              <td class="uuid-cell">
+                <div class="uuid-wrapper" [class.has-uuid]="!!mov.uuid">
+                  <button
+                    type="button"
+                    class="btn-xml"
+                    [ngClass]="{ ok: !!mov.uuid }"
+                    [title]="mov.uuid ? 'XML asociado' : 'Cargar XML'"
+                    (click)="triggerXmlPickerForMovimiento(xmlInputMov, i)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                          width="18" height="18" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 5v14m-7-7h14"></path>
+                    </svg>
+                  </button>
+
+                  <input
+                    #xmlInputMov
+                    type="file"
+                    accept=".xml,text/xml,application/xml"
+                    hidden
+                    (change)="onXmlPickedForMovimiento($event, i)" />
+
+                  <small class="uuid-badge" *ngIf="mov.uuid">{{ mov.uuid | slice:0:8 }}…</small>
+                </div>
+              </td>
+
+              <!-- Cargo  -->
+              <td>
+                <input
+                  class="cell-input"
+                  type="number"
+                  [ngModel]="mov.operacion === '0' ? mov.monto : null"
+                  (ngModelChange)="onCargoChange(i, $event)"
+                  name="cargo{{ i }}" />
+              </td>
+
+              <!-- Abono  -->
+              <td>
+                <input
+                  class="cell-input"
+                  type="number"
+                  [ngModel]="mov.operacion === '1' ? mov.monto : null"
+                  (ngModelChange)="onAbonoChange(i, $event)"
+                  name="abono{{ i }}" />
+              </td>
+
+              <!-- Eliminar  -->
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="icon-btn danger"
+                  [disabled]="deletingIndexSet.has(i)"
+                  (click)="openConfirm(i)"
+                  title="Eliminar movimiento"
+                  aria-label="Eliminar movimiento">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Panel de totales -->
+      <div class="totales-panel">
+        <div class="tot-card">
+          <div class="tot-label">TOTAL CARGOS</div>
+          <div class="tot-value">{{ getTotal('0') | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="tot-card">
+          <div class="tot-label">TOTAL ABONOS</div>
+          <div class="tot-value">{{ getTotal('1') | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="tot-card">
+          <div
+            class="tot-label font-semibold"
+            [style.color]="getDiferencia() === 0 ? '#16a34a' : '#dc2626'">
+            DIFERENCIA
+          </div>
+          <div
+            class="tot-value font-bold"
+            [style.color]="getDiferencia() === 0 ? '#16a34a' : '#dc2626'">
+            {{ getDiferencia() | number:'1.2-2' }}
+          </div>
+        </div>
+
+        <div
+          class="pill-status"
+          [ngClass]="{
+            'ok': getDiferencia() === 0,
+            'bad': getDiferencia() !== 0
+          }"
+          style="display: flex; align-items: center; gap: .5rem;"
+        >
+          <span class="icon" aria-hidden="true">
+            {{ getDiferencia() === 0 ? '✔' : '⚠' }}
+          </span>
+          <span class="text">
+            {{ getDiferencia() === 0 ? 'Póliza cuadrada' : 'No cuadra' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn ghost sm"
+          (click)="cargarPoliza(id_poliza)">
+          ↻ Recargar
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          [disabled]="updating || !puedeActualizar()"
+          (click)="actualizarPoliza()">
+          {{ updating ? 'Actualizando…' : ' Actualizar póliza' }}
+        </button>
+
+        <span class="hint" *ngIf="!puedeActualizar()">
+          Completa encabezado y corrige diferencias para habilitar el guardado.
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="polizas-container">
+      <p>Cargando póliza…</p>
+      <p class="hint error" *ngIf="errorMsg">{{ errorMsg }}</p>
+    </div>
+  </ng-template>
+
+  <app-saving-overlay
+    [open]="saving"
+    [total]="saveTotal"
+    [done]="saveDone"
+    text="Guardando póliza…"
+    variant="fullscreen">
+  </app-saving-overlay>
+</app-polizas-layout>
+
+<!-- Modal confirmación -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>
+
+<!-- Toast -->
+<app-toast-message
+  [open]="toast.open"
+  [title]="toast.title"
+  [message]="toast.message"
+  [type]="toast.type"
+  [position]="toast.position"
+  [autoCloseMs]="toast.autoCloseMs"
+  [showClose]="toast.showClose"
+  (closed)="onToastClosed()">
+</app-toast-message>
+
+<!-- Modal selección de cuenta -->
+<app-modal-seleccion-cuenta
+  [open]="modalCuentasAbierto"
+  [cuentas]="cuentasParaModal"
+  [noPosteablesComoTitulo]="true"
+  [permitirSeleccionNoPosteables]="false"
+  (cuentaConfirmada)="onCuentaSeleccionadaModal($event)"
+  (cerrado)="cerrarModalCuentas()">
+</app-modal-seleccion-cuenta>
+
+<app-modal-seleccion-cuenta
+  [open]="modalCentroAbierto"
+  [cuentas]="centrosCostoComoCuentas"
+  [cuentaSeleccionada]="centroSeleccionadoModal"
+  [noPosteablesComoTitulo]="false"
+  [permitirSeleccionNoPosteables]="true"
+  (cuentaConfirmada)="onCentroSeleccionadoModal($event)"
+  (cerrado)="cerrarModalCentro()">
+</app-modal-seleccion-cuenta>

@@ -1,0 +1,402 @@
+.polizas-header-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.polizas-header-row .nueva-poliza-btn {
+  margin-left: auto;
+}
+
+.tabla-polizas, .tabla-movimientos {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+.tabla-polizas th, .tabla-polizas td,
+.tabla-movimientos th, .tabla-movimientos td {
+  padding: .5rem .75rem;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  white-space: nowrap;
+}
+.tabla-polizas thead th, .tabla-movimientos thead th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+.negativo {
+  color: #b91c1c; 
+  font-weight: 600;
+}
+.tabla-wrapper {
+  overflow-x: auto; 
+}
+
+/* Formulario */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.form-grid input, .form-grid select {
+  border: 1px solid #e5e7eb;
+  border-radius: .375rem;
+  padding: .4rem .5rem;
+  background: #fff;
+}
+
+/* Acciones */
+.actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.btn-agregar, .btn-guardar, .btn-eliminar {
+  border: 1px solid #000000;
+  background: #171717f5;
+  padding: .4rem .6rem;
+  border-radius: .375rem;
+  cursor: pointer;
+}
+.btn-guardar {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.estado {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: .5rem;
+  font-size: .8rem;
+  font-weight: 600;
+  &.ok    { background: #e6f6ec; color: #0a7a3b; border: 1px solid #bfe7cf; }
+  &.warn  { background: #fff7e6; color: #8a5b00; border: 1px solid #ffe2a8; }
+  &.bad   { background: #fde8e8; color: #a1121a; border: 1px solid #f5b5b9; }
+}
+.icon-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.25);
+  color: #0d0d0e;
+  padding: .35rem .45rem;
+  border-radius: 10px;
+  cursor: pointer;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: .35rem;
+
+  &:hover {
+    background: rgba(255,255,255,.06);
+  }
+
+  &.danger {
+    border-color: rgba(255, 255, 255, 0.971);
+    color: #080808;
+  }
+}
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem 1rem;
+  border: 0;
+  border-radius: 9999px; /* pastilla */
+  background: #223447;   /* azul oscuro similar */
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08);
+  transition: background .15s ease, transform .05s ease;
+  white-space: nowrap;
+}
+.pill-btn2 {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem 1rem;
+  border: 0;
+  border-radius: 9999px; /* pastilla */
+  background: #223447;   /* azul oscuro similar */
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08);
+  transition: background .15s ease, transform .05s ease;
+  white-space: nowrap;
+}
+.polizas-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.polizas-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; // separa "Nueva póliza" y "Póliza de ajuste"
+}
+
+.pill-btn .icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.pill-btn:hover {
+  background: #2b425a;
+}
+
+.pill-btn:active {
+  transform: translateY(1px);
+}
+
+.pill-btn:focus-visible {
+  outline: 2px solid #7aa2ff;
+  outline-offset: 2px;
+}
+/* Fila de filtros debajo del encabezado */
+/* === FILA DE FILTROS (look corporativo) === */
+.filter-row {
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.filter-row th {
+  padding: 10px 12px;
+}
+
+/* === INPUTS DE FILTRO === */
+.filter-row input {
+  width: 80%;
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Placeholder elegante */
+.filter-row input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* === HOVER & FOCUS (efecto premium) === */
+.filter-row input:hover {
+  border-color: #94a3b8;
+  background-color: #f9fafb;
+}
+
+.filter-row input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  transform: scale(1.02);
+}
+
+/* === TABLA EN CONJUNTO === */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #0f172a;
+}
+
+/* === Ajuste de alineación visual === */
+.filter-row input {
+  text-align: center;
+}
+
+/* === Sombra superior para separar encabezado === */
+thead tr:first-child {
+  background-color: #f9fafb;
+  box-shadow: inset 0 -2px 0 #e2e8f0;
+}
+
+/* === Sutil animación al interactuar === */
+.filter-row input {
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.1s;
+}
+.th-with-filter {
+  position: relative;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%; /* justo debajo del título */
+  left: 0;
+  background: #1a1a1a;
+  padding: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 10;
+  min-width: 120px;
+}
+
+/* ===== PAGINACIÓN ===== */
+.paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+}
+
+.paginacion-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.paginacion-controles {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.paginacion-select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  appearance: none;
+
+  &:hover {
+    border-color: #9ca3af;
+    background-color: #f9fafb;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+}
+
+.paginacion-navegacion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.paginacion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f3f4f6;
+    color: #9ca3af;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.paginacion-texto {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .paginacion {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .paginacion-controles {
+    justify-content: space-between;
+  }
+
+  .paginacion-navegacion {
+    gap: 0.5rem;
+  }
+
+  .paginacion-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    
+    span {
+      display: none;
+    }
+  }
+
+  .paginacion-texto {
+    min-width: auto;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .paginacion-controles {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .paginacion-select {
+    align-self: flex-start;
+  }
+}

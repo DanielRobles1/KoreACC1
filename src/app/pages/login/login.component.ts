@@ -1,4 +1,3 @@
-// src/app/pages/login/login.component.ts
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -6,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { RecaptchaModule, RECAPTCHA_SETTINGS, RecaptchaSettings } from 'ng-recaptcha';
 import { environment } from '@environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { WsService } from '@app/services/ws.service';
 
 @Component({
   selector: 'app-login',
@@ -30,7 +30,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private auth: AuthService
+    private auth: AuthService,
+    private ws: WsService
   ) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
@@ -39,14 +40,12 @@ export class LoginComponent {
         [
           Validators.required,
           Validators.minLength(8),
-          //Validators.pattern(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/),
         ],
       ],
       remember: [false],
-      recaptcha: ['', Validators.required], // solo se valida en el form, no se manda
+      recaptcha: ['', Validators.required],
     });
 
-    // Al iniciar, si hay username guardado lo cargamos
     const savedUsername = localStorage.getItem('rememberedUsername');
     if (savedUsername) {
       this.loginForm.patchValue({
@@ -75,7 +74,6 @@ export class LoginComponent {
 
     const { username, password, remember } = this.loginForm.value;
 
-    // Guardar o limpiar del remember
     if (remember) {
       localStorage.setItem('rememberedUsername', username);
     } else {
@@ -84,15 +82,37 @@ export class LoginComponent {
 
     this.loading = true;
     this.auth.login(username, password, this.recaptchaToken!).subscribe({
-      next: () => {
+      // 👇 importante: recibir la respuesta
+      next: (resp: any) => {
         this.loading = false;
-        this.router.navigate(['/usuarios']); 
+
+        // === Guardar usuario con id_usuario en localStorage ===
+        const user = resp?.user;
+        if (user) {
+          const usuarioLite = {
+            id_usuario: user.id_usuario,                     // <- lo que usa PolizaAjuste
+            nombre: user.nombre,
+            apellido_p: user.apellido_p,
+            apellido_m: user.apellido_m,
+            apellidos: `${user.apellido_p} ${user.apellido_m}`,
+            correo: user.correo,
+            debe_cambiar_contrasena: user.debe_cambiar_contrasena,
+            roles: user.roles ?? user.Rols?.map((r: any) => r.nombre) ?? [],
+          };
+
+          localStorage.setItem('usuario', JSON.stringify(usuarioLite));
+          console.log('Usuario guardado en localStorage:', usuarioLite);
+        }
+
+        // Conectar WS y navegar
+        this.ws.connect();
+        this.router.navigate(['/poliza-home']);
       },
+
       error: (err) => {
         this.loading = false;
 
         if (err.status === 428) {
-          
           this.router.navigate(['/cambiar-password'], {
             state: { token: err.error.token, user: err.error.user }
           });

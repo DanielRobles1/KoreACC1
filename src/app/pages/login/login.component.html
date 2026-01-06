@@ -1,27 +1,33 @@
-<div class="min-h-screen bg-gradient-to-b from-white via-gray-100 to-slate-300">
-
-  <div class="pt-8 px-6">
-    <h1 class="text-center text-3xl md:text-4xl font-semibold">
-      Bienvenido a <span class="font-extrabold">KORE ACC</span>
-    </h1>
-  </div>
+<div class="min-h-screen bg-gradient-to-b from-white via-gray-100 to-slate-300 flex items-center justify-center px-4 py-12">
+  
+  
 
 
-  <div class="mx-auto w-full max-w-7xl px-6 py-8">
-    <div
-      class="flex flex-col md:flex-row items-stretch gap-8 md:gap-12
-             bg-white rounded-3xl ring-1 ring-black/10 shadow-xl
-             p-6 md:p-10">
+  <div class="w-full max-w-5xl flex flex-col md:flex-row bg-white rounded-3xl shadow-xl ring-1 ring-black/10 overflow-hidden">
+
+  
 
       <!-- Logop-->
-      <div class="hidden md:flex flex-1 items-center justify-center">
-        <img src="/assets/svgs/Kore-ACC.svg" alt="Logo KORE ACC"
-             class="w-[360px] md:w-[420px] h-auto object-contain" />
-      </div>
+    <div class="flex-1 flex items-center justify-center p-12 bg-white">
+  <div class="flex flex-col items-center">
+    
+    <img src="/assets/svgs/Kore-ACC.svg" alt="Logo KORE ACC"
+         class="w-72 md:w-80 h-auto object-contain" />
 
+    <!-- Kore ACC abajo  DEL LOGO -->
+   <span class="mt-6 text-2xl md:text-3xl font-extrabold tracking-wide">
+  Kore ACC
+</span>
+
+
+  </div>
+</div>
+
+  
       <!-- Formulario -->
-      <div class="flex-1 flex items-center justify-center">
-        <div class="w-full max-w-md bg-white rounded-3xl px-6 md:px-10 py-8">
+      <div class="flex-1 p-10 flex flex-col justify-center">
+        
+        <div class="w-full max-w-md bg-white rounded-3xl px-6 md:px-10 py-8 ">
 
           <h2 class="text-2xl md:text-3xl font-extrabold text-center mb-6">
             Inicia sesión
@@ -37,7 +43,6 @@
                 class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
                        bg-transparent outline-none py-2 pr-10"
               />
-              <!-- Iconoooo cortado-->
               <svg xmlns="http://www.w3.org/2000/svg"
                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
                    class="w-5 h-5 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
@@ -49,21 +54,50 @@
             </div>
 
             <!-- Contraseña -->
-            <div class="relative">
-              <input
-                [type]="showPassword ? 'text' : 'password'"
-                formControlName="password"
-                placeholder="Contraseña"
-                class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
-                       bg-transparent outline-none py-2 pr-10"
-              />
-              <!-- ojo de mostrar contraseña-->
-              <i
-                (click)="togglePassword()"
-                class="fa cursor-pointer absolute right-2 top-2.5 text-gray-500"
-                [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'">
-              </i>
-            </div>
+<div class="relative">
+  <input
+    [type]="showPassword ? 'text' : 'password'"
+    formControlName="password"
+    placeholder="Contraseña"
+    class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500 
+           bg-transparent outline-none py-2 pr-10"
+  />
+
+  <!-- Ojito siempre visible, mismo estilo que el icono de usuario -->
+  <button
+    type="button"
+    (click)="togglePassword()"
+    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 flex items-center justify-center"
+    aria-label="Mostrar u ocultar contraseña">
+    
+    <!-- Ojo (contraseña oculta) -->
+    <svg *ngIf="!showPassword"
+         xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7
+               -1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+      <circle cx="12" cy="12" r="3" stroke-width="2" />
+    </svg>
+
+    <!-- Ojo tachado (contraseña visible) -->
+    <svg *ngIf="showPassword"
+         xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 24 24"
+         fill="none"
+         stroke="currentColor"
+         class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 3l18 18M10.58 10.58A3 3 0 0113.4 13.4M9.88 4.13A9.77 9.77 0 0112 4
+               c4.477 0 8.268 2.943 9.542 7-.42 1.337-1.11 2.55-2.01 3.57M6.24 6.24C4.59 7.39 3.37 8.96 2.458 12
+               3.732 16.057 7.523 19 12 19c1.24 0 2.43-.22 3.53-.63"/>
+    </svg>
+  </button>
+</div>
+
 
             <!-- reCAPTCHA -->
             <div class="flex justify-center">
@@ -100,4 +134,4 @@
       </div>
     </div>
   </div>
-</div>
+

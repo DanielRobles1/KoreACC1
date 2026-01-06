@@ -1,0 +1,217 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <div class="content">
+    <div class="export-bar">
+      <button class="btn-excel" (click)="exportToExcel()">Exportar Excel</button>
+      <button class="btn-pdf" (click)="exportToPDF()">Exportar PDF</button>
+
+      <label class="btn-import" *ngIf="true">
+        Importar Excel
+        <input
+          type="file"
+          accept=".xlsx, .xls"
+          (change)="importFromExcel($event)" />
+      </label>
+    </div>
+
+    <app-crud-panel
+      [title]="title"
+      [tabs]="tabs"
+      [activeTabId]="activeTabId"
+      (tabChange)="onTabChange($event)"
+
+      [primaryActionLabel]="primaryActionLabel"
+      (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"
+
+      [projectContent]="true"
+      (search)="onSearch($event)"
+    >
+      <ul class="tree-root">
+        <ng-container *ngFor="let root of filteredTreeRoots; trackBy: trackByCuentaNodeId">
+          <ng-container
+            *ngTemplateOutlet="treeNode; context: { $implicit: root }">
+          </ng-container>
+        </ng-container>
+      </ul>
+
+      <ng-template #treeNode let-node>
+        <li class="tree-node" [class.is-leaf]="!node.children?.length">
+          <div class="tree-node__row" (click)="toggleNode(node, $event)">
+            <button
+              type="button"
+              class="tree-toggle"
+              *ngIf="node.children?.length"
+              (click)="toggleNode(node, $event)"
+              aria-label="Expandir/contraer">
+              {{ node.expanded ? '▾' : '▸' }}
+            </button>
+
+            <span class="tree-node__label">
+              {{ node.data.codigo }} — {{ node.data.nombre }}
+              <small>
+                ({{ node.data.tipo }}/{{ node.data.naturaleza }})
+              </small>
+            </span>
+
+            <span
+              class="tree-pill"
+              [ngClass]="node.data.ctaMayor ? 'tree-pill--mayor' : 'tree-pill--sub'">
+              {{ node.data.ctaMayor ? 'Mayor' : 'Subcuenta' }}
+            </span>
+
+            <button
+              type="button"
+              class="tree-action"
+              *ngIf="canEdit"
+              (click)="onEdit(node.data); $event.stopPropagation()"
+              aria-label="Editar cuenta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   width="20" height="20" role="img" aria-hidden="true">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              class="tree-action tree-action--danger"
+              *ngIf="canDelete"
+              (click)="askDelete(node.data, $event)"
+              aria-label="Eliminar cuenta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   width="18" height="18" role="img" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+              </svg>
+            </button>
+          </div>
+
+          <ul *ngIf="node.expanded && node.children?.length">
+            <ng-container *ngFor="let child of node.children; trackBy: trackByCuentaNodeId">
+              <ng-container
+                *ngTemplateOutlet="treeNode; context: { $implicit: child }">
+              </ng-container>
+            </ng-container>
+          </ul>
+        </li>
+      </ng-template>
+    </app-crud-panel>
+  </div>
+</div>
+
+<!-- Modal de edición -->
+<app-modal
+  [open]="editOpen"
+  [title]="modalTitle"
+  [size]="modalSize"
+  [showClose]="showClose"
+  (closed)="closeModal()"
+  (canceled)="cancelModal()"
+  (confirmed)="confirmModal()">
+
+  <form #cuentaForm="ngForm" style="display: grid; gap: 10px;">
+    <div>
+      <label class="field-label required">Código</label>
+      <input class="field-input" type="text" name="codigo"
+             [(ngModel)]="formCuenta.codigo"
+             (ngModelChange)="onFieldChange('codigo', $event)"
+             required maxlength="20" placeholder="Ej. 1000 o 1001-01" />
+      <small *ngIf="touched.codigo && errors.codigo"
+             style="color:rgb(247,39,39);display:block;margin-top:4px;font-weight:bold;">
+        {{ errors.codigo }}
+      </small>
+    </div>
+
+    <div>
+      <label class="field-label required">Nombre de cuenta</label>
+      <input class="field-input" type="text" name="nombre"
+             [(ngModel)]="formCuenta.nombre"
+             (ngModelChange)="onFieldChange('nombre', $event)"
+             required maxlength="100" placeholder="Ej. Caja general, Banco BBVA, Ventas" />
+      <small *ngIf="touched.nombre && errors.nombre"
+             style="color:rgb(247,58,58);display:block;margin-top:4px;font-weight:bold;">
+        {{ errors.nombre }}
+      </small>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label class="field-label" style="margin:0;">Cuenta mayor</label>
+      <input type="checkbox" name="ctaMayor"
+             [(ngModel)]="formCuenta.ctaMayor"
+             (ngModelChange)="onCtaMayorChange($event)" />
+      <span style="font-size:12px;opacity:.8;">(si se marca, puede tener subcuentas)</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label class="field-label required">Tipo</label>
+        <select class="field-input" name="tipo" required [(ngModel)]="formCuenta.tipo">
+          <option *ngFor="let t of TIPO_OPTS" [ngValue]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label required">Naturaleza</label>
+        <select class="field-input" name="naturaleza" required [(ngModel)]="formCuenta.naturaleza">
+          <option *ngFor="let n of NAT_OPTS" [ngValue]="n">{{ n }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label class="field-label" style="margin:0;">Posteable</label>
+      <input type="checkbox" name="posteable"
+             [(ngModel)]="formCuenta.posteable"
+             [disabled]="!!formCuenta.ctaMayor" />
+      <span style="font-size:12px;opacity:.8;">
+        <ng-container *ngIf="!!formCuenta.ctaMayor">(Las cuentas mayor no son posteables)</ng-container>
+        <ng-container *ngIf="!formCuenta.ctaMayor">(Las subcuentas pueden ser posteables)</ng-container>
+      </span>
+    </div>
+
+    <div>
+      <label class="field-label">Cuenta padre</label>
+      <select class="field-input" name="parentId" [(ngModel)]="formCuenta.parentId">
+        <option [ngValue]="null">— Sin padre —</option>
+        <option *ngFor="let c of getParentOptions()" [ngValue]="c.id">
+          {{ c.codigo }} - {{ c.nombre }}
+        </option>
+      </select>
+
+      <div *ngIf="parentPreselectedId" style="font-size:12px;opacity:.8;margin-top:4px;">
+        Se creará como subcuenta de <strong>{{ getCodigoPadre(parentPreselectedId) }}</strong>
+      </div>
+    </div>
+  </form>
+</app-modal>
+
+<!-- Modal de confirmación -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  [size]="'sm'"
+  [showClose]="true"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0">{{ confirmMessage }}</p>
+</app-modal>
+
+<!-- Toast -->
+<app-toast-message
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
+  position="top-right"
+  [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+  (closed)="vm.open = false">
+</app-toast-message>

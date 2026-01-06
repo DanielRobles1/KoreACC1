@@ -2,10 +2,21 @@
   <div class="w-full max-w-5xl flex flex-col md:flex-row bg-white rounded-3xl shadow-xl ring-1 ring-black/10 overflow-hidden">
 
     <!-- logop -->
-    <div class="flex-1 flex items-center justify-center p-12 bg-white">
-      <img src="/assets/svgs/Kore-ACC.svg" alt="Logo KORE ACC"
-           class="w-72 md:w-80 h-auto object-contain" />
-    </div>
+    <!-- logop -->
+<div class="flex-1 flex items-center justify-center p-12 bg-white">
+  
+  <div class="flex flex-col items-center">
+    <img src="/assets/svgs/Kore-ACC.svg" alt="Logo KORE ACC"
+         class="w-72 md:w-80 h-auto object-contain" />
+
+    <!-- Kore ACC debajo del logo -->
+    <span class="mt-6 text-2xl md:text-3xl font-extrabold tracking-wide">
+      Kore ACC
+    </span>
+  </div>
+
+</div>
+
 
     <!-- recuperar contra -->
     <div class="flex-1 p-10 flex flex-col justify-center">
@@ -18,61 +29,68 @@
       </p>
 
       <!-- Formulario -->
-      <form [formGroup]="recoverForm" (ngSubmit)="submit()" class="space-y-6">
+     <form [formGroup]="recoverForm" (ngSubmit)="submit()" class="space-y-6">
 
-        <!-- Campo de correo -->
-        <div class="relative">
-          <label for="email" class="sr-only">Correo electrónico</label>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            placeholder="Correo electrónico"
-            class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
-                   bg-transparent outline-none py-2 pr-10"
-          />
-          <svg xmlns="http://www.w3.org/2000/svg"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor"
-               class="w-5 h-5 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M16 12H8m8 0a4 4 0 10-8 0 4 4 0 008 0z" />
-          </svg>
+  <!-- Campo de correo -->
+  <div class="relative">
+    <label for="email" class="sr-only">Correo electrónico</label>
 
-          <!-- Validación -->
-          <small class="text-red-600"
-                 *ngIf="recoverForm.get('email')?.touched && recoverForm.get('email')?.invalid">
-            El correo es obligatorio y debe ser válido
-          </small>
-        </div>
+    <input
+      id="email"
+      type="email"
+      formControlName="email"
+      placeholder="Correo electrónico"
+      class="w-full border-b border-gray-400 focus:border-black placeholder-gray-500
+             bg-transparent outline-none py-2 pr-10"
+    />
 
-        <!-- Botón de enviar -->
-        <button
-          type="submit"
-          [disabled]="recoverForm.invalid || loading"
-          class="w-full bg-black text-white py-2.5 rounded-lg
-                 shadow disabled:opacity-60 disabled:cursor-not-allowed
-                 hover:bg-neutral-800 transition flex items-center justify-center gap-2">
-          <ng-container *ngIf="loading; else textoBoton">
-            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-                 viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10"
-                      stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
-          </ng-container>
-          <ng-template #textoBoton>Enviar instrucciones</ng-template>
-        </button>
+    <!-- ÚNICO ICONO → CORREO -->
+    <svg xmlns="http://www.w3.org/2000/svg"
+         fill="none" viewBox="0 0 24 24" stroke="currentColor"
+         class="w-5 h-5 absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V8a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z" />
+    </svg>
 
-        <!-- Mensaje de éxito o error -->
-        <div *ngIf="message" class="text-center text-sm mt-4 px-4 py-2 rounded-lg"
-             [ngClass]="{
-               'bg-green-100 text-green-700 ring-1 ring-green-300': success,
-               'bg-red-100 text-red-700 ring-1 ring-red-300': !success
-             }">
-          {{ message }}
-        </div>
-      </form>
+    <!-- Validación -->
+    <small class="text-red-600"
+           *ngIf="recoverForm.get('email')?.touched && recoverForm.get('email')?.invalid">
+      El correo es obligatorio y debe ser válido
+    </small>
+  </div>
+
+  <!-- Botón de enviar -->
+  <button
+    type="submit"
+    [disabled]="recoverForm.invalid || loading"
+    class="w-full bg-black text-white py-2.5 rounded-lg
+           shadow disabled:opacity-60 disabled:cursor-not-allowed
+           hover:bg-neutral-800 transition flex items-center justify-center gap-2">
+
+    <ng-container *ngIf="loading; else textoBoton">
+      <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+           viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10"
+                stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"></path>
+      </svg>
+    </ng-container>
+
+    <ng-template #textoBoton>Enviar instrucciones</ng-template>
+  </button>
+
+  <!-- Mensaje de éxito o error -->
+  <div *ngIf="message" class="text-center text-sm mt-4 px-4 py-2 rounded-lg"
+       [ngClass]="{
+         'bg-green-100 text-green-700 ring-1 ring-green-300': success,
+         'bg-red-100 text-red-700 ring-1 ring-red-300': !success
+       }">
+    {{ message }}
+  </div>
+
+</form>
+
 
       <!-- Enlace para volver -->
       <div class="text-center mt-6 text-sm">

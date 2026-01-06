@@ -1,0 +1,62 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+    <app-sidebar
+        class="sidebar"
+        [open]="sidebarOpen"
+        (openChange)="onSidebarToggle($event)"
+    ></app-sidebar>
+
+    <div class="content">
+        <app-crud-panel
+            [title]="title"
+            [tabs]="tabs"
+            [activeTabId]="activeTabId"
+            (tabChange)="onTabChange($event)"
+            [primaryActionLabel]="primaryActionLabel"
+            (primaryAction)="onPrimary()"
+            [disablePrimary]="!canCreate"
+            [columns]="columns"
+            [data]="filteredRows"
+            [actions]="actions"
+            (action)="onRowAction($event)"
+            (search)="onSearch($event)">
+        </app-crud-panel>
+    </div>
+</div>
+
+<app-modal
+    [open]="modalOpen"
+    [title]="modalTitle"
+    [size]="modalSize"
+    (closed)="closeModal()"
+    (canceled)="cancelModal()"
+    (confirmed)="impuestoFormRef.submit()">
+    <app-impuesto-form
+        #impuestoFormRef
+        [value]="editingImpuesto"
+        (submitted)="upsertImpuesto($event)"
+        (candeled)="cancelModal()">
+    </app-impuesto-form>
+</app-modal>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  size="sm"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()"
+>
+  <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
+</app-modal>
+
+
+<app-toast-message
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
+  position="top-right"
+  [autoCloseMs]="vm.autoCloseMs"
+  (closed)="toast.close()"
+/>

@@ -11,6 +11,7 @@ export type CrudTab = {
   icon?: string;
   iconAlt?: string;
   route?: string;
+  type?: 'text' | 'radio' | 'checkbox' | 'actions';
 };
 export type CrudColumn = { key: string; header: string; width?: string };
 export type CrudAction = { id: string; label?: string; tooltip?: string };
@@ -20,11 +21,26 @@ export type CrudAction = { id: string; label?: string; tooltip?: string };
   standalone: true,
   imports: [CommonModule, FormsModule, SidebarComponent,RouterModule],
   templateUrl: './crud-panel.component.html',
-  styleUrls: ['./crud-panel.component.scss'], // <- en plural
+  styleUrls: ['./crud-panel.component.scss'], 
 })
 export class CrudPanelComponent {
   /** Header */
   @Input() title = '';
+  @Input() disablePrimary = false;
+ @Input() hidePrimary = false;
+
+ @Input() projectContent = false;
+
+ // Emite la fila seleccionada cuando cambia el radio
+  @Output() selection = new EventEmitter<any>();
+  @Input() selectionMode: 'none' | 'single' = 'none';    // opt-in
+@Input() idKey: string = 'id';                         // pk genérica
+@Input() selectedRowId: string | number | null = null;
+
+  onRadioChange(row: any) {
+    this.selectedRowId = row.id;
+    this.selection.emit(row);
+  }
  route?: string; //
   /** Tabs (Usuarios / Roles y permisos / etc.) */
   @Input() tabs: CrudTab[] = [];
@@ -37,7 +53,6 @@ export class CrudPanelComponent {
   @Output() search = new EventEmitter<string>();
   innerSearch = '';
 
-  /** Botón primario (Nuevo Usuario / Nuevo Rol / etc.) */
   @Input() primaryActionLabel = 'Nuevo';
   @Output() primaryAction = new EventEmitter<void>();
 
@@ -87,4 +102,10 @@ export class CrudPanelComponent {
     }
     return out;
   }
+
+  onRowClick(row: any) {
+  if (this.selectionMode !== 'single') return;
+  // si el host controla selectedRowId, solo emite; el host actualizará el input
+  this.selection.emit(row);
+}
 }

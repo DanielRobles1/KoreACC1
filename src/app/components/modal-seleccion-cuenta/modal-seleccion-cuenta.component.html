@@ -1,0 +1,76 @@
+<ng-container *ngIf="open">
+  <div class="modal-backdrop" (click)="cerrar()"></div>
+
+  <div class="modal-cuentas" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Seleccionar cuenta contable</h3>
+      <button type="button" class="close-btn" (click)="cerrar()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <input
+        type="text"
+        class="field full"
+        [(ngModel)]="filtro"
+        (ngModelChange)="onFiltroChange()"
+        placeholder="Buscar por código o nombre…" />
+
+      <!-- Lista jerárquica -->
+      <div class="cuentas-list" *ngIf="nodosVisibles.length; else sinCuentas">
+        <button
+          type="button"
+          class="cuenta-item"
+          *ngFor="let n of nodosVisibles"
+          [style.padding-left.px]="16 + (n.nivel || 0) * 18"
+          [disabled]="!esPosteable(n)"
+          [class.cuenta-grupo]="esGrupo(n)"
+          [class.cuenta-seleccionada]="n.id_cuenta === cuentaSeleccionada?.id_cuenta"
+          (click)="esPosteable(n) && seleccionarCuenta(n)"
+        >
+          <div class="cuenta-main">
+            <div class="cuenta-titulo-line">
+              <span
+                *ngIf="esPadre(n)"
+                class="toggle-icon"
+                (click)="toggleNodo(n); $event.stopPropagation()">
+                {{ n._expandido ? '▾' : '▸' }}
+              </span>
+
+              <span class="cuenta-titulo">
+                {{ n.nombre }}
+              </span>
+            </div>
+
+            <div class="cuenta-codigo">
+              {{ n.codigo }}
+            </div>
+          </div>
+
+          <!-- Pill estado -->
+          <span
+            class="estado-pill"
+            [ngClass]="esPosteable(n) ? 'estado-activo' : 'estado-inactivo'">
+            {{ esPosteable(n) ? 'Activo' : 'NO POSTEABLE' }}
+          </span>
+        </button>
+      </div>
+
+      <ng-template #sinCuentas>
+        <p style="padding:1rem; text-align:center; color:#6b7280;">
+          No se encontraron cuentas.
+        </p>
+      </ng-template>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn ghost" (click)="cerrar()">Cancelar</button>
+      <button
+        type="button"
+        class="btn primary"
+        [disabled]="!cuentaSeleccionada"
+        (click)="confirmar()">
+        Guardar
+      </button>
+    </div>
+  </div>
+</ng-container>

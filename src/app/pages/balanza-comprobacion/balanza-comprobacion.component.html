@@ -1,0 +1,140 @@
+<app-reportes-layout
+    [open]="sidebarOpen"
+    [empresaId]="miEmpresaId"
+    (openChange)="onSidebarToggle($event)"
+>
+    <div class="header">
+        <h3>Balanza de comprobación</h3>
+
+        <div class="select-information">
+            <p>Selecciona el ejercicio</p>
+            <select id="ejercicio" (change)="onEjercicioChange($any($event.target).value)">
+                <option value="">-- Elegir --</option>
+                <ng-container *ngIf="ejercicios | async as ej">
+                <option *ngFor="let e of ej" [value]="e.id_ejercicio">{{ e.anio }}</option>
+                </ng-container>
+            </select>
+
+            <p>Selecciona los rangos por periodos</p>
+            <div class="field">
+                <label for="periodo_ini" class="flag" *ngIf="periodoIniId">Inicio</label>
+                <select id="periodo_ini"
+                        [disabled]="periodos.length === 0"
+                        (change)="onPeriodoIniChange($any($event.target).value)">
+                    <option value="">-- Inicio --</option>
+                    <option *ngFor="let p of periodos; trackBy: trackPeriodo" [value]="p.id_periodo">
+                    {{ getPeriodoLabel(p) }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="periodo_fin" class="flag" *ngIf="periodoFinId">Término</label>
+                <select id="periodo_fin"
+                        [disabled]="periodos.length === 0 || !periodoIniId"
+                        (change)="onPeriodoFinChange($any($event.target).value)">
+                    <option value="">-- Fin --</option>
+                    <option *ngFor="let p of periodosFiltradosFin(); trackBy: trackPeriodo" [value]="p.id_periodo">
+                    {{ getPeriodoLabel(p) }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="actions" style="margin-top: 1rem">
+            <button
+                type="button"
+                class="btn primary"
+                [disabled]="!periodoIniId || !periodoFinId || loading"
+                (click)="onGenerarBalanza()"
+            >
+                {{ loading ? "Generando…" : "Generar" }}
+            </button>
+            <button class="btn ghost" 
+                *ngIf="!loading && (balanza?.length ?? 0) > 0"
+                (click)="exportToExcel(true)">
+                Exportar
+            </button>
+        </div>
+
+        <div *ngIf="balanza.length > 0" class="resultado" style="margin-top: 1rem">
+
+            <div class="tabla-wrap" style="overflow: auto; max-height: 60vh">
+                <table class="tabla balanza">
+                <thead>
+                    <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Cargos</th>
+                    <th>Abonos</th>
+                    <th>Saldo final Deudor</th>
+                    <th>Saldo final Acreedor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let r of balanza; trackBy: trackCodigo">
+                    <td>{{ r.codigo }}</td>
+                    <td>{{ r.nombre }}</td>
+                    <td>{{ r.cargos }}</td>
+                    <td>{{ r.abonos }}</td>
+                    <td>{{ r.saldo_final_deudor }}</td>
+                    <td>{{ r.saldo_final_acreedor }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr class="totales-row">
+                        <td colspan="2">Totales de movimientos</td>
+                        <td>{{ totCargos | number:'1.2-2' }}</td>
+                        <td>{{ totAbonos | number:'1.2-2' }}</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+
+                    <tr class="totales-row">
+                        <td colspan="4">Totales de saldos</td>
+                        <td>{{ totDeudor | number:'1.2-2' }}</td>
+                        <td>{{ totAcreedor | number:'1.2-2' }}</td>
+                    </tr>
+
+                    <tr class="diff-row" *ngIf="diffMovAbs > 0.005 || diffSaldosAbs > 0.005">
+                        <td colspan="2">Diferencia movimientos</td>
+                        <td [class.bad]="!cuadraMov">{{ (totCargos - totAbonos) | number:'1.2-2' }}</td>
+                        <td class="muted">= 0.00</td>
+                        <td colspan="2" class="muted"></td>
+                    </tr>
+                    <tr class="diff-row" *ngIf="diffMovAbs > 0.005 || diffSaldosAbs > 0.005">
+                        <td colspan="4">Diferencia saldos</td>
+                        <td [class.bad]="!cuadraSaldos">{{ (totDeudor - totAcreedor) | number:'1.2-2' }}</td>
+                        <td class="muted">= 0.00</td>
+                    </tr>
+
+                    <!-- Estado -->
+                    <tr class="estado-row">
+                        <td colspan="6">
+                        <span class="pill" [class.ok]="cuadraMov && cuadraSaldos" [class.bad]="!cuadraMov || !cuadraSaldos">
+                            {{ cuadraMov && cuadraSaldos ? 'BALANZA CUADRADA' : 'BALANZA NO CUADRADA' }}
+                        </span>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div
+            *ngIf="!loading && balanza?.length === 0"
+            style="margin-top: 0.5rem; opacity: 0.7"
+            >
+            <em>Sin datos para mostrar.</em>
+        </div>
+    </div>
+</app-reportes-layout>
+
+<app-toast-message
+    [open]="toast.open"
+    [title]="toast.title"
+    [message]="toast.message ?? ''"
+    [type]="toast.type"
+    position="top-right"
+    [autoCloseMs]="toast.autoCloseMs ?? 3500"
+    (closed)="onToastClosed()"
+/>

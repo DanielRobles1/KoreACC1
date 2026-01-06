@@ -1,0 +1,258 @@
+@charset "UTF-8";
+/* El componente ocupa toda la ventana */
+:host {
+  display: block;
+  width: 100%;
+  height: 100vh;
+  /* alto de la pantalla */
+  box-sizing: border-box;
+}
+
+/* LAYOUT: sidebar + contenido */
+.layout {
+  display: flex;
+  height: 102%;
+  /* usa todo el alto del :host */
+}
+
+/* SIDEBAR: columna fija a todo el alto */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width 0.3s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+.content {
+  min-width: 0;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* ÁREA PRINCIPAL (donde va el panel blanco) */
+.layout-main {
+  flex: 1 1 auto;
+  padding: 1rem 1.75rem 2rem;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  overflow-y: hidden;
+  /* scroll general si el contenido es muy largo */
+}
+
+/* PANEL BLANCO PRINCIPAL */
+.page {
+  width: 160%;
+  max-width: 1180px;
+  background: #ffffff;
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12);
+  padding: 1.5rem 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+/* CABECERA */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.page-header__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+}
+
+/* BADGE */
+.badge {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge--soft {
+  background: #e5f3ff;
+  color: #2563eb;
+}
+
+/* CUERPO */
+.page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ESTADOS */
+.state {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.state--loading {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.state--error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* KPIs */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kpi-card {
+  background: #ffffff;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+/* CARDS (gráfica + tabla) */
+.card {
+  background: #ffffff;
+  border-radius: 0.9rem;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  padding: 0.9rem 1rem 0.25rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.card-body {
+  padding: 0.5rem 1rem 1rem;
+}
+
+/* GRÁFICA */
+.chart-card {
+  min-height: 260px;
+}
+
+.chart-body {
+  height: 220px;
+}
+
+/* TABLA */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  table-layout: fixed;
+  /* evita que se desborde horizontalmente */
+}
+
+.table thead {
+  background: #f3f4f6;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* PILLS */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.pill--tipo {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .layout-main {
+    padding: 1rem;
+  }
+
+  .page {
+    padding: 1rem 1.25rem 1.5rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.table-card {
+  max-height: 195px;
+  overflow-y: auto;
+}

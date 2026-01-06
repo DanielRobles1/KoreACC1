@@ -2,16 +2,25 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from "../modal/modal/modal.component";
 import { AuthService } from '../../services/auth.service';
+import { WsService } from '@app/services/ws.service';
 import { UsuariosService } from '@app/services/usuarios.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { EditProfileModalComponent } from '../edit-profile-modal/edit-profile-modal.component';
 
-type Item = 'polizas' | 'reportes' | 'dashboard' | 'configuracion';
+type Item =
+  | 'polizas'
+  | 'reportes'
+  | 'dashboard'
+  | 'configuracion'
+  | 'usuarios-permisos'
+  | 'catalogos'
+  | 'empresa'
+  | '';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, ModalComponent, EditProfileModalComponent],
+  imports: [CommonModule, RouterModule, ModalComponent, EditProfileModalComponent],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
@@ -19,23 +28,43 @@ export class SidebarComponent {
   @Input() open = true;
   @Output() openChange = new EventEmitter<boolean>();
 
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-    private users: UsuariosService
-  ) {}
-
   user: any = null;
-  active: Item = 'configuracion';
+  active: Item = '';
   reportesOpen = false;
   configOpen = false;
-
+  tempUser: any = {};
   confirmOpen = false;
   confirmTitle = '';
   confirmMessage = '';
   private actionToConfirm: (() => void) | null = null;
 
   editProfileOpen = false;
+
+  usuariosPermisosOpen = false;
+  catalogosOpen = false;
+  empresaOpen = false;
+
+  constructor(
+    private auth: AuthService,
+    public router: Router,
+    private users: UsuariosService,
+    private ws: WsService
+  ) { }
+
+  toggleUsuariosPermisos() {
+    this.usuariosPermisosOpen = !this.usuariosPermisosOpen;
+    this.active = 'usuarios-permisos';
+  }
+
+  toggleCatalogos() {
+    this.catalogosOpen = !this.catalogosOpen;
+    this.active = 'catalogos';
+  }
+
+  toggleEmpresa() {
+    this.empresaOpen = !this.empresaOpen;
+    this.active = 'empresa';
+  }
 
   toggleSidebar() {
     this.open = !this.open;
@@ -46,6 +75,9 @@ export class SidebarComponent {
     this.active = item;
     if (item !== 'reportes') this.reportesOpen = false;
     if (item !== 'configuracion') this.configOpen = false;
+    if (item !== 'usuarios-permisos') this.usuariosPermisosOpen = false;
+    if (item !== 'catalogos') this.catalogosOpen = false;
+    if (item !== 'empresa') this.empresaOpen = false;
   }
 
   toggleReportes() {
@@ -65,8 +97,15 @@ export class SidebarComponent {
     this.actionToConfirm = () => this.onLogout();
   }
 
-  closeConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
-  cancelConfirm() { this.confirmOpen = false; this.actionToConfirm = null; }
+  closeConfirm() {
+    this.confirmOpen = false;
+    this.actionToConfirm = null;
+  }
+
+  cancelConfirm() {
+    this.confirmOpen = false;
+    this.actionToConfirm = null;
+  }
 
   confirmProceed() {
     if (this.actionToConfirm) this.actionToConfirm();
@@ -77,23 +116,53 @@ export class SidebarComponent {
   onLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    this.auth.logout().subscribe({ next: () => this.router.navigate(['/login']) });
+    this.ws.disconnect();
+    this.auth.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: (err) => {
+        console.error('Error al cerrar sesión', err);
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   ngOnInit() {
     this.users.getMe().subscribe({
-      next: (data) => this.user = data,
+      next: (data) => {
+        console.log('Usuario cargado:', data);
+        const apellidos = (data.apellidos || '').trim();
+        const [apellido_p, apellido_m = ''] = apellidos.split(' ');
+
+        this.user = {
+          ...data,
+          apellido_p,
+          apellido_m
+        };
+
+        console.log('Usuario descompuesto:', this.user);
+      },
       error: (err) => console.error('Error cargando usuario', err)
     });
   }
 
-  openEditProfile() { this.editProfileOpen = true; }
-  closeEditProfile() { this.editProfileOpen = false; }
+  openEditProfile() {
+    if (this.user) {
+      this.tempUser = { ...this.user }; // copia de usuario actual
+    }
+    this.editProfileOpen = true;
+  }
 
   saveProfile(updated: any) {
     this.users.updateMe(updated).subscribe({
-      next: (res: any) => { this.user = res.usuario; this.editProfileOpen = false; this.ngOnInit();},
+      next: (res: any) => {
+        this.user = res.usuario; // actualiza usuario real
+        this.editProfileOpen = false;
+      },
       error: (err) => console.error('Error actualizando perfil', err)
     });
+  }
+
+  closeEditProfile() {
+    this.editProfileOpen = false;
   }
 }

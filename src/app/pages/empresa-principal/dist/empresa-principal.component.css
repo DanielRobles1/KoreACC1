@@ -1,0 +1,425 @@
+@charset "UTF-8";
+/* usuarios.component.scss (o global) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  /* la 1a col toma el ancho del sidebar */
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Tipografía base del formulario (opcional) */
+:host {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* Grid para alinear dos campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  /* separa como en la captura */
+}
+
+/* Etiquetas con el look de la imagen */
+.field-label {
+  display: inline-block;
+  font-weight: 600;
+  /* negrita sutil */
+  font-size: 14px;
+  /* ajusta a 15–16 si lo quieres un pelín más grande */
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  color: #0b1020;
+  /* azul oscuro casi negro */
+  margin-bottom: 8px;
+}
+
+/* Asterisco para requeridos */
+.field-label.required::after {
+  content: "*";
+  margin-left: 2px;
+  font-weight: 700;
+  color: #0b1020;
+  /* mismo color que el texto; cambia a #e11d48 si lo quieres rojo */
+}
+
+/* Inputs básicos (opcional, por si quieres un look prolijo) */
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D9DEE7;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* sidebar ocupa el 100% en alto y su ancho lo manda la var */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width 0.3s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  /* importante para que no “asome” contenido */
+}
+
+/*0 cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+/* content debe permitir encogerse correctamente */
+.content {
+  min-width: 0;
+  /* evita overflow horizontal de grids */
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Móvil: el sidebar se vuelve overlay deslizante */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    /* sólo una columna */
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    /* top:0; right:auto; bottom:0; left:0 */
+    height: 100vh;
+    width: 280px;
+    /* ancho fijo en móvil */
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+    z-index: 50;
+  }
+
+  .layout.is-collapsed .sidebar {
+    transform: translateX(-100%);
+  }
+}
+.crud-combined {
+  display: flex;
+  flex-direction: column;
+  /* uno abajo del otro */
+  gap: 0;
+  /* elimina espacio entre ellos */
+}
+
+.crud-combined app-crud-panel {
+  margin: 0;
+  /* elimina márgenes internos */
+}
+
+.tabs-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 4px 4px 8px;
+}
+
+.btn.btn-primary {
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.empresa-card {
+  background: linear-gradient(135deg, #ffffff, #f7f9fc);
+  border-radius: 18px;
+  padding: 32px;
+  margin-top: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 32px;
+  transition: all 0.2s ease-in-out;
+}
+
+.empresa-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.empresa-nombre {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0a2a4a;
+  margin-bottom: 10px;
+}
+
+.empresa-datos p {
+  margin: 6px 0;
+  font-size: 15px;
+  color: #2b2b2b;
+}
+
+.empresa-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.btn.btn-blue {
+  background-color: #1d4774;
+  color: #fff;
+  font-weight: 500;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn.btn-blue:hover {
+  background-color: #18416c;
+}
+
+.empresa-empty {
+  text-align: center;
+  padding: 20px;
+  color: #777;
+  font-style: italic;
+}
+
+.empresa-card {
+  background: linear-gradient(135deg, #ffffff, #f7f9fc);
+  border-radius: 18px;
+  padding: 28px;
+  margin-top: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 24px;
+  transition: all 0.2s ease-in-out;
+}
+
+.empresa-nombre {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0a2a4a;
+  margin-bottom: 10px;
+}
+
+.empresa-datos p {
+  margin: 6px 0;
+  font-size: 15px;
+  color: #2b2b2b;
+}
+
+.btn.btn-blue {
+  background-color: #0d4d91;
+  color: #fff;
+  font-weight: 500;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn.btn-blue:hover {
+  background-color: #224a74;
+}
+
+.empresa-empty {
+  text-align: center;
+  padding: 20px;
+  color: #777;
+  font-style: italic;
+}
+
+.empresa-card {
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border-radius: 18px;
+  padding: 28px 36px;
+  margin-top: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.empresa-nombre {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--foreground, #1a2a3a);
+  margin-bottom: 10px;
+}
+
+.empresa-info p {
+  margin: 6px 0;
+  font-size: 15.5px;
+  color: #333;
+}
+
+.empresa-actions .btn {
+  /* azul elegante */
+  background-color: #2C3E50;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.empresa-actions .btn:hover {
+  background-color: #005dc1;
+}
+
+.empresa-empty {
+  text-align: center;
+  padding: 20px;
+  color: #777;
+  font-style: italic;
+}
+
+/* Encabezado con tabs estilo CrudPanel */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--foreground, #f3f4f5);
+  margin: 0;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--muted, #f1f5f9);
+  color: var(--muted-foreground, #ffffff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}
+
+.chip-active {
+  background: #eef2ff;
+  color: #334155;
+  border-color: #c7d2fe;
+}
+
+.chip-icon {
+  font-size: 14px;
+}
+
+/* Botones */
+.btn.btn-primary {
+  background: #334155;
+  border: 1px solid #334155;
+  color: #fff;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Tarjeta de empresa (no tabla) dentro del contenedor principal */
+.empresa-card {
+  background: var(--card, #fff);
+  border-radius: 16px;
+  padding: 20px 22px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.empresa-info p {
+  margin: 6px 0;
+  font-size: 15px;
+  color: var(--muted-foreground, #334155);
+}
+
+.empresa-nombre {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--foreground, #111827);
+  margin-bottom: 10px;
+}
+
+.empresa-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.empresa-empty {
+  text-align: center;
+  padding: 16px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.icon-btn svg {
+  pointer-events: none;
+}
+.icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.btn-delete:hover {
+  color: #dc3545;
+  /* rojo suave */
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text);
+}
+
+.back-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 0.5rem;
+}

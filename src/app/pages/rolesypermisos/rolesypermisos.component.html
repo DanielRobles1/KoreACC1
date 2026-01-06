@@ -13,6 +13,7 @@
       (tabChange)="onTabChange($event)"
       [primaryActionLabel]="primaryActionLabel"
       (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"
       [columns]="columns"
       [data]="tableRows"
       [actions]="actions"
@@ -67,44 +68,61 @@
 <app-modal
   [open]="permOpen"
   [title]="permTitle"
-  size="lg"
+  size="xl"
   (closed)="permOpen = false"
   (canceled)="permOpen = false"
   (confirmed)="confirmPermissionsOnly()">
+
+  <!-- Buscador de permisos -->
+  <div class="flex items-center justify-between gap-3 mb-3 px-1">
+    <div class="text-sm text-gray-600">
+      Filtra permisos por nombre
+    </div>
+    <div class="flex items-center gap-2">
+      <input
+        type="text"
+        [(ngModel)]="permissionSearch"
+        placeholder="Buscar permiso..."
+        class="px-3 py-2 border rounded-lg w-64"
+        aria-label="Buscar permiso" />
+      <button
+        type="button"
+        class="px-3 py-2 border rounded-lg hover:bg-gray-50"
+        (click)="permissionSearch = ''">
+        Limpiar
+      </button>
+    </div>
+  </div>
 
   <!-- Grid por categorías en columnas -->
   <div class="max-h-96 overflow-auto">
     <div
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
 
-      <section
-        class="border rounded-lg overflow-hidden"
-        *ngFor="let cat of (groupedPermissions | keyvalue); trackBy: trackByCat">
+      <section class="border rounded-lg overflow-hidden" *ngFor="let cat of (groupedPermissions | keyvalue); trackBy: trackByCat">
 
-        <!-- Header de la columna -->
+      <ng-container *ngIf="filterPerms(cat.value) as filtered">
         <header
           class="sticky top-0 bg-white/95 backdrop-blur px-3 py-2 border-b flex items-center justify-between">
           <h4 class="text-lg font-semibold">{{ cat.key }}</h4>
 
           <div class="flex items-center gap-2 text-xs">
             <span class="text-gray-600">
-              {{ countSelectedInGroup(cat.value) }}/{{ cat.value?.length || 0 }}
+              {{ countSelectedInGroup(filtered) }}/{{ filtered.length }}
             </span>
-
             <button
               type="button"
               class="px-2 py-1 rounded border hover:bg-gray-50"
-              (click)="toggleGroup(cat.key, cat.value)">
-              {{ areAllSelectedInGroup(cat.value) ? 'Ninguno' : 'Todo' }}
+              (click)="toggleGroup(cat.key, filtered)">
+              {{ areAllSelectedInGroup(filtered) ? 'Ninguno' : 'Todo' }}
             </button>
           </div>
         </header>
 
-        <!-- Lista de permisos del grupo en 2 columnas (auto) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 px-3 py-2">
           <label
             class="flex items-center gap-2 py-1 cursor-pointer select-none"
-            *ngFor="let p of cat.value; trackBy: trackByPerm"
+            *ngFor="let p of filtered; trackBy: trackByPerm"
             [for]="'perm_'+cat.key+'_'+p">
             <input
               type="checkbox"
@@ -115,7 +133,44 @@
             <span class="text-lg">{{ formatPermission(p) }}</span>
           </label>
         </div>
-      </section>
+
+        <div class="px-3 pb-3 text-sm text-gray-500" *ngIf="filtered.length === 0">
+          No hay permisos que coincidan con “{{ permissionSearch }}”.
+        </div>
+      </ng-container>
+    </section>
     </div>
   </div>
 </app-modal>
+
+<app-toast-message
+  [open]="noPermsOpen"
+  [title]="noPermsTitle"
+  [message]="noPermsMessage"
+  type="warning"
+  position="top-right"
+  [autoCloseMs]="3500"
+  (closed)="closeNoPerms()"
+/>
+
+<!-- TOAST ÉXITO -->
+<app-toast-message
+  [open]="successOpen"
+  [title]="successTitle"
+  [message]="successMessage"
+  type="success"
+  position="top-right"
+  [autoCloseMs]="3000"
+  (closed)="closeSuccess()"
+/>
+
+<!-- TOAST ERROR (sin autocierre) -->
+<app-toast-message
+  [open]="errorOpen"
+  [title]="errorTitle"
+  [message]="errorMessage"
+  type="error"
+  position="top-right"
+  [autoCloseMs]="0"
+  (closed)="closeError()"
+/>

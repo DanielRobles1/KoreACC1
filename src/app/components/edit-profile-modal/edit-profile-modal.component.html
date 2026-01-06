@@ -1,22 +1,50 @@
-<div *ngIf="open" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-  <div class="bg-white p-6 rounded-lg shadow-md w-96">
-    <h2 class="text-xl font-bold mb-4">Editar perfil</h2>
+<div *ngIf="open" class="modal">
+  <div class="modal__dialog sm">
+    
+    <!-- Header -->
+    <header class="modal__header">
+      <h2 class="modal__title">Editar perfil</h2>
+      <div class="modal__actions">
+        <button type="button" (click)="close()" class="icon-btn light" aria-label="Cerrar">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
 
-    <label class="block mb-2">Nombre</label>
-    <input [(ngModel)]="tempUser.nombre" class="border p-2 w-full mb-3" />
+    <!-- Body -->
+    <section class="modal__body">
+      <div class="form-grid">
+        <!-- Nombre -->
+        <div class="form-field">
+          <label>Nombre*</label>
+          <input [(ngModel)]="tempUser.nombre" class="form-control" />
+        </div>
 
-    <label class="block mb-2">Apellidos</label>
-    <input [(ngModel)]="tempUser.apellidos" class="border p-2 w-full mb-3" />
+        <!-- Apellidos -->
+        <div class="form-field">
+          <label>Apellido paterno*</label>
+          <input [(ngModel)]="tempUser.apellido_p" class="form-control" />
+        </div>
+ <div class="form-field">
+          <label>Apellido materno*</label>
+          <input [(ngModel)]="tempUser.apellido_m" class="form-control" />
+        </div>
+        <!-- Correo -->
+        <div class="form-field full">
+          <label>Correo electrónico*</label>
+          <input [(ngModel)]="tempUser.correo" type="email" class="form-control" />
+        </div>
+      </div>
+    </section>
 
-    <label class="block mb-2">Correo</label>
-    <input [(ngModel)]="tempUser.correo" type="email" class="border p-2 w-full mb-3" />
+    <!-- Footer -->
+    <footer class="modal__footer">
+      <button type="button" class="btn light" (click)="close()">Cancelar</button>
+      <button type="button" class="btn primary" (click)="save()">Guardar</button>
+    </footer>
 
-    <div class="flex justify-end gap-2 mt-4">
-      <button class="px-4 py-2 bg-gray-300 rounded" (click)="close()">Cancelar</button>
-     <button type="button" class="btn w-full bg-blue-600 text-white" (click)="save()">
-  Guardar
-</button>
-
-    </div>
   </div>
 </div>

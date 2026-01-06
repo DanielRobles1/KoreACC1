@@ -1,0 +1,109 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+  <!-- SIDEBAR -->
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="layout-main">
+    <!-- PANEL BLANCO DEL DASHBOARD -->
+    <div class="page">
+
+      <!-- CABECERA -->
+      <header class="page-header">
+        <div class="page-header__title-block">
+          <h1 class="page-title">Dashboard contable</h1>
+          <p class="page-subtitle">
+            Resumen de pólizas y movimientos contables por periodo.
+          </p>
+        </div>
+
+        <div class="page-header__actions">
+          <span class="badge badge--soft" *ngIf="!loading()">Actualizado</span>
+        </div>
+      </header>
+
+      <!-- CONTENIDO -->
+      <section class="page-body">
+        <!-- ESTADOS DE CARGA / ERROR -->
+        <div *ngIf="loading()" class="state state--loading">
+          Cargando dashboard…
+        </div>
+
+        <div *ngIf="!loading() && errorMsg()" class="state state--error">
+          {{ errorMsg() }}
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <ng-container *ngIf="!loading() && !errorMsg() && data() as d">
+
+          <!-- KPIs -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Pólizas de ingreso</div>
+              <div class="kpi-value">{{ totalIngresos() }}</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-label">Pólizas de egreso</div>
+              <div class="kpi-value">{{ totalEgresos() }}</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-label">Pólizas de diario</div>
+              <div class="kpi-value">{{ totalDiario() }}</div>
+            </div>
+          </div>
+
+          <!-- GRID: GRÁFICA + TABLA -->
+          <div class="content-grid">
+            <!-- GRÁFICA -->
+            <div class="card chart-card">
+              <div class="card-header">
+                <h2 class="card-title">Ganancias vs pérdidas por mes</h2>
+                <p class="card-subtitle">
+                  Basado en los movimientos contables registrados.
+                </p>
+              </div>
+              <div class="card-body chart-body">
+                <canvas baseChart
+                        [type]="'line'"
+                        [data]="lineData"
+                        [options]="lineOptions">
+                </canvas>
+              </div>
+            </div>
+
+            <!-- TABLA -->
+            <div class="card table-card">
+              <div class="card-header">
+                <h2 class="card-title">Resumen por tipo y estado</h2>
+              </div>
+              <div class="card-body">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Estado</th>
+                      <th class="text-right">Total de pólizas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let r of d.resumen">
+                      <td class="pill pill--tipo">{{ r.tipo }}</td>
+                      <td>{{ r.estado }}</td>
+                      <td class="text-right">{{ r.total_polizas }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </ng-container>
+      </section>
+    </div>
+  </main>
+</div>

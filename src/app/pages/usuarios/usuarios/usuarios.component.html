@@ -1,4 +1,3 @@
-<!-- usuarios.component.html -->
 <div class="layout" [class.is-collapsed]="!sidebarOpen">
   <app-sidebar
     class="sidebar"
@@ -12,39 +11,42 @@
       [tabs]="tabs"
       [activeTabId]="activeTabId"
       (tabChange)="onTabChange($event)"
+
       [primaryActionLabel]="'Nuevo Usuario'"
       (primaryAction)="onPrimary()"
+      [disablePrimary]="!canCreate"  
+
       [columns]="columns"
       [data]="rows"
-      [actions]="actions"
+      [actions]="actions"           
       (action)="onRowAction($event)"
+
       [page]="page"
       [totalPages]="totalPages">
     </app-crud-panel>
   </div>
 </div>
 
+<!-- MODAL DE FORMULARIO -->
 <app-modal
   [open]="modalOpen"
   [title]="modalTitle"
   [size]="modalSize"
-  (closed)="closeModal()
-  "
+  (closed)="closeModal()"
   (canceled)="cancelModal()"
   (confirmed)="userFormRef.submit()"
 >
+ <app-user-form
+  #userFormRef
+  [value]="editing"
+  [readonlyEmail]="!!editing"
+  (submitted)="upsertUser($event)"
+  (canceled)="cancelModal()"
+></app-user-form>
 
-  <app-user-form
-    #userFormRef
-    [value]="editing"
-    [roles]="['Administrador','Contador','Auditor','Invitado']"
-    [readonlyEmail]="!!editing"
-    (submitted)="upsertUser($event)"
-    (canceled)="cancelModal()"
-  ></app-user-form>
 </app-modal>
 
-<!-- MODAL DE CONFIRMACIÓ-->
+<!-- MODAL DE CONFIRMACIÓN -->
 <app-modal
   [open]="confirmOpen"
   [title]="confirmTitle"
@@ -55,3 +57,35 @@
 >
   <p style="margin:0 0 .5rem 0;">{{ confirmMessage }}</p>
 </app-modal>
+
+<app-toast-message
+  [open]="noPermsOpen"
+  [title]="noPermsTitle"
+  [message]="noPermsMessage"
+  type="warning"
+  position="top-right"
+  [autoCloseMs]="3500"
+  (closed)="closeNoPerms()"
+/>
+
+<!-- TOAST ÉXITO -->
+<app-toast-message
+  [open]="successOpen"
+  [title]="successTitle"
+  [message]="successMessage"
+  type="success"
+  position="top-right"
+  [autoCloseMs]="3000"
+  (closed)="closeSuccess()"
+/>
+
+<!-- TOAST ERROR (sin autocierre) -->
+<app-toast-message
+  [open]="errorOpen"
+  [title]="errorTitle"
+  [message]="errorMessage"
+  type="error"
+  position="top-right"
+  [autoCloseMs]="0"
+  (closed)="closeError()"
+/>

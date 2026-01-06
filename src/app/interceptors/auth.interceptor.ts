@@ -12,20 +12,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = auth.getToken();
 
   if (token) {
-    console.log('📌 Token encontrado:', token);
-    console.log('📌 Request URL:', req.url);
-    console.log('📌 Headers antes de enviar:', req.headers);
-
-    req = req.clone({
-      setHeaders: { Authorization: `Bearer ${token}` }
-    });
-  } else {
-    console.warn('⚠️ No hay token en el storage');
+  req = req.clone({
+    setHeaders: { Authorization: `Bearer ${token}` }
+  });
+  console.log('📌 Headers enviados:', req.headers.keys());
+}
+ else {
+    console.warn(' No hay token en el storage');
   }
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 401) {
         auth.clearSession();
         if (router.url !== '/login') {
           router.navigate(['/login']);
@@ -34,6 +32,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         if (router.url !== '/cambiar-password') {
           router.navigate(['/cambiar-password']);
         }
+      } else if (err.status === 403) {
+        router.navigate(['/acceso-restringido'], { state: { reason: 'No tienes permiso para acceder a este recurso.' } });
       }
 
       return throwError(() => err);

@@ -1,0 +1,495 @@
+<app-polizas-layout
+  [open]="sidebarOpen"
+  (openChange)="onSidebarToggle($event)">
+
+  <div class="polizas-header-row">
+    <a [routerLink]="['/poliza-home']" style="text-decoration:none;">
+      <button
+        type="button"
+        style="background:none; border:none; cursor:pointer; padding:0;">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          width="24"
+          height="24">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    </a>
+
+    <span page-title>Pólizas</span>
+
+    <!-- Acciones a la derecha, en fila -->
+    
+   <div class="polizas-header-actions">
+  <button
+    type="button"
+    class="pill-btn nueva-poliza-btn"
+    (click)="irANueva()">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    Nueva póliza
+  </button>
+
+  <!-- AHORA SOLO SE MUESTRA SI HAY pólizaSeleccionada -->
+  <button
+    *ngIf="polizaSeleccionada"
+    type="button"
+    class="pill-btn nueva-poliza-btn ajuste-poliza-btn"
+    (click)="irACrearAjuste()">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    Póliza de ajuste
+  </button>
+</div>
+
+  </div>
+
+
+  <div page-actions class="toolbar-filters">
+    <input
+      #xmlInput
+      type="file"
+      accept=".xml,text/xml,application/xml"
+      hidden
+      (change)="onXmlPicked($event)" />
+
+    <span *ngIf="selectedXmlName" style="margin-left:.5rem; color:#e9eef5;">
+      {{ selectedXmlName }}
+    </span>
+    <span *ngIf="uploadXmlError" style="margin-left:.5rem; color:#ffb4b4;">
+      {{ uploadXmlError }}
+    </span>
+  </div>
+
+  <!-- Contenido -->
+  <div class="polizas-container" style="width:100%; overflow-x:auto;">
+
+    <h2>Pólizas registradas</h2>
+
+    <!-- Buscador -->
+    <input
+      type="search"
+      [(ngModel)]="q"
+      (ngModelChange)="onBuscarChange($event)"
+      placeholder="Buscar pólizas por folio, concepto, UUID, cliente…"
+      style="min-width:320px; padding:.45rem .6rem; border-radius:10px; border:1px solid rgb(10, 10, 10, 0.25); background:transparent; color:#0a0a0a; outline:none; margin-bottom:.75rem; margin-left:1rem;" 
+    />
+
+    <!-- Select ejercicio -->
+    <select
+      [(ngModel)]="selectedEjercicioId"
+      (ngModelChange)="onEjercicioChange($event)"
+      style="margin-left:.75rem; padding:.45rem .6rem; border-radius:10px; border:1px solid rgba(10,10,10,0.25); background:transparent; color:#0a0a0a; outline:none; min-width:200px;">
+      <option [ngValue]="null">Ejercicio activo</option>
+      <option *ngFor="let e of ejercicios" [ngValue]="e.id_ejercicio">
+        {{ e.etiqueta }}
+      </option>
+    </select>
+
+    <table class="tabla-polizas">
+      <thead>
+        <tr>
+          <th></th>
+
+          <!-- Folio -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Folio
+              <span class="filter-icon" (click)="toggleFilter('folio')"></span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['folio']">
+              <input type="text" [(ngModel)]="filtros.folio" (input)="aplicarFiltros()" placeholder="Filtrar folio" />
+            </div>
+          </th>
+
+          <!-- Concepto -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Concepto
+              <span class="filter-icon" (click)="toggleFilter('concepto')"></span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['concepto']">
+              <input type="text" [(ngModel)]="filtros.concepto" (input)="aplicarFiltros()" placeholder="Filtrar concepto" />
+            </div>
+          </th>
+
+          <!-- Centro -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Centro
+              <span class="filter-icon" (click)="toggleFilter('centro')">▼</span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['centro']">
+              <select [(ngModel)]="filtros.centro" (change)="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option *ngFor="let c of centros" [value]="c.nombre">{{ c.nombre }}</option>
+              </select>
+            </div>
+          </th>
+
+          <!-- Tipo -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Tipo
+              <span class="filter-icon" (click)="toggleFilter('tipo')">▼</span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['tipo']">
+              <select [(ngModel)]="filtros.tipo" (change)="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option *ngFor="let t of tiposPoliza" [value]="t.nombre">{{ t.nombre }}</option>
+              </select>
+            </div>
+          </th>
+
+          <!-- Periodo -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Periodo
+              <span class="filter-icon" (click)="toggleFilter('periodo')">▼</span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['periodo']">
+              <select [(ngModel)]="filtros.periodo" (change)="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option *ngFor="let p of periodos" [value]="p.nombre">{{ periodoLabelFromRow(p) }}</option>
+              </select>
+            </div>
+          </th>
+
+          <!-- Estado -->
+          <th class="th-with-filter">
+            <div class="th-content">
+              Estado
+              <span class="filter-icon" (click)="toggleFilter('estado')">▼</span>
+            </div>
+            <div class="filter-dropdown" *ngIf="showFilter['estado']">
+              <select [(ngModel)]="filtros.estado" (change)="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option value="Aprobada">Aprobada</option>
+                <option value="Por revisar">Por revisar</option>
+              </select>
+            </div>
+          </th>
+
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container *ngFor="let p of (polizasFiltradas ?? []); trackBy: trackByFolio">
+          <!-- Fila principal -->
+          <tr
+            (click)="seleccionarPoliza(p)"
+            [class.table-active]="polizaSeleccionada?.id_poliza === p.id_poliza"
+            style="cursor: pointer">
+            
+            <!-- Ver más -->
+            <td
+              (click)="toggleVerMas(p); $event.stopPropagation()"
+              style="cursor:pointer; user-select:none; white-space:nowrap;">
+              <span>{{ expandedId === getIdPoliza(p) ? 'Ocultar' : 'Ver más' }}</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                width="18"
+                height="18"
+                style="vertical-align:middle; margin-left:.35rem; transition:transform .15s;"
+                [style.transform]="expandedId === getIdPoliza(p) ? 'rotate(180deg)' : 'rotate(0deg)'">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </td>
+
+            <td>{{ p.folio }}</td>
+            <td>{{ p.concepto }}</td>
+            <td>{{ nombreCentro(p.id_centro) }}</td>
+            <td>{{ nombreTipo(p.id_tipopoliza) }}</td>
+            <td>{{ nombrePeriodo(p.id_periodo) }}</td>
+            <td><span [class]="estadoClass(p)">{{ getEstado(p) }}</span></td>
+
+            <!-- Acciones -->
+            <td>
+              <div class="acciones">
+
+                <!-- Revisada / Aprobada -->
+                <button
+                  type="button"
+                  (click)="abrirApproveModal(p); $event.stopPropagation()"
+                  [disabled]="loadingId === getIdPoliza(p) || !canMarcarRevisada(p)"
+                  title="Marcar como Aprobada"
+                  class="icon-btn"
+                  [ngStyle]="{
+                    cursor: 'pointer',
+                    opacity: (loadingId === getIdPoliza(p) || !canMarcarRevisada(p)) ? 0.5 : 1
+                  }">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="black"
+                    stroke-width="2"
+                    width="20"
+                    height="20">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+
+                <!-- Editar -->
+                <button
+                  class="icon-btn"
+                  (click)="editarPoliza(p); $event.stopPropagation()"
+                  title="Editar"
+                  aria-label="Editar póliza">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    width="20"
+                    height="20">
+                    <path d="M12 20h9"></path>
+                    <path
+                      d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                  </svg>
+                </button>
+
+                <!-- Eliminar -->
+                <button
+                  class="icon-btn danger"
+                  (click)="eliminarPoliza(p.id_poliza); $event.stopPropagation()"
+                  title="Eliminar"
+                  aria-label="Eliminar póliza">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    width="20"
+                    height="20">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Fila expandible: SOLO movimientos -->
+          <tr *ngIf="expandedId === getIdPoliza(p)">
+            <td colspan="8" style="background:rgba(255,255,255,0.04); border-top:1px solid rgba(255,255,255,.1);">
+              <div style="padding:1rem;">
+                <h4 style="margin-bottom:.5rem;">Movimientos</h4>
+
+                <table style="width:100%; border-collapse:collapse;">
+                  <thead>
+                    <tr style="text-align:left; background:rgba(255,255,255,.06);">
+                      <th style="padding:.5rem .6rem;">Código cuenta</th>
+                      <th style="padding:.5rem .6rem;">Nombre cuenta</th>
+                      <th style="padding:.5rem .6rem;">Ref. Serie Venta</th>
+                      <th style="padding:.5rem .6rem;">Operación</th>
+                      <th style="padding:.5rem .6rem; text-align:right;">Monto</th>
+                      <th style="padding:.5rem .6rem;">Cliente</th>
+                      <th style="padding:.5rem .6rem;">Fecha</th>
+                      <th style="padding:.5rem .6rem;">Centro Costo</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr
+                      *ngFor="let m of p?.movimientos; let i = index"
+                      style="border-top:1px solid rgba(255,255,255,.08);">
+                      <td style="padding:.45rem .6rem;">
+                        {{
+                          $any(m).cuenta?.codigo
+                            || $any(m).cuenta_codigo
+                            || $any(m).codigo
+                            || '—'
+                        }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{
+                          $any(m).cuenta?.nombre
+                            || $any(m).cuenta_nombre
+                            || $any(m).nombre
+                            || '—'
+                        }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{ m?.ref_serie_venta || '—' }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{ (m?.operacion == '0' || m?.operacion == 0) ? 'Cargo' : 'Abono' }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem; text-align:right; font-variant-numeric:tabular-nums;">
+                        {{ m?.monto | currency:'MXN':'symbol':'1.2-2' }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{ m?.cliente || '—' }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{ m?.fecha ? (m.fecha | date:'yyyy-MM-dd') : '—' }}
+                      </td>
+
+                      <td style="padding:.45rem .6rem;">
+                        {{ m?.cc }}
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="!p?.movimientos?.length">
+                      <td colspan="8" style="padding:.75rem; text-align:center; opacity:.75;">
+                        No hay movimientos registrados para esta póliza.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div
+                  *ngIf="movsTotalFor(p) > movsPageSize"
+                  style="display:flex; justify-content:space-between; align-items:center; margin-top:.75rem;">
+                  <span>
+                    Mostrando
+                    {{
+                      (movsPageFor(p) - 1) * movsPageSize + 1
+                    }}
+                    -
+                    {{
+                      Math.min(
+                        movsPageFor(p) * movsPageSize,
+                        movsTotalFor(p)
+                      )
+                    }}
+                    de {{ movsTotalFor(p) }} movimientos
+                  </span>
+
+                  <div style="display:flex; gap:.5rem; align-items:center;">
+                    <button
+                      type="button"
+                      (click)="cambiarPaginaMovimientos(p, -1)"
+                      [disabled]="movsPageFor(p) <= 1"
+                      class="paginacion-btn">
+                      Anterior
+                    </button>
+
+                    <span>
+                      Página {{ movsPageFor(p) }}
+                      de {{ lastMovsPageFor(p) }}
+                    </span>
+
+                    <button
+                      type="button"
+                      (click)="cambiarPaginaMovimientos(p, 1)"
+                      [disabled]="movsPageFor(p) >= lastMovsPageFor(p)"
+                      class="paginacion-btn">
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <div class="paginacion">
+      <div class="paginacion-info">
+        <span>
+          Mostrando {{ (currentPage - 1) * pageSize + 1 }}
+          -
+          {{ Math.min(currentPage * pageSize, totalPolizas) }}
+          de {{ totalPolizas }} pólizas
+        </span>
+      </div>
+      
+      <div class="paginacion-controles">
+        <select 
+          [(ngModel)]="pageSize" 
+          (change)="cambiarTamanioPagina(pageSize)" 
+          class="paginacion-select">
+          <option value="5">5 por página</option>
+          <option value="10">10 por página</option>
+          <option value="20">20 por página</option>
+          <option value="50">50 por página</option>
+        </select>
+
+        <div class="paginacion-navegacion">
+          <button 
+            type="button" 
+            (click)="cambiarPagina(currentPage - 1)" 
+            [disabled]="currentPage <= 1"
+            class="paginacion-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Anterior
+          </button>
+          
+          <span class="paginacion-texto">
+            Página {{ currentPage }} de {{ Math.ceil(totalPolizas / pageSize) }}
+          </span>
+          
+          <button 
+            type="button" 
+            (click)="cambiarPagina(currentPage + 1)" 
+            [disabled]="currentPage >= Math.ceil(totalPolizas / pageSize)"
+            class="paginacion-btn">
+            Siguiente
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</app-polizas-layout>
+
+<app-toast-message
+  [open]="toast.open"
+  [title]="toast.title"
+  [message]="toast.message"
+  [type]="toast.type"
+  [position]="toast.position"
+  [autoCloseMs]="toast.autoCloseMs"
+  [showClose]="toast.showClose"
+  (closed)="onToastClosed()">
+</app-toast-message>
+
+<app-modal
+  [open]="confirmModal.open"
+  [title]="confirmModal.title"
+  [size]="'sm'"
+  (confirmed)="confirmarConfirmModal()"
+  (canceled)="cerrarConfirmModal()"
+  (closed)="cerrarConfirmModal()">
+  {{ confirmModal.message }}
+</app-modal>
+
+<!-- Modal de confirmación: APROBAR PÓLIZA -->
+<app-modal
+  [open]="approveModal.open"
+  [title]="approveModal.title"
+  [size]="'sm'"
+  (confirmed)="confirmarApproveModal()"
+  (canceled)="cerrarApproveModal()"
+  (closed)="cerrarApproveModal()">
+  {{ approveModal.message }}
+</app-modal>

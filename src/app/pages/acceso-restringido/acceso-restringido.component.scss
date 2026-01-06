@@ -1,0 +1,186 @@
+
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr; 
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;         
+}
+
+
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+/* content debe permitir encogerse correctamente */
+.content {
+  min-width: 0;              /* evita overflow horizontal de grids */
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Móvil: el sidebar se vuelve overlay deslizante */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr; /* sólo una columna */
+  }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0; /* top:0; right:auto; bottom:0; left:0 */
+    height: 100vh;
+    width: 280px;      /* ancho fijo en móvil */
+    transform: translateX(0);
+    transition: transform .3s ease;
+    z-index: 50;
+  }
+  .layout.is-collapsed .sidebar {
+    transform: translateX(-100%);
+  }
+}
+
+
+.page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  padding: clamp(16px, 4vw, 32px);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255,255,255,0.08), transparent 40%),
+    radial-gradient(800px 400px at 10% 110%, rgba(255,255,255,0.06), transparent 40%),
+    var(--kore-page-bg);
+  color: var(--kore-text);
+}
+
+.card {
+  width: min(680px, 100%);
+  background: var(--kore-card-bg);
+  border-radius: 20px;
+  padding: clamp(20px, 4vw, 36px);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.15),
+    0 1px 0 rgba(255,255,255,0.6) inset;
+  border: 1px solid rgba(0,0,0,0.06);
+  text-align: center;
+
+  /* sutil división interna */
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.5) inset;
+    opacity: .5;
+  }
+}
+
+.icon-wrap {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 12px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(15,110,154,0.14), rgba(15,110,154,0.06));
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 6px 18px rgba(15,110,154,0.18),
+    0 0 0 1px var(--kore-ring);
+}
+
+.icon-lock {
+  width: 36px;
+  height: 36px;
+  fill: var(--kore-primary);
+}
+
+.title {
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin: 8px 0 6px;
+  color: var(--kore-text);
+}
+
+.message {
+  margin: 0 auto 18px;
+  max-width: 54ch;
+  line-height: 1.55;
+  color: var(--kore-muted);
+}
+
+.actions {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 8px;
+
+  @media (max-width: 520px) {
+    grid-auto-flow: row;
+  }
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--kore-ring);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.btn-primary {
+  background: var(--kore-primary);
+  color: #fff;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow:
+    0 10px 18px rgba(15,110,154,0.28),
+    0 1px 0 rgba(255,255,255,0.3) inset;
+
+  &:hover { filter: brightness(1.05); }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--kore-primary);
+  border-color: rgba(15,110,154,0.25);
+  &:hover {
+    background: rgba(15,110,154,0.06);
+  }
+}
+
+.help {
+  margin-top: 16px;
+  text-align: center;
+  color: rgba(255,255,255,0.85);
+  font-size: 0.95rem;
+
+  strong { color: #fff; }
+}
+
+/* Accesibilidad / movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: none; }
+}

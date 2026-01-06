@@ -6,46 +6,8 @@ import { FormsModule, NgForm } from '@angular/forms';
   selector: 'app-role-form',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <form #form="ngForm" (ngSubmit)="submit()" class="space-y-6">
-      <!-- Nombre -->
-      <div class="form-field">
-        <label for="name" class="block text-sm font-semibold text-gray-800">Nombre del Rol</label>
-        <input
-          id="name"
-          type="text"
-          [(ngModel)]="localValue.nombre"
-          name="nombre"
-          required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 transition-colors duration-200"
-          placeholder="Ej: Administrador, Editor, etc."
-        />
-      </div>
-
-      <!-- Descripción -->
-      <div class="form-field">
-        <label for="description" class="block text-sm font-semibold text-gray-800">Descripción</label>
-        <textarea
-          id="description"
-          [(ngModel)]="localValue.descripcion"
-          name="descripcion"
-          rows="3"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 transition-colors duration-200"
-          placeholder="Una breve descripción del rol."></textarea>
-      </div>
-
-      <!-- (Opcional) Activo -->
-      <div class="form-field">
-        <label class="inline-flex items-center gap-3 text-sm font-semibold text-gray-800">
-          <input type="checkbox" [(ngModel)]="localValue.activo" name="activo" class="h-4 w-4">
-          Activo
-        </label>
-      </div>
-
-      
-    </form>
-  `,
-  styles: [`.form-field { margin-bottom: 1rem; display: flex; flex-direction: column; }`]
+  templateUrl: './role-form-component.component.html',
+  styleUrls: ['./role-form-component.component.scss'] 
 })
 export class RoleFormComponent implements OnInit, OnChanges {
   @Input() role: any;
@@ -77,11 +39,13 @@ export class RoleFormComponent implements OnInit, OnChanges {
   }
 
   submitForm() {
+    
     if (!this.form?.valid) return;
     this.submitted.emit(this.localValue);
   }
 
   submit() {
+ if (!this.form?.valid) return;
     this.submitForm();
   }
 

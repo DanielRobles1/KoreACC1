@@ -137,3 +137,22 @@
     flex-wrap: wrap;
   }
 }
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #111; /* NEGRO */
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn:hover:not([disabled]) {
+  color: #c00; /* Rojo suave al pasar */
+  transform: scale(1.08);
+}
+
+.icon-btn[disabled] {
+  opacity: .4;
+  cursor: not-allowed;
+}

@@ -2,58 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
-/* === Sidebar container (no cambiamos la distribución de tus botones) === */
 :host {
-  --accent: #2E5777;
-  --sidebar-w: 280px;       /* ancho por defecto en desktop */
+  --accent: #2e5777;
+  --sidebar-w: 280px;
   display: block;
   height: 100%;
   width: var(--sidebar-w);
-  border-right: 1px solid rgba(0,0,0,.08);
-  overflow: hidden;         /* evita que “asome” contenido al colapsar */
-  transition: width .28s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: visible;
+  transition: width 0.28s ease;
 }
 
-/* Cuando el padre añada .is-collapsed al <app-sidebar>, el ancho se vuelve 0 */
 :host(.is-collapsed) {
   --sidebar-w: 0px;
   border-right: none;
 }
 
-/* --- Móvil/Tablet: el sidebar se vuelve overlay deslizante --- */
-@media (max-width: 1024px) {
-  :host {
-    position: fixed;
-    inset: 0 auto 0 0;      /* top:0; left:0; bottom:0 */
-    width: 280px;           /* ancho fijo en móvil */
-    max-width: 86vw;
-    height: 100vh;
-    z-index: 50;
-    background: #fff;       /* asegura fondo al flotar */
-    border-right: 1px solid rgba(0,0,0,.08);
-    transform: translateX(0);
-    transition: transform .28s ease;
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-  :host(.is-collapsed) {
-    transform: translateX(-100%);
-  }
+.sidebar-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 60;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 2.5rem;
+  height: 2.5rem;
+
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12); 
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--accent);
+
+  box-shadow:
+    0 10px 15px -3px rgba(15, 23, 42, 0.25),
+    0 4px 6px -2px rgba(15, 23, 42, 0.15);
+
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.1s ease;
 }
 
-/* Si tu template tiene un contenedor raíz interno, lo hacemos columna */
+.sidebar-toggle:hover {
+  background: var(--accent);
+  color: #fff;
+  box-shadow:
+    0 12px 20px -5px rgba(15, 23, 42, 0.35),
+    0 6px 10px -4px rgba(15, 23, 42, 0.22);
+  transform: translateY(-1px);
+}
+
+.sidebar-toggle:active {
+  transform: translateY(0);
+  box-shadow:
+    0 6px 10px -4px rgba(15, 23, 42, 0.25),
+    0 3px 6px -2px rgba(15, 23, 42, 0.18);
+}
+
+.sidebar-toggle svg {
+  display: block;
+}
+
 .sidebar-shell {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* Para que el bloque inferior quede “pegado” abajo */
 .sidebar-shell .sidebar-bottom {
   margin-top: auto;
 }
 
-/* ====== TUS ESTILOS DE BOTONES (SIN CAMBIOS EN LA DISTRIBUCIÓN) ====== */
+@media (max-width: 1024px) {
+  :host {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 280px;
+    max-width: 86vw;
+    height: 100vh;
+    z-index: 50;
+    background: transparent;
+    border-right: none;
+  }
+
+  .sidebar-shell {
+    height: 100%;
+    background: #fff;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    transform: translateX(0);
+    transition: transform 0.28s ease;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  :host(.is-collapsed) .sidebar-shell {
+    transform: translateX(-100%);
+  }
+}
+
 .btn {
   @apply flex items-center w-full px-4 py-2 rounded-2xl transition select-none text-white bg-slate-800;
   &:hover {
@@ -76,13 +127,97 @@
   }
 }
 
-.icon { width: 1.25rem; height: 1.25rem; }
-.icon-sm { width: 1rem; height: 1rem; }
+.subbtn--active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.icon-sm {
+  width: 1rem;
+  height: 1rem;
+}
 
 .btn:hover img.icon,
 .btn--active img.icon,
-.subbtn:hover img.icon-sm {
+.subbtn:hover img.icon-sm,
+.subbtn--active img.icon-sm {
   filter: brightness(0) invert(1);
 }
 
-.caret { transition: transform 180ms ease; }
+.btn svg,
+.subbtn svg {
+  flex-shrink: 0;
+}
+
+.btn--active svg,
+.btn:hover svg,
+.subbtn--active svg,
+.subbtn:hover svg {
+  color: #fff !important;
+}
+
+.caret {
+  transition: transform 180ms ease;
+}
+
+.menu-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #fff;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.layout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #e0e4e9;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.tipo-poliza {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tipo-poliza label {
+  font-weight: 500;
+  color: #333;
+}
+
+.tipo-poliza select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #f9fafb;
+  font-size: 0.9rem;
+}
+
+/* Contenedor del contenido dinámico */
+.layout-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
