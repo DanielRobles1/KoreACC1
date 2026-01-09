@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { RecaptchaModule, RECAPTCHA_SETTINGS, RecaptchaSettings } from 'ng-recaptcha';
-import { environment } from '@environments/environment';
+import { environment } from 'src/environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { WsService } from '@app/services/ws.service';
 
