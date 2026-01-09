@@ -22,6 +22,6 @@ pipelines:
 
     production:
       - step:
-          name: Production Frontend Scm Update
+          name: Production Frontend kore-acc Update
           script:
             - ssh $USERPRODSCM@$HOSTPRODSCM 'cd $HOME/kore-acc/frontend-acc && make deploy NODE_ENV=production'
