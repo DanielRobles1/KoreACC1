@@ -18,6 +18,7 @@ endif
 update-repo:
 	@echo "Updating repo..."
 	git pull origin $(CURRENT_BRANCH)
+	@echo "pull correctamente.."
 
 # Build the Docker image with the specified NODE_ENV
 docker-build:
