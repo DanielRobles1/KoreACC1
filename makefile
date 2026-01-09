@@ -49,15 +49,3 @@ help:
 	@echo "  deploy        - Deploy the application by updating the repo, building the Docker image, and running the containers"
 
 .PHONY: update-repo docker-build run-docker deploy help
-
-
-
-
-
-
-
-# ... (tus validaciones de NODE_ENV y update-repo se mantienen igual)
-
-
-
-
