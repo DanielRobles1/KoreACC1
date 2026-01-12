@@ -17,6 +17,7 @@ import type { Poliza, Movimiento } from '@app/services/polizas.service';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
 
 import { catchError, finalize, forkJoin, of, switchMap, tap, throwError, firstValueFrom } from 'rxjs';
+import { environment } from '@environments/environment';
 
 type Cuenta = {
   id_cuenta: number;
@@ -88,7 +89,7 @@ type CentroCostoItem = {
   styleUrls: ['./poliza-editar.component.scss']
 })
 export class PolizaEditarComponent implements OnInit {
-  private apiBase = 'http://localhost:3000/api/v1';
+  private apiBase = `${environment.urlBase}/api/v1`;
   private get api(): any { return this.apiSvc as any; }
 
   sidebarOpen = true;

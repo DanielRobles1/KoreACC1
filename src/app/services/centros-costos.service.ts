@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs'; 
+import { environment } from '@environments/environment';
 
 type UiCentro = {
   id_centro?: number;
@@ -21,7 +22,7 @@ type UiCentro = {
   providedIn: 'root'
 })
 export class CentrosCostosService {
-  private apiURL = 'http://localhost:3000/api/v1/centros';
+  private apiURL = `${environment.urlBase}/api/v1/centros`;
   constructor(private http: HttpClient) { }
 
   getCentros(): Observable<UiCentro[]> {

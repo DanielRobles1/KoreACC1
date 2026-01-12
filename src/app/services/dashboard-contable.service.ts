@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
+import { environment } from '@environments/environment';
 
 export interface ResumenItem {
   tipo: 'ingreso' | 'egreso' | 'diario' | string;
@@ -32,7 +33,8 @@ interface DashboardContableResponse {
 
 @Injectable({ providedIn: 'root' })
 export class DashboardContableService {
-  private base = 'http://localhost:3000/api/v1/dashboard-contable';
+  private base = `${environment.urlBase}/api/v1/dashboard-contable`;
+  
 
   constructor(private http: HttpClient) {}
 
