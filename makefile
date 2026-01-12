@@ -29,11 +29,12 @@ docker-build:
 # Run the Docker containers for the ng_ecommerce service
 docker-run:
 	@echo "Updating $(SERVICE_NAME)..."
-	docker-compose stop $(SERVICE_NAME)
-	docker-compose up -d $(SERVICE_NAME)
+	docker compose stop $(SERVICE_NAME)
+	docker compose up -d $(SERVICE_NAME)
 	@echo "Checking status..."
 	sleep 2
-	docker compose -f $(COMPOSE_FILE) ps $(SERVICE_NAME)
+	docker compose logs $(SERVICE_NAME)
+	docker compose ps $(SERVICE_NAME)
 	@echo "desplegado correctamente $(SERVICE_NAME)..."
 
 # Deploy the application by updating the repo, building the Docker image, and running the containers
