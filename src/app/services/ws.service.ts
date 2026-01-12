@@ -31,7 +31,7 @@ export class WsService implements OnDestroy {
       this.socket.disconnect();
     }
 
-    this.socket = io('http://localhost:3000', {
+    this.socket = io(this.baseUrl, {
       auth: { token },
       transports: ['websocket'],
     });

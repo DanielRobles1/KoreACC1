@@ -65,6 +65,7 @@ export class LoginComponent {
   }
 
   submit(): void {
+    console.log('v1')
     this.authError = null;
 
     if (this.loginForm.invalid) {
