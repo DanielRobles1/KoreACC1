@@ -29,9 +29,8 @@ docker-build:
 # Run the Docker containers for the ng_ecommerce service
 docker-run:
 	@echo "Updating $(SERVICE_NAME)..."
-	# up -d con --no-deps actualiza SOLO este servicio sin tocar el back ni la base
-	# --force-recreate asegura que use la nueva imagen construida
-	docker compose -f $(COMPOSE_FILE) up -d --no-deps --force-recreate $(SERVICE_NAME)
+	docker-compose stop $(SERVICE_NAME)
+	docker-compose up -d $(SERVICE_NAME)
 	@echo "Checking status..."
 	sleep 2
 	docker compose -f $(COMPOSE_FILE) ps $(SERVICE_NAME)
