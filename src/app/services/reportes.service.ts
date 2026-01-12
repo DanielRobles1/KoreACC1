@@ -5,10 +5,11 @@ import { BalanzaResp, BalanzaRow } from '@app/models/balanza-row';
 import { EstadoResultadosResponse } from '@app/models/estado-resultado';
 import { BalanceResp } from '@app/models/balance-gral';
 import { Empresa } from '@app/models/empresa';
+import { environment } from '@environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ReportesService {
-  private baseUrl = 'http://localhost:3000/api/v1';
+  private baseUrl =  `${environment.urlBase}/api/v1`;
 
   constructor(private http: HttpClient) { }
 

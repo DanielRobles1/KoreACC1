@@ -3,12 +3,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, finalize, tap, switchMap } from 'rxjs/operators';
 import { Observable, throwError, of, Subject } from 'rxjs';
+import { environment } from '@environments/environment';
 
 export type UserRole = string;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api/v1';
+  private apiUrl = `${environment.urlBase}/api/v1`;
   private tokenKey = 'auth_token';
   private userKey = 'user';
   private permKey = 'permissions';
@@ -62,7 +63,7 @@ export class AuthService {
   }
   loadPermissions() {
     return this.http.get<{ permisos: Array<{ nombre: string }> }>(
-      'http://localhost:3000/api/v1/usuarios/permisos'
+      `${this.apiUrl}/usuarios/permisos`
     ).pipe(
       tap(({ permisos }) => {
         const perms = permisos.map(p => p.nombre);

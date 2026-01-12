@@ -3,12 +3,14 @@ import { io, Socket } from 'socket.io-client';
 import { AuthService } from './auth.service';
 import { switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { environment } from '@environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WsService implements OnDestroy {
   private socket?: Socket;
+  private baseUrl = environment.urlBase
 
   constructor(private auth: AuthService) { }
 

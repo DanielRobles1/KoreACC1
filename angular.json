@@ -100,9 +100,14 @@
               "sourceMap": true,
               "namedChunks": true,
               "extractLicenses": false
+            },
+            "development": {
+              "optimization": false,
+              "outputHashing": "none",
+              "sourceMap": true
             }
           },
-          "defaultConfiguration": ""
+          "defaultConfiguration": "development"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
@@ -121,9 +126,12 @@
             },
             "test-serve": {
               "buildTarget": "KoreAcc:build:test-serve"
+            },
+             "development": {
+              "buildTarget": "KoreAcc:build:development"
             }
           },
-          "defaultConfiguration": ""
+          "defaultConfiguration": "development"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
