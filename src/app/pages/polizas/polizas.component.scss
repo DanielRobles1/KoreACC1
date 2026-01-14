@@ -92,7 +92,19 @@
   box-shadow: 0 1px 0 rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.08);
 }
 
-/* Botón icono compacto (si lo usas para eliminar fila, etc.) */
+.btn.pill img[alt="kore-image"]{
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.btn.pill {
+  line-height: 1;
+}
+
 .icon-btn {
   background: #fff;
   border: 1px solid var(--line);

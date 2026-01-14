@@ -13,6 +13,7 @@ import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-c
 import { PolizasService } from '@app/services/polizas.service';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { CuentasService } from '@app/services/cuentas.service';
+import { KoreService } from '@app/services/kore.service';
 import type { Poliza, Movimiento } from '@app/services/polizas.service';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
 
@@ -56,7 +57,7 @@ type CfdiOption = {
 };
 type ToastType = 'info' | 'success' | 'warning' | 'error';
 type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string; [k: string]: any };
+type UsuarioLigero = { id_usuario: number; nombre?: string; email?: string;[k: string]: any };
 
 type CentroCostoItem = {
   serie_venta: any;
@@ -171,12 +172,35 @@ export class PolizaEditarComponent implements OnInit {
 
   private lastOrderMap = new Map<number, number>();
 
+  evento: {
+    tipo_operacion: 'ingreso' | 'egreso';
+    monto_base: number | null;
+    fecha_operacion: string;
+    id_empresa: number | null;
+    medio_cobro_pago: 'bancos' | 'caja' | 'clientes' | 'proveedores';
+    id_cuenta_contrapartida: number | null;
+    cliente: string;
+    ref_serie_venta: string;
+    cc: number | null;
+  } = {
+      tipo_operacion: 'ingreso',
+      monto_base: null,
+      fecha_operacion: '',
+      id_empresa: 1,
+      medio_cobro_pago: 'bancos',
+      id_cuenta_contrapartida: null,
+      cliente: '',
+      ref_serie_venta: '',
+      cc: null
+    };
+
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
     private apiSvc: PolizasService,
     private cuentasSvc: CuentasService,
     private ejercicioSvc: EjercicioContableService,
+    private kore: KoreService
   ) { }
 
   ngOnInit(): void {
@@ -872,6 +896,194 @@ export class PolizaEditarComponent implements OnInit {
         this.deletingIndexSet.delete(i);
         const msg = err?.error?.message || err?.error?.error || 'No se pudo eliminar el movimiento.';
         this.showToast({ type: 'warning', title: 'Aviso', message: msg });
+      }
+    });
+  }
+
+  private findCuentaIdByCodigo(codigo: string): number | null {
+    const c = this.cuentas?.find(x => x.codigo?.toString() === codigo);
+    return c?.id_cuenta ?? null;
+  }
+
+  getNaturalezaSeleccionada(): 'INGRESO' | 'EGRESO' | null {
+    const t = this.tiposPoliza?.find(x => x.id_tipopoliza === this.poliza.id_tipopoliza);
+    if (!t) return null;
+    const name = (t.nombre ?? '')
+      .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      .toUpperCase();
+
+    if (/\bINGRES/.test(name)) return 'INGRESO';
+    if (/\bEGRES/.test(name) || /\bCOMPRA/.test(name)) return 'EGRESO';
+    return null;
+  }
+
+
+  isTipoSoportado(): boolean {
+    return this.getNaturalezaSeleccionada() !== null;
+  }
+
+
+  private getAppToken(): string {
+    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVkZTg1ZWExYzMyODRhMDAwMTU5Yzg5NyIsInVzZXJuYW1lIjoiS0FSSU5BIiwibm9tYnJlIjoiS0FSSU5BIENSVVogSUxMRVNDQVMiLCJwcm9maWxlIjoiNWRlODVlYTFjMzI4NGEwMDAxNTljODk3IiwiYWxtYWNlbiI6WyJFMCIsIkEwIiwiQzAiLCJGMCIsIkIwIiwiRzEiLCJFMSIsIkkwIiwiTzAiLCJEMCIsIk0wIiwiRzAiLCJIMCIsIk4wIiwiSjAiLCJLMCJdLCJhbG1hY2VuZXNfaWQiOls1LDEsMyw2LDIsMTYsMTQsMTAsNCw3LDksNjYsMThdLCJhbG1hY2VuX2RlZmF1bHQiOiJBMCIsImFsbWFjZW5fZGVmYXVsdF9pZCI6MSwiY29ycmVvIjoic2lzdGVtYXNAdHVib3N5Y29uZXhpb25lcy5teCIsIm51bWFndCI6IkbDjVNJQ0EiLCJwcm9maWxlc2tvcmUiOlsiQWRtaW5pc3RyYWRvciIsIkNPTlNVTFRBUiIsIkNVQUxRVUlFUkEiXSwiZXhwIjoxNzkwMzU4MzAyLCJqdGkiOiI1ZGU4NWVhMWMzMjg0YTAwMDE1OWM4OTciLCJpYXQiOjE3NTg4MjIzMDJ9.eVq2Oy6kJci_R4efy3qw7IE2AlyDkcpA4bcs9aV72a4';
+  }
+
+
+  modalFechaOpen = false;
+  fechaPoliza: string | null = null;
+  fechaAnterior: string | null = null;
+
+  abrirModalFechaAnterior() {
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+
+    this.fechaPoliza = `${yyyy}-${mm}-${dd}`;
+    const ayer = new Date(hoy.getTime() - 86400000);
+    const mmA = String(ayer.getMonth() + 1).padStart(2, '0');
+    const ddA = String(ayer.getDate()).padStart(2, '0');
+    this.fechaAnterior = `${ayer.getFullYear()}-${mmA}-${ddA}`;
+
+    this.modalFechaOpen = true;
+  }
+
+  onConfirmarFechaAnterior() {
+    if (!this.fechaPoliza || !this.fechaAnterior) {
+      this.showToast({
+        type: 'warning',
+        title: 'Fechas incompletas',
+        message: 'Selecciona la fecha de póliza y la fecha anterior.'
+      });
+      return;
+    }
+    if (this.fechaAnterior > this.fechaPoliza) {
+      this.showToast({
+        type: 'warning',
+        title: 'Rango inválido',
+        message: 'La fecha anterior no puede ser mayor a la fecha de póliza.'
+      });
+      return;
+    }
+
+    this.modalFechaOpen = false;
+    this.consumirKore();
+  }
+
+  parseCurrencyToNumber(v: string | number | null | undefined): number {
+    if (typeof v === 'number') return v;
+    if (!v) return 0;
+    const cleaned = String(v).replace(/[^0-9.-]/g, '');
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  //  Consumir endpoint de kore
+  consumirKore(): void {
+    const naturaleza = this.getNaturalezaSeleccionada();
+    if (!naturaleza) {
+      this.showToast({ type: 'warning', title: 'Tipo no soportado', message: 'Solo Ingreso o Egreso.' });
+      return;
+    }
+
+    if (!this.fechaPoliza || !this.fechaAnterior) {
+      this.abrirModalFechaAnterior();
+      return;
+    }
+
+    if (this.fechaAnterior > this.fechaPoliza) {
+      this.showToast({
+        type: 'warning',
+        title: 'Rango inválido',
+        message: 'La fecha anterior debe ser menor o igual a la fecha de póliza.'
+      });
+      return;
+    }
+
+    if (this.poliza.folio == null || this.poliza.folio === '') {
+      this.showToast({ type: 'error', title: 'Folio faltante', message: 'No se puede consultar sin folio.' });
+      return;
+    }
+    if (this.poliza.id_centro == null) {
+      this.showToast({ type: 'error', title: 'Centro faltante', message: 'Selecciona un centro de costo.' });
+      return;
+    }
+
+    const ccHeader = this.toNumOrNull(this.poliza.id_centro);
+    const serieHeader = this.getSerieVentaByCcId(ccHeader ?? null);
+    const refSerie = this.evento?.ref_serie_venta ?? null;
+
+    const almacenesCsv = (serieHeader || refSerie || '').trim();
+
+    if (!almacenesCsv) {
+      this.showToast({
+        type: 'warning',
+        title: 'Falta serie/almacén',
+        message: 'No se pudo determinar la serie del almacén (ej. A0). Selecciona un centro con serie válida.'
+      });
+      return;
+    }
+
+    const params = {
+      folio: String(this.poliza.folio),
+      fecha_poliza: String(this.fechaPoliza),
+      fecha_anterior: String(this.fechaAnterior),
+      almacenes_multiple: almacenesCsv
+    };
+
+    const token = this.getAppToken();
+    if (!token) {
+      this.showToast({ type: 'error', title: 'Token faltante', message: 'No hay x-app-token configurado.' });
+      return;
+    }
+
+    this.showToast({ type: 'warning', title: 'Consultando', message: 'Recuperando movimientos…' });
+
+    this.kore.getMovimientos(params, { naturaleza, token }).subscribe({
+      next: (movs) => {
+        console.log('KORE raw →', movs);
+
+        const ccNum = this.poliza.id_centro != null ? Number(this.poliza.id_centro) : null;
+
+        const mapeados: Movimiento[] = (movs || []).map(m => {
+          const codigoCuenta = String(m.IdCuenta ?? '').trim();
+          const id_cuenta = this.findCuentaIdByCodigo(codigoCuenta) ?? null;
+          const oper: '0' | '1' = m.TipoMovimiento === '1' ? '1' : '0';
+
+          return {
+            id_cuenta,
+            ref_serie_venta: m.Referencia ?? '',
+            cliente: m.Concepto ?? '',
+            fecha: m.Fecha || this.fechaPoliza!,
+            cc: ccNum,
+            operacion: oper,
+            monto: this.parseCurrencyToNumber(m.Importe),
+          } as Movimiento;
+        });
+
+        if (mapeados.length > 0) {
+          const actuales = this.poliza.movimientos ?? [];
+          this.poliza.movimientos = [...actuales, ...mapeados];
+        } else {
+          this.showToast({
+            type: 'info',
+            title: 'Sin cambios',
+            message: 'La consulta no devolvió movimientos; se conservan los existentes.'
+          });
+        }
+        const sinCuenta = mapeados.filter(x => !this.toNumOrNull(x.id_cuenta)).length;
+        if (sinCuenta > 0) {
+          this.showToast({
+            type: 'warning',
+            title: 'Cuentas no encontradas',
+            message: `${sinCuenta} movimiento(s) traen código contable que no existe en tu catálogo. Selección manual requerida.`
+          });
+        }
+
+        this.showToast({ type: 'success', title: 'Listo', message: 'Movimientos cargados.' });
+      },
+      error: (err) => {
+        console.error(err);
+        this.showToast({ type: 'error', title: 'Error', message: 'No se pudieron recuperar movimientos.' });
       }
     });
   }

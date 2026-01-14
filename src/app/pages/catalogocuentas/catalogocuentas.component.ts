@@ -349,7 +349,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
         this.closeConfirm();
         this.loadCuentas();
       },
-      error: (err) => this.handleHttpError(err, 'No se pudo eliminar la cuenta'),
+      error: (err) => this.handleHttpError(err, 'No se pudo eliminar la cuenta, revisa si tiene movimientos asociados'),
     });
     this.subs.push(s);
   }
@@ -509,7 +509,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     if (this.formCuenta.ctaMayor) {
       this.formCuenta.posteable = false;
     } else {
-      if (this.formCuenta.posteable === false) this.formCuenta.posteable = true;
+      this.formCuenta.posteable = true;
     }
   }
 
@@ -553,7 +553,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       const det = err?.error?.details?.map((d: any) => d.message).join('; ');
       return this.toastWarn(det || fallbackMsg);
     }
-    this.toastError(fallbackMsg, err);
+    this.toastWarn(fallbackMsg);
   }
 
   //   buascar
