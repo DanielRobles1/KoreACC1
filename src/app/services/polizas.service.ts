@@ -73,7 +73,7 @@ export class PolizasService {
 
   /** GET /api/v1/tipo-poliza */
 
-
+  //Revisar
   getTiposPoliza(): Observable<TipoPoliza[]> {
     return this.http.get<any>(`${this.api}/tipo-poliza`, {
       headers: this.getAuthHeaders(),
@@ -251,6 +251,7 @@ export class PolizasService {
     });
   }
 
+  // Revisar
   getNaturalezasPoliza() {
     return this.http.get<any>(`${this.api}/tipo-poliza/naturalezas`, {
       headers: this.getAuthHeaders(),

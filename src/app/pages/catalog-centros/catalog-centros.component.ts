@@ -279,7 +279,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       const id = evt.row?.id_centro;
       const nombre = evt.row?.nombre_centro;
       if (!id) {
-        this.toast.error('No se encontró el identificador del centro.', 'Error');
+        this.toast.error('No se encontró el identificador del centro.', 'Fallo');
         return;
       }
 
@@ -306,7 +306,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
   /** Usuario confirma la eliminación */
   confirmProceed() {
     if (this.pendingDeleteId == null) {
-      this.toast.error('No se pudo determinar el centro a eliminar.', 'Error');
+      this.toast.error('No se pudo determinar el centro a eliminar.', 'Fallo');
       this.closeConfirm();
       return;
     }
@@ -323,7 +323,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.confirmBusy = false;
         this.closeConfirm();
-        this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo eliminar el centro', 'Error');
+        this.toast.warning(this.extractErrorMessage(err) ?? 'No se pudo eliminar el centro', 'Fallo');
       }
     });
   }
@@ -439,7 +439,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           onDone();
-          this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo actualizar el centro', 'Error');
+          this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo actualizar el centro', 'Fallo');
         }
       });
     } else {
@@ -454,7 +454,7 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           onDone();
-          this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo registrar el centro', 'Error');
+          this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo registrar el centro', 'Fallo');
         }
       });
     }

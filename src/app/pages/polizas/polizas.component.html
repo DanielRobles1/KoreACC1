@@ -107,7 +107,7 @@
                   required
                   (ngModelChange)="onPeriodoChange($event)">
             <option [ngValue]="undefined" disabled>Seleccione…</option>
-            <option *ngFor="let p of periodos" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
+            <option *ngFor="let p of periodosFiltrados; trackBy: trackByPeriodoId" [ngValue]="p.id_periodo">{{ p.nombre }}</option>
           </select>
         </label>
 
@@ -187,7 +187,16 @@
               Agregar movimiento
             </button>
 
-            <!-- Botón Calculadora -->
+            <button
+              type="button"
+              class="btn pill"
+              (click)="abrirModalFechaAnterior()"  
+              [disabled]="!isTipoSoportado()"
+              [title]="!isTipoSoportado() ? 'Solo disponible para pólizas de Ingreso o Egreso' : ''">
+              <img src="assets/images/kore.png" alt="kore-image">
+              Recuperar de Kore
+            </button>
+
             <button type="button" class="btn pill" (click)="abrirModalIva()">
               🧮 Calculadora IVA
             </button>
@@ -203,7 +212,7 @@
                 <th>Concepto</th>
                 <th>Fecha</th>
                 <th>Centro Costo</th>
-                <th>UUID</th>
+                <!-- <th>UUID</th> -->
                 <th>Cargo</th>
                 <th>Abono</th>
                 <th>Acciones</th>
@@ -240,7 +249,7 @@
                   </button>
                 </td>
 
-                <td class="uuid-cell">
+                <!-- <td class="uuid-cell">
                   <div class="uuid-wrapper" [class.has-uuid]="!!mov.uuid">
                     <button
                       type="button"
@@ -263,7 +272,7 @@
 
                     <small class="uuid-badge" *ngIf="mov.uuid">{{ mov.uuid | slice:0:8 }}…</small>
                   </div>
-                </td>
+                </td> -->
 
                 <td>
                   <input
@@ -496,4 +505,26 @@
     </small>
   </form>
 
+</app-modal>
+
+<!-- Modal para consumir desde kore -->
+<app-modal
+  [open]="modalFechaOpen"
+  [title]="'Fecha anterior'"
+  [size]="'sm'"
+  [showClose]="true"
+  (closed)="modalFechaOpen=false"
+  (canceled)="modalFechaOpen=false"
+  (confirmed)="onConfirmarFechaAnterior()">
+
+  <form style="display:grid; gap:10px; padding-top:.25rem;">
+    <label>
+      Selecciona la fecha de póliza
+      <input class="field" type="date" [(ngModel)]="fechaPoliza" name="fechaPoliza" />
+    </label>
+    <label>
+      Selecciona la fecha anterior
+      <input class="field" type="date" [(ngModel)]="fechaAnterior" name="fechaAnterior" />
+    </label>
+  </form>
 </app-modal>

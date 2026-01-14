@@ -262,7 +262,7 @@ export class EstadoResComponent {
         this.canGenerateReport = !!flags.canCreate;
       },
       {
-        keys: { create: 'crear_reporte', edit: 'crear_reporte', delete: 'crear_reporte' },
+        keys: { create: 'generar_reporte', edit: '', delete: '' },
         socketEvent: ['permissions:changed', 'role-permissions:changed'],
         contextLabel: 'Reportes',
       }

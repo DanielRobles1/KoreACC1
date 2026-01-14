@@ -1,24 +1,22 @@
-/* El componente ocupa toda la ventana */
 :host {
   display: block;
   width: 100%;
-  height: 100vh;         /* alto de la pantalla */
+  height: 100vh;
   box-sizing: border-box;
 }
 
-/* LAYOUT: sidebar + contenido */
 .layout {
   display: flex;
-  height: 102%;          /* usa todo el alto del :host */
+  height: 100%;
 }
 
-/* SIDEBAR: columna fija a todo el alto */
 .sidebar {
   width: var(--sidebar-w, 280px);
   transition: width .3s ease;
   border-right: 1px solid rgba(0,0,0,.1);
   overflow: hidden;         
 }
+
 .layout.is-collapsed .sidebar {
   --sidebar-w: 0px;
   border-right: none;
@@ -31,19 +29,17 @@
   background: var(--kore-page-bg, #2C3E50);
 }
 
-/* ÁREA PRINCIPAL (donde va el panel blanco) */
 .layout-main {
   flex: 1 1 auto;
   padding: 1.0rem 1.75rem 2rem;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
-  overflow-y:hidden;      /* scroll general si el contenido es muy largo */
+  overflow-y: auto; // Cambiado de hidden a auto
 }
 
-/* PANEL BLANCO PRINCIPAL */
 .page {
-  width: 160%;
+  width: 100%;
   max-width: 1180px;
   background: #ffffff;
   border-radius: 1.5rem;
@@ -104,6 +100,8 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1;
+  min-height: 0; // Importante para permitir que los hijos con scroll funcionen
 }
 
 /* ESTADOS */
@@ -112,10 +110,12 @@
   border-radius: 0.75rem;
   font-size: 0.9rem;
 }
+
 .state--loading {
   background: #eff6ff;
   color: #1d4ed8;
 }
+
 .state--error {
   background: #fef2f2;
   color: #b91c1c;
@@ -148,6 +148,14 @@
   font-weight: 700;
 }
 
+/* GRID: GRÁFICA + TABLA */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  min-height: 0; // Importante
+}
+
 /* CARDS (gráfica + tabla) */
 .card {
   background: #ffffff;
@@ -155,10 +163,12 @@
   border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
+  min-height: 0; // Importante para que el scroll interno funcione
 }
 
 .card-header {
-  padding: 0.9rem 1rem 0.25rem;
+  padding: 0.9rem 1rem 0.5rem;
+  flex-shrink: 0; // Evita que el header se comprima
 }
 
 .card-title {
@@ -174,35 +184,53 @@
 }
 
 .card-body {
-  padding: 0.5rem 1rem 1rem;
+  flex: 1;
+  min-height: 0; // Importante
+  overflow: hidden; // El contenido interior manejará su propio scroll
 }
 
 /* GRÁFICA */
 .chart-card {
-  min-height: 260px;
+  min-height: 300px;
 }
 
 .chart-body {
-  height: 220px;
+  padding: 0.5rem 1rem 1rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  canvas {
+    max-height: 100%;
+  }
 }
 
 /* TABLA */
-
+.table-card {
+  .card-body {
+    padding: 0; // Removemos el padding del card-body para la tabla
+    overflow-y: auto; // Añadimos scroll vertical
+    max-height: 280px; // Altura máxima antes de hacer scroll
+  }
+}
 
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  table-layout: fixed;     /* evita que se desborde horizontalmente */
 }
 
 .table thead {
   background: #f3f4f6;
+  position: sticky; // El header se queda fijo al hacer scroll
+  top: 0;
+  z-index: 1;
 }
 
 .table th,
 .table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 1rem;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -213,6 +241,10 @@
   background: #f9fafb;
 }
 
+.table tbody tr:hover {
+  background: #f3f4f6;
+}
+
 .text-right {
   text-align: right;
 }
@@ -221,10 +253,11 @@
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.1rem 0.6rem;
+  padding: 0.15rem 0.65rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .pill--tipo {
@@ -233,20 +266,26 @@
 }
 
 /* RESPONSIVE */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-card .card-body {
+    max-height: 400px;
+  }
+}
+
 @media (max-width: 900px) {
   .layout-main {
     padding: 1rem;
   }
-
+  
   .page {
     padding: 1rem 1.25rem 1.5rem;
   }
-
+  
   .kpi-grid {
     grid-template-columns: 1fr;
   }
-}
-.table-card {
-  max-height: 195px;
-  overflow-y: auto;
 }
