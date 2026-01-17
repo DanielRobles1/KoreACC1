@@ -384,7 +384,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       posteable: row.posteable,
       tipo: row.tipo,
       naturaleza: row.naturaleza,
-      parentId: row.parentId ?? null,
+      parentId: row.ctaMayor ? null : (row.parentId ?? null),
     };
     this.enforcePosteableRule();
     this.resetValidation();
@@ -515,8 +515,23 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
 
   onCtaMayorChange(v: boolean) {
     this.formCuenta.ctaMayor = !!v;
+
+    if (this.formCuenta.ctaMayor) {
+      this.formCuenta.parentId = null; 
+      this.parentPreselectedId = null;
+    }
+
     this.enforcePosteableRule();
   }
+
+  onParentChange(id: number | null) {
+  this.formCuenta.parentId = id ?? null;
+
+  if (id != null) {
+    this.formCuenta.ctaMayor = false;      // tener padre implica ser subcuenta
+    this.enforcePosteableRule();
+  }
+}
 
   getParentOptions(): Cuenta[] {
     const excludeId = this.editId;

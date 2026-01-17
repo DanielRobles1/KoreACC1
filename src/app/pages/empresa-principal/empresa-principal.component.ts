@@ -84,7 +84,7 @@ export class EmpresaPrincipalComponent implements OnInit {
   tabs: CrudTab[] = [
     {id: 'datos',label: 'Ejercicios',icon: 'assets/svgs/poliza.svg',iconAlt: 'Empresa',route: '/empresa',},
     // {id: 'periodos',label: 'Impuestos',icon: 'assets/svgs/poliza.svg',iconAlt: 'Períodos',route: '/impuestos',},
-    {id: 'empresa',label: 'empresa',icon: 'assets/svgs/poliza.svg',iconAlt: 'Períodos',route: '/empresas',},
+    {id: 'empresa',label: 'empresa',icon: 'assets/svgs/company.svg',iconAlt: 'Períodos',route: '/empresas',},
     {id: 'tipo-poliza',label: '+ Tipo póliza',},
   ];
 

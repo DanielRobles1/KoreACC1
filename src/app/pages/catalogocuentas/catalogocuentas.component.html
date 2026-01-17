@@ -143,13 +143,13 @@
       </small>
     </div>
 
-    <div *ngIf="!formCuenta.ctaMayor" style="display:flex;align-items:center;gap:8px;">
-      <label class="field-label" style="margin:0;">Posteable</label>
-      <input type="checkbox" name="posteable"
-            [(ngModel)]="formCuenta.posteable" />
-      <span style="font-size:12px;opacity:.8;">
-        (Las subcuentas pueden ser posteables)
-      </span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label class="field-label" style="margin:0;">¿Es cuenta mayor?</label>
+      <input
+        type="checkbox"
+        name="ctaMayor"
+        [(ngModel)]="formCuenta.ctaMayor"
+        (ngModelChange)="onCtaMayorChange($event)" />
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -178,18 +178,24 @@
       </span>
     </div> -->
 
-    <div>
-      <label class="field-label">Cuenta padre</label>
-      <select class="field-input" name="parentId" [(ngModel)]="formCuenta.parentId">
-        <option [ngValue]="null">— Sin padre —</option>
-        <option *ngFor="let c of getParentOptions()" [ngValue]="c.id">
-          {{ c.codigo }} - {{ c.nombre }}
-        </option>
-      </select>
+    <select
+      class="field-input"
+      name="parentId"
+      [(ngModel)]="formCuenta.parentId"
+      (ngModelChange)="onParentChange($event)"
+      [disabled]="!!formCuenta.ctaMayor">
+      <option [ngValue]="null">— Sin padre —</option>
+      <option *ngFor="let c of getParentOptions()" [ngValue]="c.id">
+        {{ c.codigo }} - {{ c.nombre }}
+      </option>
+    </select>
 
-      <div *ngIf="parentPreselectedId" style="font-size:12px;opacity:.8;margin-top:4px;">
-        Se creará como subcuenta de <strong>{{ getCodigoPadre(parentPreselectedId) }}</strong>
-      </div>
+    <div *ngIf="!!formCuenta.ctaMayor" style="font-size:12px;opacity:.8;margin-top:4px;">
+      Las cuentas mayor no pueden tener padre.
+    </div>
+
+    <div *ngIf="!formCuenta.ctaMayor && !!parentPreselectedId" style="font-size:12px;opacity:.8;margin-top:4px;">
+      Se creará como subcuenta de <strong>{{ getCodigoPadre(parentPreselectedId) }}</strong>
     </div>
   </form>
 </app-modal>
