@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+import { environment } from '@environments/environment';
 
 export type PeriodoTipo =
   | 'SEMANAL'
@@ -33,7 +34,7 @@ interface GenerarResponse {
 
 @Injectable({ providedIn: 'root' })
 export class EmpresaServiceTsService {
-  private apiUrl = 'http://localhost:3000/api/v1/empresas';
+  private apiUrl =  `${environment.urlBase}/api/v1/empresas`;
 
   constructor(private http: HttpClient) {}
 

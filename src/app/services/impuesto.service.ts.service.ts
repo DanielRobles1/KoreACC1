@@ -2,12 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Impuestos } from '@app/components/impuesto-form/impuesto-form.component';
+import { environment } from '@environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ImpuestoServiceTsService {
-  private apiUrl = 'http://localhost:3000/api/v1/impuestos';
+  private apiUrl = `${environment.urlBase}/api/v1/impuestos`;
 
   constructor(private http: HttpClient) {}
 

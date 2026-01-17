@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { environment } from '@environments/environment';
 
 @Component({
   selector: 'app-cambiar-password',
@@ -18,6 +19,7 @@ export class CambiarPasswordComponent {
   mensajeError = '';
   showPassword = false;
   showConfirmPassword = false;
+  private baseUrl = `${environment.urlBase}/api/v1`
 
   constructor(private fb: FormBuilder, private http: HttpClient, private router: Router) {
     this.form = this.fb.group({
@@ -50,7 +52,7 @@ export class CambiarPasswordComponent {
     this.mensajeOk = '';
     this.mensajeError = '';
 
-    this.http.patch('http://localhost:3000/api/v1/auth/change-password', {
+    this.http.patch(`${this.baseUrl}/auth/change-password`, {
       oldPassword: this.form.value.oldPassword,
       newPassword: this.form.value.password
     }).subscribe({
