@@ -2459,20 +2459,18 @@ export class PolizasComponent implements OnInit {
     this.recomputarFolioSugerido();
   }
 
-  //  Totales 
-
-  getTotal(
-    p: Poliza | { movimientos?: Movimiento[] },
-    tipo: '0' | '1'
-  ): number {
+  //  Totales
+  getTotal(p: Poliza | { movimientos?: Movimiento[] }, tipo: '0' | '1'): number {
     const movs = Array.isArray(p?.movimientos) ? p.movimientos : [];
-    return movs
+    const total = movs
       .filter(m => String(m.operacion) === tipo)
       .reduce((s, m) => s + (Number(m.monto) || 0), 0);
+
+    return this.r2(total);
   }
 
-  getDiferencia(p: Poliza): number {
-    return this.getTotal(p, '0') - this.getTotal(p, '1');
+  getDiferencia(p: any): number {
+    return this.r2(this.getTotal(p, '0') - this.getTotal(p, '1'));
   }
 
   trackByFolio = (_: number, x: any) => x?.folio ?? _;

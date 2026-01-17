@@ -135,3 +135,12 @@
     </div>
   </div>
 
+<app-toast-message
+  [open]="vm.open"
+  [title]="vm.title"
+  [message]="vm.message"
+  [type]="vm.type"
+  position="top-right"
+  [autoCloseMs]="vm.autoCloseMs"
+  (closed)="toast.close()"
+/>

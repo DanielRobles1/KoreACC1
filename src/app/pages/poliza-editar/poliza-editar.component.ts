@@ -612,7 +612,7 @@ export class PolizaEditarComponent implements OnInit {
 
     const cargos = this.getTotal('0');
     const abonos = this.getTotal('1');
-    if (Math.abs(cargos - abonos) > 0.001) {
+    if (this.r2(cargos - abonos) !== 0) {
       this.showToast({ type: 'warning', title: 'Partida doble', message: `No cuadra.\nCargos: ${cargos}\nAbonos: ${abonos}` });
       return;
     }
@@ -1409,12 +1409,20 @@ export class PolizaEditarComponent implements OnInit {
     return c ? `${c.codigo} — ${c.nombre}` : '';
   }
 
-  //  Totales 
+  //  Totales
+  private r2(n: any): number {
+    const x = Number(n ?? 0);
+    if (!Number.isFinite(x)) return 0;
+    return Math.round(x * 100) / 100;
+  }
+
   getTotal(tipo: '0' | '1'): number {
     const movs = Array.isArray(this.poliza?.movimientos) ? this.poliza!.movimientos! : [];
-    return movs
+    const total = movs
       .filter(m => String(m.operacion) === tipo)
       .reduce((s, m) => s + (Number(m.monto) || 0), 0);
+
+    return this.r2(total);
   }
   getDiferencia(): number { return this.getTotal('0') - this.getTotal('1'); }
 
