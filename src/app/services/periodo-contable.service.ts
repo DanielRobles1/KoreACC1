@@ -2,6 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '@environments/environment';
 
 export type PeriodoTipo = 'SEMANAL' | 'MENSUAL' | 'ANUAL' | 'PERSONALIZADO';
 
@@ -31,7 +32,7 @@ export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
 
 @Injectable({ providedIn: 'root' })
 export class PeriodoContableService {
-  private baseUrl = 'http://localhost:3000/api/v1/periodos';
+  private baseUrl = `${environment.urlBase}/api/v1/periodos`;
 
   constructor(private http: HttpClient) { }
 

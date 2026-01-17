@@ -8,6 +8,7 @@ import { CrudPanelComponent, CrudAction, CrudColumn, CrudTab } from '../../../co
 import { ModalComponent } from '../../../components/modal/modal/modal.component';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { UserFormComponent, Usuario } from '../../../components/user-form/user-form/user-form.component';
+import { environment } from '@environments/environment';
 
 export interface Rol {
   id: number;
@@ -82,9 +83,9 @@ export class UsuariosComponent implements OnInit {
       ...(this.canDelete ? [{ id: 'delete', tooltip: 'Eliminar usuario' }] : [])
     ];
   }
-  private rolesApiUrl = 'http://localhost:3000/api/v1/roles'; // ajusta a tu endpoint
+  private rolesApiUrl = `${environment.urlBase}/api/v1/roles`; // ajusta a tu endpoint
 
-  private apiUrl = 'http://localhost:3000/api/v1/usuarios';
+  private apiUrl = `${environment.urlBase}/api/v1/usuarios`;
 
   // UI TEXT
   title = 'Gestión de usuarios y permisos';

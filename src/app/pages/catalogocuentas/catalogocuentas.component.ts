@@ -17,8 +17,9 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 import { AuthService } from '@app/services/auth.service';
 import { WsService } from '@app/services/ws.service';
 import { PermissionWatcher } from '@app/utils/permissions.util';
+import { environment } from '@environments/environment';
 
-const API = 'http://localhost:3000/api/v1/cuentas';
+const API = `${environment.urlBase}/api/v1/cuentas`;
 
 type CuentaTipo = 'ACTIVO' | 'PASIVO' | 'CAPITAL' | 'INGRESO' | 'GASTO';
 type Naturaleza = 'DEUDORA' | 'ACREEDORA';

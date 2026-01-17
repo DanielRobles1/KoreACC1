@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '@environments/environment';
 export interface Movimiento {
   id_cuenta: number | null;
   ref_serie_venta?: string;
@@ -52,9 +53,9 @@ export interface TipoPoliza {
 @Injectable({ providedIn: 'root' })
 export class PolizasService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/v1/usuarios';
+  private apiUrl = `${environment.urlBase}/api/v1/usuarios`;
 
-  private api = 'http://localhost:3000/api/v1';
+  private api =  `${environment.urlBase}/api/v1`;
   private basePoliza = `${this.api}/poliza`;
   private cfdiImportUrl = `${this.api}/cfdi/import`;
 
