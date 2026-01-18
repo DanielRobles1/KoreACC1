@@ -1,25 +1,9 @@
-// services/ejercicio-contable.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
+import { EjercicioContableDto, EjercicioFilters } from '@app/models/ejercicio';
 
-export interface EjercicioContableDto {
-  id_ejercicio?: number;
-  id_empresa: number;
-  anio: number;
-  fecha_inicio: string;
-  fecha_fin: string;
-  esta_abierto: boolean;
-}
-
-export interface EjercicioFilters {
-  id_empresa?: number;
-  anio?: number;
-  esta_abierto?: boolean;
-  desde?: string;
-  hasta?: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class EjercicioContableService {

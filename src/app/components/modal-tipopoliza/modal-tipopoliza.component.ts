@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, HostListener, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { PolizasService, TipoPolizaCreate, TipoPoliza } from '@app/services/polizas.service';
+import { PolizasService} from '@app/services/polizas.service';
+import { TipoPoliza, TipoPolizaCreate } from '@app/models/poliza';
 import { ModalComponent } from "../modal/modal/modal.component";
 
 @Component({

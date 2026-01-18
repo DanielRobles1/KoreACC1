@@ -2,21 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs'; 
 import { environment } from '@environments/environment';
-
-type UiCentro = {
-  id_centro?: number;
-  parent_id?: number | null;
-  serie_venta: string;
-  nombre_centro: string;
-  calle: string;
-  num_ext: string;
-  num_int: string;
-  cp: string;
-  region: string;
-  telefono: string;
-  correo: string;
-  activo: boolean;
-}
+import { UiCentro } from '@app/models/centros';
 
 @Injectable({
   providedIn: 'root'

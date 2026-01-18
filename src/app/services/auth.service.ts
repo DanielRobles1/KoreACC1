@@ -1,4 +1,3 @@
-// src/app/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, finalize, tap, switchMap } from 'rxjs/operators';
@@ -111,6 +110,13 @@ export class AuthService {
       }),
       finalize(() => this.clearSession())
     );
+  }
+
+  changePassword(oldPassword: string,password: string) {
+    return this.http.patch(`${this.apiUrl}/auth/change-password`, {
+      oldPassword,
+      newPassword: password
+    });
   }
 
 

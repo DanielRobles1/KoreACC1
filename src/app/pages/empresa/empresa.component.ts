@@ -10,10 +10,11 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 
 import { EmpresaServiceTsService } from '@app/services/empresa.service.ts.service';
 import { AuthService } from '@app/services/auth.service';
-import { PeriodoContableService, PeriodoContableDto, PeriodoTipo } from '@app/services/periodo-contable.service';
+import { PeriodoContableService} from '@app/services/periodo-contable.service';
+import { PeriodoContableDto, PeriodoTipo } from '@app/models/periodo';
 
-
-import { EjercicioContableService, EjercicioContableDto } from '@app/services/ejercicio-contable.service';
+import { EjercicioContableService} from '@app/services/ejercicio-contable.service';
+import { EjercicioContableDto } from '@app/models/ejercicio';
 import { PolizasService } from '@app/services/polizas.service';
 
 type UiEmpresa = {

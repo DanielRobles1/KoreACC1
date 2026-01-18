@@ -21,7 +21,7 @@
         </div>
 
         <div class="page-header__actions">
-          <span class="badge badge--soft" *ngIf="!loading()">Actualizado</span>
+          <span class="badge badge--soft" *ngIf="!loading() && !errorMsg()">Actualizado</span>
         </div>
       </header>
 
@@ -41,21 +41,21 @@
 
           <!-- KPIs -->
           <div class="kpi-grid">
-            <div class="kpi-card">
-              <div class="kpi-label">Pólizas de ingreso</div>
-              <div class="kpi-value">{{ totalIngresos() }}</div>
+           <div class="kpi-card">
+              <div class="kpi-label">Pólizas por revisar</div>
+              <div class="kpi-value">{{ totalPorRevisar() }}</div>
             </div>
 
             <div class="kpi-card">
-              <div class="kpi-label">Pólizas de egreso</div>
-              <div class="kpi-value">{{ totalEgresos() }}</div>
+              <div class="kpi-label">Pólizas aprobadas</div>
+              <div class="kpi-value">{{ totalAprobadas() }}</div>
             </div>
 
             <div class="kpi-card">
-              <div class="kpi-label">Pólizas de diario</div>
-              <div class="kpi-value">{{ totalDiario() }}</div>
+              <div class="kpi-label">Pólizas contabilizadas</div>
+              <div class="kpi-value">{{ totalContabilizadas() }}</div>
             </div>
-          </div>
+            </div>
 
           <!-- GRID: GRÁFICA + TABLA -->
           <div class="content-grid">

@@ -3,52 +3,7 @@ import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@environments/environment';
-export interface Movimiento {
-  id_cuenta: number | null;
-  ref_serie_venta?: string;
-  operacion?: number | string; // 0 cargo, 1 abono
-  monto?: null | number;
-  cliente?: string;
-  fecha?: string;               // 'YYYY-MM-DD'
-  cc?: number | null;
-  uuid?: null | string;
-  id_poliza?: number;
-  includeMovimientos?: boolean;
-}
-
-export interface Poliza {
-   id_poliza: number; 
-  id_tipopoliza: number;
-  id_periodo: number;
-  id_usuario: number;
-  id_centro: number;
-  folio: string;
-  concepto: string;
-  movimientos: Movimiento[];
-}
-
-export interface CfdiRow {
-  uuid: string;
-  folio?: string | null;
-  fecha?: string | null;
-  total?: number | string | null;
-}
-
-/** ===== Tipos para Tipo de Póliza ===== */
-export type NaturalezaTP = 'ingreso' | 'egreso' | 'diario' | 'apertura' | 'cierre';
-
-export interface TipoPolizaCreate {
-  naturaleza: NaturalezaTP;
-  descripcion: string;
-}
-
-export interface TipoPoliza {
-  id_tipopoliza: number;
-  naturaleza: NaturalezaTP;
-  descripcion: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { Poliza, CfdiRow, Movimiento, NaturalezaTP, TipoPoliza, TipoPolizaCreate } from '@app/models/poliza';
 
 @Injectable({ providedIn: 'root' })
 export class PolizasService {

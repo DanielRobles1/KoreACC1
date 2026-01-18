@@ -14,7 +14,7 @@ import { PolizasService } from '@app/services/polizas.service';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { CuentasService } from '@app/services/cuentas.service';
 import { KoreService } from '@app/services/kore.service';
-import type { Poliza, Movimiento } from '@app/services/polizas.service';
+import { Poliza, Movimiento } from '@app/models/poliza';
 import { SavingOverlayComponent } from '@app/components/saving-overlay/saving-overlay.component';
 
 import { catchError, finalize, forkJoin, of, switchMap, tap, throwError, firstValueFrom } from 'rxjs';

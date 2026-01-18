@@ -6,8 +6,9 @@ import { saveAs } from 'file-saver';
 
 import { ReportesLayoutComponent } from '@app/components/reportes-layout/reportes-layout.component';
 import { PolizasService } from '@app/services/polizas.service';
-import { PeriodoContableService, PeriodoContableDto } from '@app/services/periodo-contable.service';
-import { EjercicioContableDto } from '@app/services/ejercicio-contable.service';
+import { PeriodoContableService, } from '@app/services/periodo-contable.service';
+import { PeriodoContableDto } from '@app/models/periodo';
+import { EjercicioContableDto } from '@app/models/ejercicio';
 import { ReportesService } from '@app/services/reportes.service';
 import { BalanzaResp, BalanzaRow } from '@app/models/balanza-row';
 import { Empresa } from '@app/models/empresa';

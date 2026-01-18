@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { ReportesLayoutComponent } from '@app/components/reportes-layout/reportes-layout.component';
-import { EjercicioContableDto } from '@app/services/ejercicio-contable.service';
+import { EjercicioContableDto } from '@app/models/ejercicio';
 import { ReportesService } from '@app/services/reportes.service';
-import { PeriodoContableDto, PeriodoContableService } from '@app/services/periodo-contable.service';
+import { PeriodoContableService } from '@app/services/periodo-contable.service';
+import { PeriodoContableDto } from '@app/models/periodo';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { PolizasService } from '@app/services/polizas.service';
 import { ToastType } from '@app/services/toast-service.service';

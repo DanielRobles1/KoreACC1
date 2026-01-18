@@ -2,22 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
-
-interface Cuenta {
-  id: number;
-  codigo: string;
-  nombre: string;
-  ctaMayor: boolean;
-  parentId: number | null;
-  deleted?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-
-  padreCodigo?: string | null;
-  padreNombre?: string | null;
-  icon?: string;
-}
-
+import { Cuenta } from '@app/models/cuentas';
 
 @Injectable({
   providedIn: 'root'
