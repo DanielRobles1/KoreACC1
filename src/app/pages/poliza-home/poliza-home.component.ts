@@ -5,7 +5,8 @@ import { Router, RouterModule } from '@angular/router';
 import { PolizasLayoutComponent } from '@app/components/polizas-layout/polizas-layout.component';
 import { OnboardingService } from '@app/services/onboarding.service';
 
-import { PolizasService, Poliza, Movimiento } from '../../services/polizas.service';
+import { PolizasService} from '../../services/polizas.service';
+import { Poliza, Movimiento } from '@app/models/poliza';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { ToastMessageComponent } from '@app/components/modal/toast-message-component/toast-message-component.component';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';

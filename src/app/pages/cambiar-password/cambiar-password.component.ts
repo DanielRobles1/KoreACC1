@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { AuthService } from '@app/services/auth.service';
 import { environment } from '@environments/environment';
 
 @Component({
@@ -21,7 +22,8 @@ export class CambiarPasswordComponent {
   showConfirmPassword = false;
   private baseUrl = `${environment.urlBase}/api/v1`
 
-  constructor(private fb: FormBuilder, private http: HttpClient, private router: Router) {
+  constructor(private fb: FormBuilder, private http: HttpClient,
+    private router: Router, private auth: AuthService) {
     this.form = this.fb.group({
       oldPassword: ['', [Validators.required, Validators.minLength(6)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
@@ -52,22 +54,22 @@ export class CambiarPasswordComponent {
     this.mensajeOk = '';
     this.mensajeError = '';
 
-    this.http.patch(`${this.baseUrl}/auth/change-password`, {
-      oldPassword: this.form.value.oldPassword,
-      newPassword: this.form.value.password
-    }).subscribe({
-      next: () => {
-        this.loading = false;
-        this.mensajeOk = 'Contraseña cambiada con éxito';
-        this.router.navigate(['/login']);
-        this.form.reset();
-      },
-      error: (err) => {
-        this.loading = false;
-        this.mensajeError = err.error?.message || 'Error al cambiar la contraseña';
-      }
-    });
+    this.auth.changePassword(this.form.value.oldPassword, this.form.value.password)
+      .subscribe({
+        next: () => {
+          this.mensajeOk = 'Contraseña cambiada exitosamente. Redirigiendo al login...';
+          this.form.reset();
 
-
+          setTimeout(() => {
+            this.auth.logout();
+            this.router.navigate(['/login']);
+            this.loading = false;
+          }, 2000);
+        },
+        error: (err) => {
+          this.mensajeError = err.error?.message || 'Error al cambiar la contraseña';
+          this.loading = false;
+        }
+      });
   }
 }

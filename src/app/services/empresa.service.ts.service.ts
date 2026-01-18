@@ -2,35 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '@environments/environment';
-
-export type PeriodoTipo =
-  | 'SEMANAL'
-  | 'QUINCENAL'
-  | 'MENSUAL'
-  | 'BIMESTRAL'
-  | 'TRIMESTRAL'
-  | 'SEMESTRAL'
-  | 'ANUAL'
-  | 'PERSONALIZADO';
-
-export interface UiPeriodo {
-  id: number;
-  anio: number;
-  etiqueta: string;
-  tipo_periodo: PeriodoTipo;
-  fecha_inicio: string;
-  fecha_fin: string;
-  estado?: string;
-  activo?: boolean;
-}
-
-type ApiPeriodo = UiPeriodo;
-
-interface GenerarResponse {
-  created: number;
-  total: number;
-  periodos: ApiPeriodo[];
-}
+import { PeriodoTipo, ApiPeriodo, GenerarResponse, UiPeriodo, } from '@app/models/periodo';
 
 @Injectable({ providedIn: 'root' })
 export class EmpresaServiceTsService {

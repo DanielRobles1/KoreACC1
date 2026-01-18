@@ -20,14 +20,13 @@ import { EmpresaServiceTsService } from '@app/services/empresa.service.ts.servic
 import { AuthService } from '@app/services/auth.service';
 import {
   PeriodoContableService,
-  PeriodoContableDto,
-  PeriodoTipo,
 } from '@app/services/periodo-contable.service';
+import { PeriodoContableDto, PeriodoTipo } from '@app/models/periodo';
 import {
   EjercicioContableService,
-  EjercicioContableDto,
 } from '@app/services/ejercicio-contable.service';
 import { PolizasService } from '@app/services/polizas.service';
+import { EjercicioContableDto } from '@app/models/ejercicio';
 
 type UiEmpresa = {
   id?: number;

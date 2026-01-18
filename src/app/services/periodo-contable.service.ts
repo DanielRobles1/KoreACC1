@@ -1,32 +1,9 @@
-// src/app/services/periodo-contable.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@environments/environment';
+import { PeriodoContableDto, PeriodoTipo, PeriodoQuery } from '@app/models/periodo';
 
-export type PeriodoTipo = 'SEMANAL' | 'MENSUAL' | 'ANUAL' | 'PERSONALIZADO';
-
-export interface PeriodoContableDto {
-  id_periodo?: number;
-  id_empresa: number;
-  id_ejercicio: number;
-  tipo_periodo: PeriodoTipo;
-  fecha_inicio: string;
-  fecha_fin: string;
-  periodo_daterange?: any;
-  esta_abierto?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface PeriodoQuery {
-  id_empresa?: number;
-  id_ejercicio?: number;           // ⬅️ Permite filtrar por ejercicio
-  tipo_periodo?: PeriodoTipo;
-  esta_abierto?: boolean;
-  desde?: string;
-  hasta?: string;
-}
 
 export type FrecuenciaPeriodo = Exclude<PeriodoTipo, 'PERSONALIZADO'>;
 

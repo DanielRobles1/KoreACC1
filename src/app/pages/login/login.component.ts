@@ -118,10 +118,12 @@ export class LoginComponent {
           };
           localStorage.setItem('usuario', JSON.stringify(usuarioLite));
         }
-
+        
         this.toast.success('¡Bienvenido! Redirigiendo...', 'Autenticación exitosa');
-        this.ws.connect();
-        this.router.navigate(['/poliza-home']);
+        setTimeout(() => {
+          this.ws.connect();
+          this.router.navigate(['/poliza-home']);
+        }, 1200);
       },
 
       error: (err) => {

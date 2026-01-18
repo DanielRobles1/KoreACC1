@@ -17,29 +17,32 @@ import { SidebarComponent } from "@app/components/sidebar/sidebar.component";
 export class DashboardContableComponent implements OnInit {
   sidebarOpen = true;
 
-onSidebarToggle(open: boolean) {
-  this.sidebarOpen = open;
-}
+  onSidebarToggle(open: boolean) {
+    this.sidebarOpen = open;
+  }
   loading = signal(true);
   errorMsg = signal<string | null>(null);
   data = signal<DashboardContableDTO | null>(null);
 
 
   // KPIs (ejemplo: total por tipo)
-  totalIngresos = computed(() =>
+  // KPIs por ESTADO (coincide con tu backend y tus estados reales)
+  totalPorRevisar = computed(() =>
     (this.data()?.resumen ?? [])
-      .filter(r => r.tipo === 'ingreso')
-      .reduce((a, b) => a + b.total_polizas, 0)
+      .filter(r => (r.estado ?? '').toLowerCase() === 'por revisar')
+      .reduce((a, b) => a + Number(b.total_polizas ?? 0), 0)
   );
-  totalEgresos = computed(() =>
+
+  totalAprobadas = computed(() =>
     (this.data()?.resumen ?? [])
-      .filter(r => r.tipo === 'egreso')
-      .reduce((a, b) => a + b.total_polizas, 0)
+      .filter(r => (r.estado ?? '').toLowerCase() === 'aprobada')
+      .reduce((a, b) => a + Number(b.total_polizas ?? 0), 0)
   );
-  totalDiario = computed(() =>
+
+  totalContabilizadas = computed(() =>
     (this.data()?.resumen ?? [])
-      .filter(r => r.tipo === 'diario')
-      .reduce((a, b) => a + b.total_polizas, 0)
+      .filter(r => (r.estado ?? '').toLowerCase() === 'contabilizada')
+      .reduce((a, b) => a + Number(b.total_polizas ?? 0), 0)
   );
 
   // Chart.js config
@@ -54,7 +57,7 @@ onSidebarToggle(open: boolean) {
     }
   };
 
-  constructor(private svc: DashboardContableService) {}
+  constructor(private svc: DashboardContableService) { }
 
   ngOnInit(): void {
     this.svc.getResumen().subscribe({
@@ -70,78 +73,78 @@ onSidebarToggle(open: boolean) {
     });
   }
 
-private setupChart(res: DashboardContableDTO) {
-  const movs = res.movimientos ?? [];
+  private setupChart(res: DashboardContableDTO) {
+    const movs = res.movimientos ?? [];
 
-  const labels = [...new Set(movs.map(m => m.mes))].sort();
+    const labels = [...new Set(movs.map(m => m.mes))].sort();
 
-  const ganancias = labels.map(
-    l => movs.find(m => m.mes === l)?.ganancias ?? 0
-  );
-  const perdidas = labels.map(
-    l => movs.find(m => m.mes === l)?.perdidas ?? 0
-  );
-  const utilidad = ganancias.map((g, i) => g - perdidas[i]);
+    const ganancias = labels.map(
+      l => movs.find(m => m.mes === l)?.ganancias ?? 0
+    );
+    const perdidas = labels.map(
+      l => movs.find(m => m.mes === l)?.perdidas ?? 0
+    );
+    const utilidad = ganancias.map((g, i) => g - perdidas[i]);
 
-  // Junta todos los valores para calcular rango
-  const allValues = [...ganancias, ...perdidas, ...utilidad].filter(v => !isNaN(v));
-  const min = allValues.length ? Math.min(...allValues) : 0;
-  const max = allValues.length ? Math.max(...allValues) : 0;
+    // Junta todos los valores para calcular rango
+    const allValues = [...ganancias, ...perdidas, ...utilidad].filter(v => !isNaN(v));
+    const min = allValues.length ? Math.min(...allValues) : 0;
+    const max = allValues.length ? Math.max(...allValues) : 0;
 
-  // Un margen para que no queden pegadas al borde
-  const padding = (max - min) === 0 ? 1 : (max - min) * 0.1;
+    // Un margen para que no queden pegadas al borde
+    const padding = (max - min) === 0 ? 1 : (max - min) * 0.1;
 
-  this.lineLabels = labels;
-  this.lineData = {
-    labels,
-    datasets: [
-      {
-        label: 'Ganancias',
-        data: ganancias,
-        tension: 0.25,
-        fill: false,
-      },
-      {
-        label: 'Pérdidas',
-        data: perdidas,
-        tension: 0.25,
-        fill: false,
-      },
-      {
-        label: 'Utilidad neta',
-        data: utilidad,
-        tension: 0.25,
-        fill: false,
-      }
-    ]
-  };
+    this.lineLabels = labels;
+    this.lineData = {
+      labels,
+      datasets: [
+        {
+          label: 'Ganancias',
+          data: ganancias,
+          tension: 0.25,
+          fill: false,
+        },
+        {
+          label: 'Pérdidas',
+          data: perdidas,
+          tension: 0.25,
+          fill: false,
+        },
+        {
+          label: 'Utilidad neta',
+          data: utilidad,
+          tension: 0.25,
+          fill: false,
+        }
+      ]
+    };
 
-  this.lineOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => {
-            const v = ctx.parsed.y ?? 0;
-            // si quieres pesos:
-            return `${ctx.dataset.label}: ${v.toLocaleString('es-MX', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}`;
+    this.lineOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.y ?? 0;
+              // si quieres pesos:
+              return `${ctx.dataset.label}: ${v.toLocaleString('es-MX', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`;
+            }
           }
         }
+      },
+      scales: {
+        y: {
+          suggestedMin: min - padding,
+          suggestedMax: max + padding
+        }
       }
-    },
-    scales: {
-      y: {
-        suggestedMin: min - padding,
-        suggestedMax: max + padding
-      }
-    }
-  };
-}
+    };
+  }
 
 
 
