@@ -18,6 +18,7 @@ import { AuthService } from '@app/services/auth.service';
 import { WsService } from '@app/services/ws.service';
 import { PermissionWatcher } from '@app/utils/permissions.util';
 import { environment } from '@environments/environment';
+import { CuentasService } from '@app/services/cuentas.service';
 
 const API = `${environment.urlBase}/api/v1/cuentas`;
 
@@ -76,6 +77,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   private ws = inject(WsService);
   private http = inject(HttpClient);
   private subs: Subscription[] = [];
+  private cuentasService = inject(CuentasService);
 
   TIPO_OPTS: CuentaTipo[] = ['ACTIVO', 'PASIVO', 'CAPITAL', 'INGRESO', 'GASTO'];
   NAT_OPTS: Naturaleza[] = ['DEUDORA', 'ACREEDORA'];
@@ -518,7 +520,7 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.formCuenta.ctaMayor = !!v;
 
     if (this.formCuenta.ctaMayor) {
-      this.formCuenta.parentId = null; 
+      this.formCuenta.parentId = null;
       this.parentPreselectedId = null;
     }
 
@@ -526,13 +528,13 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
   }
 
   onParentChange(id: number | null) {
-  this.formCuenta.parentId = id ?? null;
+    this.formCuenta.parentId = id ?? null;
 
-  if (id != null) {
-    this.formCuenta.ctaMayor = false;      // tener padre implica ser subcuenta
-    this.enforcePosteableRule();
+    if (id != null) {
+      this.formCuenta.ctaMayor = false;      // tener padre implica ser subcuenta
+      this.enforcePosteableRule();
+    }
   }
-}
 
   getParentOptions(): Cuenta[] {
     const excludeId = this.editId;
@@ -674,27 +676,35 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
 
   //  EXPORTAR A EXCEL 
   exportToExcel(): void {
-    const visible = this.getVisibleRows();
+    this.cuentasService.downloadCuentasExcel().subscribe({
+      next: (resp) => {
+        const blob = resp.body!;
+        const cd = resp.headers.get('content-disposition') ?? '';
+        const match = /filename="([^"]+)"/.exec(cd);
+        const filename = match?.[1] ?? `catalogo_cuentas_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        saveAs(blob, filename);
+        this.toastOk('Catálogo exportado a Excel');
+      },
+      error: async (err) => {
+        console.error('Export error status:', err.status);
 
-    const exportData = visible.map((r) => ({
-      Código: r.codigo,
-      Nombre: r.nombre,
-      '¿Mayor?': r.ctaMayor ? 'Sí' : 'No',
-      Posteable: r.posteable ? 'Sí' : 'No',
-      Tipo: r.tipo,
-      Naturaleza: r.naturaleza,
-      'Padre (Código)': r.padreCodigo ?? '',
-      'Padre (Nombre)': r.padreNombre ?? '',
-    }));
+        if (err?.error instanceof Blob) {
+          const text = await err.error.text();
+          console.error('Backend error body:', text);
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Cuentas');
+          try {
+            const json = JSON.parse(text);
+            console.error('Backend error JSON:', json);
+            this.toastError(json?.message ?? json?.error ?? 'Error exportando', json);
+          } catch {
+            this.toastError(text || 'Error exportando', err);
+          }
+        } else {
+          this.toastError(err?.message ?? 'Error exportando', err);
+        }
+      }
 
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `catalogo_cuentas_${new Date().toISOString().split('T')[0]}.xlsx`);
-    this.toastOk('Catálogo exportado a Excel');
+    });
   }
 
   //  EXPORTAR A PDF 
@@ -722,153 +732,51 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
     this.toastOk('Catálogo exportado a PDF');
   }
 
-  importFromExcel(event: any): void {
-    const file = event.target.files?.[0];
+  importFromExcel(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!['xlsx', 'xls'].includes(ext ?? '')) {
+      this.toastWarn('Selecciona un archivo Excel (.xlsx o .xls)');
+      input.value = '';
+      return;
+    }
 
-    reader.onload = async (e: any) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const rowsExcel: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-      if (!rowsExcel.length) {
-        this.toastWarn('El archivo no contiene filas para importar.');
-        return;
-      }
-
-      const normalize = (v: any) => (v ?? '').toString().trim();
-
-      type CuentaImport = {
-        codigo: string;
-        nombre: string;
-        ctaMayor: boolean;
-        posteable: boolean;
-        tipo: CuentaTipo;
-        naturaleza: Naturaleza;
-        parentCodigo: string | null;
-      };
-
-      const cuentas: CuentaImport[] = rowsExcel.map((r) => {
-        const codigo = normalize(r['Código']);
-        const nombre = normalize(r['Nombre']);
-        const tipo = normalize(r['Tipo']) as CuentaTipo;
-        const naturaleza = normalize(r['Naturaleza']) as Naturaleza;
-        const mayorStr = normalize(r['¿Mayor?']);
-        const posteableStr = normalize(r['Posteable']);
-        const parentCodigoRaw = normalize(r['Padre (Código)']);
-
-        const toBool = (s: string) => {
-          const v = s.toLowerCase();
-          return v === 'sí' || v === 'si' || v === 'true' || v === '1';
-        };
-
-        return {
-          codigo,
-          nombre,
-          tipo,
-          naturaleza,
-          ctaMayor: toBool(mayorStr),
-          posteable: toBool(posteableStr),
-          parentCodigo: parentCodigoRaw || null,
-        };
-      });
-
-      const invalid = cuentas.filter(
-        (c) =>
-          !c.codigo ||
-          !c.nombre ||
-          !this.TIPO_OPTS.includes(c.tipo) ||
-          !this.NAT_OPTS.includes(c.naturaleza)
-      );
-
-      if (invalid.length) {
-        this.toastWarn(
-          `Hay ${invalid.length} filas con datos inválidos (código, nombre, tipo o naturaleza). Corrige el archivo e inténtalo de nuevo.`
-        );
-        return;
-      }
-
-      const codigoToId = new Map<string, number>();
-
-      this.allCuentas.forEach((c) => {
-        if (c.codigo && c.id) {
-          codigoToId.set(c.codigo, c.id);
+    this.cuentasService.importCuentasExcel(file).subscribe({
+      next: (resp) => {
+        if (resp?.ok) {
+          this.toastOk(
+            `Importación completada.
+           Creadas: ${resp.created}
+           Omitidas: ${resp.skipped}
+           Errores: ${resp.errors}`
+          );
+          this.loadCuentas();
+        } else {
+          this.toastWarn(resp?.message ?? 'No se pudo importar el archivo');
         }
-      });
+      },
+      error: async (err) => {
+        console.error('Import error:', err);
 
-      try {
-        for (const c of cuentas.filter((x) => !x.parentCodigo)) {
-          if (codigoToId.has(c.codigo)) {
-            console.warn(`Código ya existente, se omite creación: ${c.codigo}`);
-            continue;
+        if (err?.error instanceof Blob) {
+          const text = await err.error.text();
+          try {
+            const json = JSON.parse(text);
+            this.toastError(json?.message ?? 'Error importando cuentas', json);
+          } catch {
+            this.toastError(text ?? 'Error importando cuentas', err);
           }
-
-          const payload: Partial<Cuenta> = {
-            codigo: c.codigo,
-            nombre: c.nombre,
-            ctaMayor: c.ctaMayor,
-            posteable: c.posteable,
-            tipo: c.tipo,
-            naturaleza: c.naturaleza,
-            parentId: null,
-          };
-
-          const created: any = await firstValueFrom(this.http.post(API, payload));
-
-          if (created?.id) {
-            codigoToId.set(c.codigo, created.id);
-          } else {
-            console.warn('No se devolvió ID para:', c);
-          }
+        } else {
+          this.toastError(err?.message ?? 'Error importando cuentas', err);
         }
-
-        for (const c of cuentas.filter((x) => !!x.parentCodigo)) {
-          const parentId = c.parentCodigo ? codigoToId.get(c.parentCodigo) : undefined;
-
-          if (!parentId) {
-            console.warn(`Padre no encontrado para ${c.codigo} (${c.parentCodigo})`);
-            continue;
-          }
-
-          if (codigoToId.has(c.codigo)) {
-            console.warn(`Código ya existente, se omite creación: ${c.codigo}`);
-            continue;
-          }
-
-          const payload: Partial<Cuenta> = {
-            codigo: c.codigo,
-            nombre: c.nombre,
-            ctaMayor: c.ctaMayor,
-            posteable: c.posteable,
-            tipo: c.tipo,
-            naturaleza: c.naturaleza,
-            parentId,
-          };
-
-          const created: any = await firstValueFrom(this.http.post(API, payload));
-
-          if (created?.id) {
-            codigoToId.set(c.codigo, created.id);
-          } else {
-            console.warn('No se devolvió ID para:', c);
-          }
-        }
-
-        this.loadCuentas();
-        this.toastOk('Importación completada y jerarquía asociada correctamente.');
-      } catch (err) {
-        console.error('Error en importación:', err);
-        this.toastError('No se pudo completar la importación', err);
-      }
-    };
-
-    reader.readAsArrayBuffer(file);
-
-    event.target.value = '';
+      },
+      complete: () => {
+        input.value = '';
+      },
+    });
   }
 
   trackById(index: number, item: { id: number }): number {

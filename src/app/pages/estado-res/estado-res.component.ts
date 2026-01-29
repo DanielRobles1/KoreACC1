@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportesLayoutComponent } from '@app/components/reportes-layout/reportes-layout.component';
 import { PolizasService } from '@app/services/polizas.service';
-import { PeriodoContableService} from '@app/services/periodo-contable.service';
+import { PeriodoContableService } from '@app/services/periodo-contable.service';
 import { PeriodoContableDto } from '@app/models/periodo';
 import { EjercicioContableDto } from '@app/models/ejercicio';
 import { ReportesService } from '@app/services/reportes.service';
@@ -275,330 +275,28 @@ export class EstadoResComponent {
     this.permWatcher?.stop();
   }
 
-  exportToExcel(includeSplitSheets = true): void {
+  exportToExcel(): void {
     if (!this.canGenerateReport) {
       this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
       return;
     }
-    const er = this.estadoResultados;
-    if (!er) {
-      this.showToast({
-        type: 'warning',
-        title: 'Sin datos',
-        message: 'Genera primero el estado de resultados.'
-      });
+    if (!this.periodoIniId || !this.periodoFinId) {
+      this.showToast({ type: 'warning', title: 'Fallo', message: 'Seleccione un rango de periodos.' });
       return;
     }
 
-    const buildHeader = (subtitle: string): any[][] => {
-      const rows: any[][] = [];
-
-      if (this.empresaInfo) {
-        rows.push([this.empresaInfo.razon_social ?? '']);
-        rows.push([`RFC: ${this.empresaInfo.rfc ?? ''}`]);
-
-        if (this.empresaInfo.domicilio_fiscal) {
-          rows.push([`Domicilio: ${this.empresaInfo.domicilio_fiscal}`]);
-        }
-
-        const contactoParts: string[] = [];
-        if (this.empresaInfo.telefono) contactoParts.push(`Tel: ${this.empresaInfo.telefono}`);
-        if (this.empresaInfo.correo_contacto) contactoParts.push(`Correo: ${this.empresaInfo.correo_contacto}`);
-        if (contactoParts.length > 0) {
-          rows.push([contactoParts.join('   ')]);
-        }
-
-        rows.push([]);
-      }
-
-      const rangoLabel = this.getRangoPeriodosLabel();
-      const fechaLabel = `Fecha de generación: ${todayISO()}`;
-
-      const title = subtitle
-        ? `Estado de resultados - ${subtitle}`
-        : 'Estado de resultados';
-
-      rows.push([title]);
-      rows.push([rangoLabel]);
-      rows.push([fechaLabel]);
-      rows.push([]);
-
-      return rows;
-    };
-
-    const wb = XLSX.utils.book_new();
-
-    const headerResumen = buildHeader('Resumen');
-    const headerLinesResumen = headerResumen.length;
-
-    const resumenHead = ['Concepto', 'Importe'];
-    const resumenBody = [
-      ['Ingresos', this.toNum(er.resumen.ingresos)],
-      ['Costos', this.toNum(er.resumen.costos)],
-      ['Utilidad bruta', this.toNum(er.resumen.utilidad_bruta)],
-      ['Gastos de operación', this.toNum(er.resumen.gastos_operacion)],
-      ['Utilidad neta', this.toNum(er.resumen.utilidad_neta)],
-    ];
-
-    const aoaResumen = [
-      ...headerResumen,
-      resumenHead,
-      ...resumenBody,
-    ];
-
-    const wsResumen = XLSX.utils.aoa_to_sheet(aoaResumen);
-
-    // Índices 0-based
-    const headRowResumenIdx = headerLinesResumen;
-    const firstDataRowResumenIdx = headerLinesResumen + 1;
-    const lastDataRowResumenIdx = firstDataRowResumenIdx + resumenBody.length - 1;
-
-    this.numFmtCell(wsResumen, 1, 1, firstDataRowResumenIdx, lastDataRowResumenIdx);
-
-    // Autofiltro sobre la tabla
-    wsResumen['!autofilter'] = {
-      ref: XLSX.utils.encode_range({
-        s: { r: headRowResumenIdx, c: 0 },
-        e: { r: lastDataRowResumenIdx, c: 1 },
-      }),
-    };
-
-    (wsResumen as any)['!freeze'] = { xSplit: 0, ySplit: headRowResumenIdx + 1 };
-
-    this.autosize(wsResumen);
-
-    const titleResumen = 'Estado de resultados - Resumen';
-    const titleRowResumenIdx = headerResumen.findIndex(r => r[0] === titleResumen);
-    if (titleRowResumenIdx >= 0) {
-      const addr = XLSX.utils.encode_cell({ r: titleRowResumenIdx, c: 0 });
-      if (!wsResumen[addr]) wsResumen[addr] = { t: 's', v: titleResumen };
-      (wsResumen[addr] as any).s = {
-        font: { bold: true, sz: 16 },
-        alignment: { horizontal: 'left' }
-      };
-    }
-
-    for (let c = 0; c < resumenHead.length; c++) {
-      const addr = XLSX.utils.encode_cell({ r: headRowResumenIdx, c });
-      const cell = wsResumen[addr];
-      if (!cell) continue;
-      (cell as any).s = {
-        font: { bold: true, sz: 11 },
-        fill: { fgColor: { rgb: 'D9E1F2' } },
-        alignment: { horizontal: 'center', vertical: 'center' },
-        border: {
-          top: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          left: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          right: { style: 'thin', color: { rgb: 'AAAAAA' } },
+    this.reportesService.downloadEstadoRes(this.periodoIniId!, this.periodoFinId!)
+      .subscribe({
+        next: (resp) => {
+          const blob = resp.body!;
+          const cd = resp.headers.get('content-disposition') ?? '';
+          const match = /filename="([^"]+)"/.exec(cd);
+          const filename = match?.[1] ?? `EstadoResultados_${todayISO()}.xlsx`;
+          saveAs(blob, filename);
         },
-      };
-    }
+        error: () => this.showToast({ type: 'error', title: 'Error', message: 'No se pudo descargar el Excel.' })
+      });
 
-    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
-    const headerDetalle = buildHeader('Detalle');
-    const headerLinesDet = headerDetalle.length;
-
-    const HEAD = ['Código', 'Nombre', 'Tipo', 'Naturaleza', 'Cargos (per.)', 'Abonos (per.)', 'Importe'];
-
-    const body = (er.detalle ?? []).map(d => ([
-      d.codigo ?? '',
-      d.nombre ?? '',
-      d.tipo_er ?? '',
-      d.naturaleza ?? '',
-      this.toNum(d.cargos_per),
-      this.toNum(d.abonos_per),
-      this.toNum(d.importe),
-    ]));
-
-    const firstDataRowDet = headerLinesDet + 2;
-    const lastDataRowDet = body.length ? firstDataRowDet + body.length - 1 : firstDataRowDet - 1;
-
-    const totalsRow = body.length ? [
-      'Totales', '', '', '',
-      { f: `SUM(E${firstDataRowDet}:E${lastDataRowDet})` },
-      { f: `SUM(F${firstDataRowDet}:F${lastDataRowDet})` },
-      { f: `SUM(G${firstDataRowDet}:G${lastDataRowDet})` },
-    ] : ['Totales', '', '', '', 0, 0, 0];
-
-    const aoaDetalle = [
-      ...headerDetalle,
-      HEAD,
-      ...body,
-      totalsRow,
-    ];
-
-    const wsDetalle = XLSX.utils.aoa_to_sheet(aoaDetalle);
-
-    const headRowDetIdx = headerLinesDet;
-    const firstDataRowDetIdx = headerLinesDet + 1;
-    const totalsRowDetIdx = headerLinesDet + 1 + body.length;
-
-    this.numFmtCell(wsDetalle, 4, 6, firstDataRowDetIdx, totalsRowDetIdx);
-
-    wsDetalle['!autofilter'] = {
-      ref: XLSX.utils.encode_range({
-        s: { r: headRowDetIdx, c: 0 },
-        e: { r: totalsRowDetIdx, c: HEAD.length - 1 },
-      }),
-    };
-
-    (wsDetalle as any)['!freeze'] = { xSplit: 0, ySplit: headRowDetIdx + 1 };
-
-    this.autosize(wsDetalle);
-
-    const titleDet = 'Estado de resultados - Detalle';
-    const titleRowDetIdx = headerDetalle.findIndex(r => r[0] === titleDet);
-    if (titleRowDetIdx >= 0) {
-      const addr = XLSX.utils.encode_cell({ r: titleRowDetIdx, c: 0 });
-      if (!wsDetalle[addr]) wsDetalle[addr] = { t: 's', v: titleDet };
-      (wsDetalle[addr] as any).s = {
-        font: { bold: true, sz: 16 },
-        alignment: { horizontal: 'left' }
-      };
-    }
-
-    for (let c = 0; c < HEAD.length; c++) {
-      const addr = XLSX.utils.encode_cell({ r: headRowDetIdx, c });
-      const cell = wsDetalle[addr];
-      if (!cell) continue;
-      (cell as any).s = {
-        font: { bold: true, sz: 11 },
-        fill: { fgColor: { rgb: 'D9E1F2' } },
-        alignment: { horizontal: 'center', vertical: 'center' },
-        border: {
-          top: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          left: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          right: { style: 'thin', color: { rgb: 'AAAAAA' } },
-        },
-      };
-    }
-
-    for (let c = 0; c < HEAD.length; c++) {
-      const addr = XLSX.utils.encode_cell({ r: totalsRowDetIdx, c });
-      const cell = wsDetalle[addr];
-      if (!cell) continue;
-      (cell as any).s = {
-        font: { bold: true },
-        fill: { fgColor: { rgb: 'F2F2F2' } },
-        alignment: { horizontal: c >= 4 ? 'right' : 'left' },
-      };
-    }
-
-    XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle');
-
-    if (includeSplitSheets) {
-      const mkSheetBy = (tipo: 'INGRESO' | 'COSTO' | 'GASTO', subtitle: string, sheetName: string) => {
-        const header = buildHeader(subtitle);
-        const headerLines = header.length;
-
-        const rows = (er.detalle ?? [])
-          .filter(d => d.tipo_er === tipo)
-          .map(d => ([
-            d.codigo ?? '',
-            d.nombre ?? '',
-            d.tipo_er ?? '',
-            d.naturaleza ?? '',
-            this.toNum(d.cargos_per),
-            this.toNum(d.abonos_per),
-            this.toNum(d.importe),
-          ]));
-
-        const firstDataRow = headerLines + 2;
-        const lastDataRow = rows.length ? firstDataRow + rows.length - 1 : firstDataRow - 1;
-
-        const tot = rows.length ? [
-          'Totales', '', '', '',
-          { f: `SUM(E${firstDataRow}:E${lastDataRow})` },
-          { f: `SUM(F${firstDataRow}:F${lastDataRow})` },
-          { f: `SUM(G${firstDataRow}:G${lastDataRow})` },
-        ] : ['Totales', '', '', '', 0, 0, 0];
-
-        const aoa = [
-          ...header,
-          HEAD,
-          ...rows,
-          tot,
-        ];
-
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-        const headRowIdx = headerLines;
-        const firstDataIdx = headerLines + 1;
-        const totalsRowIdx = headerLines + 1 + rows.length;
-
-        this.numFmtCell(ws, 4, 6, firstDataIdx, totalsRowIdx);
-        ws['!autofilter'] = {
-          ref: XLSX.utils.encode_range({
-            s: { r: headRowIdx, c: 0 },
-            e: { r: totalsRowIdx, c: HEAD.length - 1 },
-          }),
-        };
-        (ws as any)['!freeze'] = { xSplit: 0, ySplit: headRowIdx + 1 };
-        this.autosize(ws);
-
-        for (let c = 0; c < HEAD.length; c++) {
-          const addr = XLSX.utils.encode_cell({ r: headRowIdx, c });
-          const cell = ws[addr];
-          if (!cell) continue;
-          (cell as any).s = {
-            font: { bold: true, sz: 11 },
-            fill: { fgColor: { rgb: 'D9E1F2' } },
-            alignment: { horizontal: 'center', vertical: 'center' },
-            border: {
-              top: { style: 'thin', color: { rgb: 'AAAAAA' } },
-              bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
-              left: { style: 'thin', color: { rgb: 'AAAAAA' } },
-              right: { style: 'thin', color: { rgb: 'AAAAAA' } },
-            },
-          };
-        }
-
-        for (let c = 0; c < HEAD.length; c++) {
-          const addr = XLSX.utils.encode_cell({ r: totalsRowIdx, c });
-          const cell = ws[addr];
-          if (!cell) continue;
-          (cell as any).s = {
-            font: { bold: true },
-            fill: { fgColor: { rgb: 'F2F2F2' } },
-            alignment: { horizontal: c >= 4 ? 'right' : 'left' },
-          };
-        }
-
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      };
-
-      mkSheetBy('INGRESO', 'Ingresos', 'Ingresos');
-      mkSheetBy('COSTO', 'Costos', 'Costos');
-      mkSheetBy('GASTO', 'Gastos', 'Gastos');
-    }
-
-    const rangoSlug =
-      (this.periodoIniId && this.periodoFinId)
-        ? `_p${this.periodoIniId}-p${this.periodoFinId}`
-        : '';
-    const fecha = todayISO();
-
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-    const blob = new Blob(
-      [excelBuffer],
-      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
-    );
-
-    const empresaSlug = this.empresaInfo?.razon_social
-      ? this.empresaInfo.razon_social.replace(/[^\w\d]+/g, '_')
-      : 'empresa';
-
-    saveAs(blob, `${empresaSlug}_EstadoResultados${rangoSlug}_${fecha}.xlsx`);
-
-    this.showToast({
-      type: 'success',
-      title: 'Excel generado',
-      message: 'Se exportó el Estado de Resultados.'
-    });
   }
 
 }

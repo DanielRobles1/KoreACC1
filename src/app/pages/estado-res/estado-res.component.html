@@ -50,7 +50,7 @@
                 {{ loading ? 'Generando…' : 'Generar' }}
             </button>
             <button class="btn ghost" 
-                (click)="exportToExcel(true)"
+                (click)="exportToExcel()"
                 *ngIf="!loading && (detalleIngresos?.length ?? 0) > 0">
                 Exportar
             </button>

@@ -46,4 +46,8 @@ export class CentrosCostosService {
     return this.http.post<any>(`${this.apiURL}/bulk`, data);
   }
 
+  downloadCentrosExcel() {
+    return this.http.get(`${this.apiURL}/export.xlsx`, { responseType: 'blob', observe: 'response' });
+  }
+
 }

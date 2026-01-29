@@ -12,3 +12,9 @@ export type UiCentro = {
     correo: string;
     activo: boolean;
 }
+
+export interface CentroNode {
+    data: UiCentro;
+    children: CentroNode[];
+    expanded: boolean;
+}

@@ -17,27 +17,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CommonModule } from '@angular/common';
-
-type UiCentro = {
-  id_centro?: number;
-  parent_id?: number | null;
-  serie_venta: string;
-  nombre_centro: string;
-  calle: string;
-  num_ext: string;
-  num_int: string;
-  cp: string;
-  region: string;
-  telefono: string;
-  correo: string;
-  activo: boolean;
-};
-
-interface CentroNode {
-  data: UiCentro;
-  children: CentroNode[];
-  expanded: boolean;
-}
+import { UiCentro, CentroNode } from '@app/models/centros';
 
 @Component({
   selector: 'app-catalog-centros',
@@ -493,14 +473,16 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(this.rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Centros de Costo');
-
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, 'centros_de_costo.xlsx');
-    this.toast.success('Archivo Excel exportado correctamente.');
+    this.centroService.downloadCentrosExcel().subscribe({
+      next: (response) => {
+        const blob = new Blob([response.body!], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, 'centros_de_costo.xlsx');
+        this.toast.success('Excel exportado correctamente.');
+      },
+      error: (err) => {
+        this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo exportar a Excel', 'Fallo');
+      }
+    });
   }
 
   onImportExcel(event: any) {
