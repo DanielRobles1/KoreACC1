@@ -9,7 +9,7 @@ import { environment } from '@environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ReportesService {
-  private baseUrl =  `${environment.urlBase}/api/v1`;
+  private baseUrl = `${environment.urlBase}/api/v1`;
 
   constructor(private http: HttpClient) { }
 
@@ -39,4 +39,38 @@ export class ReportesService {
       .get<Empresa>(`${this.baseUrl}/empresas/${id_empresa}`)
       .pipe(shareReplay(1));
   }
+
+  downloadBalance(periodoIniId: number, periodoFinId: number) {
+    return this.http.get(
+      `${this.baseUrl}/reports/balance-gral/export`,
+      {
+        params: { periodoIni: periodoIniId, periodoFin: periodoFinId },
+        responseType: 'blob',
+        observe: 'response',
+      }
+    );
+  }
+
+  dowloadBalanza(periodoIniId: number, periodoFinId: number) {
+    return this.http.get(
+      `${this.baseUrl}/reports/balanza-comprobacion/export`,
+      {
+        params: { periodoIni: periodoIniId, periodoFin: periodoFinId },
+        responseType: 'blob',
+        observe: 'response',
+      }
+    );
+  }
+
+  downloadEstadoRes(periodoIniId: number, periodoFinId: number) {
+    return this.http.get(
+      `${this.baseUrl}/reports/estado-resultados/export`,
+      {
+        params: { periodoIni: periodoIniId, periodoFin: periodoFinId },
+        responseType: 'blob',
+        observe: 'response',
+      }
+    );
+  }
+
 }

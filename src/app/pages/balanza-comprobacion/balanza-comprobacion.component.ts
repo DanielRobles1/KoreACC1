@@ -270,206 +270,28 @@ export class BalanzaComprobacionComponent {
     this.permWatcher?.stop();
   }
 
-  exportToExcel(allRows = false): void {
+  exportToExcel(): void {
     if (!this.canGenerateReport) {
       this.showToast({ type: 'warning', title: 'Permiso requerido', message: 'No tienes permiso para generar reportes.' });
       return;
     }
-    const rows = (allRows ? this.balanza : this.filteredRows) ?? [];
-
-    const headerRows: any[][] = [];
-
-    if (this.empresaInfo) {
-      headerRows.push([this.empresaInfo.razon_social ?? '']);
-      headerRows.push([`RFC: ${this.empresaInfo.rfc ?? ''}`]);
-
-      if (this.empresaInfo.domicilio_fiscal) {
-        headerRows.push([`Domicilio: ${this.empresaInfo.domicilio_fiscal}`]);
-      }
-
-      const contactoParts: string[] = [];
-      if (this.empresaInfo.telefono) contactoParts.push(`Tel: ${this.empresaInfo.telefono}`);
-      if (this.empresaInfo.correo_contacto) contactoParts.push(`Correo: ${this.empresaInfo.correo_contacto}`);
-      if (contactoParts.length > 0) {
-        headerRows.push([contactoParts.join('   ')]);
-      }
+    if (!this.periodoIniId || !this.periodoFinId) {
+      this.showToast({ type: 'warning', title: 'Fallo', message: 'Seleccione un rango de periodos.' });
+      return;
     }
 
-    if (headerRows.length > 0) {
-      headerRows.push([]);
-    }
-
-    const rangoLabel = this.getRangoPeriodosLabel();
-    const fechaLabel = `Fecha de generación: ${todayISO()}`;
-
-    headerRows.push(['Balanza de comprobación']);
-    headerRows.push([rangoLabel]);
-    headerRows.push([fechaLabel]);
-    headerRows.push([]);
-
-    const headerLines = headerRows.length;
-    const HEAD = [
-      'Código',
-      'Nombre',
-      'Cargos',
-      'Abonos',
-      'Saldo final Deudor',
-      'Saldo final Acreedor',
-    ];
-
-    const BODY = rows.map(r => ([
-      r.codigo ?? '',
-      r.nombre ?? '',
-      this.toNum(r.cargos),
-      this.toNum(r.abonos),
-      this.toNum(r.saldo_final_deudor),
-      this.toNum(r.saldo_final_acreedor),
-    ]));
-
-    const firstDataRow = headerLines + 2;
-    const lastDataRow = firstDataRow + BODY.length - 1;
-
-    const totalLabel = 'Totales';
-    const TOTALS = BODY.length > 0 ? [
-      totalLabel,
-      '',
-      { f: `SUM(C${firstDataRow}:C${lastDataRow})` },
-      { f: `SUM(D${firstDataRow}:D${lastDataRow})` },
-      { f: `SUM(E${firstDataRow}:E${lastDataRow})` },
-      { f: `SUM(F${firstDataRow}:F${lastDataRow})` },
-    ] : [totalLabel, '', 0, 0, 0, 0];
-
-    const aoa = [
-      ...headerRows,
-      HEAD,
-      ...BODY,
-      TOTALS,
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-    const numberFmt = '#,##0.00';
-
-    if (ws['!ref']) {
-      const range = XLSX.utils.decode_range(ws['!ref']);
-
-      for (let R = firstDataRow - 1; R <= range.e.r; R++) {
-        for (let C = 2; C <= 5; C++) {
-          const addr = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = ws[addr];
-          if (!cell) continue;
-          if (typeof cell.v === 'number' || (cell as any).f) {
-            (cell as any).z = numberFmt;
-          }
-        }
-      }
-
-      ws['!autofilter'] = {
-        ref: XLSX.utils.encode_range({
-          s: { r: headerLines, c: 0 },
-          e: { r: Math.max(headerLines, range.e.r), c: 5 },
-        }),
-      };
-
-      (ws as any)['!freeze'] = { xSplit: 0, ySplit: headerLines + 1 };
-
-      // Ancho de columnas
-      const rowsForWidth = aoa.map(row =>
-        row.map(v => {
-          if (typeof v === 'object' && v && 'f' in v) return 'Σ';
-          return (v ?? '').toString();
-        })
-      );
-
-      const colCount = HEAD.length;
-      const colWidths = Array.from({ length: colCount }).map((_, colIdx) => {
-        const maxLen = rowsForWidth.reduce(
-          (m, row) => Math.max(m, (row[colIdx] ?? '').length),
-          0
-        );
-        return { wch: Math.min(Math.max(10, maxLen + 2), 50) };
+    this.reportesService.dowloadBalanza(this.periodoIniId, this.periodoFinId)
+      .subscribe({
+        next: (resp) => {
+          const blob = resp.body!;
+          const cd = resp.headers.get('content-disposition') ?? '';
+          const match = /filename="([^"]+)"/.exec(cd);
+          const filename = match?.[1] ?? `BalanzaComprobacion_${todayISO()}.xlsx`;
+          saveAs(blob, filename);
+          this.showToast({ type: 'success', title: 'Excel generado', message: 'Descarga iniciada.' });
+        },
+        error: () => this.showToast({ type: 'error', title: 'Error', message: 'No se pudo descargar el Excel.' })
       });
-
-      (ws as any)['!cols'] = colWidths;
-
-      const titleRow = headerRows.findIndex(r => r[0] === 'Balanza de comprobación');
-      if (titleRow >= 0) {
-        const addr = XLSX.utils.encode_cell({ r: titleRow, c: 0 });
-        if (!ws[addr]) ws[addr] = { t: 's', v: 'Balanza de comprobación' };
-        (ws[addr] as any).s = {
-          font: { bold: true, sz: 16 },
-          alignment: { horizontal: 'left' },
-        };
-      }
-      const headRowIdx = headerLines;
-      for (let c = 0; c < HEAD.length; c++) {
-        const addr = XLSX.utils.encode_cell({ r: headRowIdx, c });
-        const cell = ws[addr];
-        if (!cell) continue;
-        (cell as any).s = {
-          font: { bold: true, sz: 11 },
-          fill: { fgColor: { rgb: 'D9E1F2' } },
-          alignment: { horizontal: 'center', vertical: 'center' },
-          border: {
-            top: { style: 'thin', color: { rgb: 'AAAAAA' } },
-            bottom: { style: 'thin', color: { rgb: 'AAAAAA' } },
-            left: { style: 'thin', color: { rgb: 'AAAAAA' } },
-            right: { style: 'thin', color: { rgb: 'AAAAAA' } },
-          },
-        };
-      }
-
-      const totalRowIdx = headerLines + 1 + BODY.length;
-      for (let c = 0; c < HEAD.length; c++) {
-        const addr = XLSX.utils.encode_cell({ r: totalRowIdx, c });
-        const cell = ws[addr];
-        if (!cell) continue;
-        (cell as any).s = {
-          font: { bold: true },
-          fill: { fgColor: { rgb: 'F2F2F2' } },
-          alignment: { horizontal: c >= 2 ? 'right' : 'left' },
-        };
-      }
-
-      for (let R = firstDataRow - 1; R <= range.e.r; R++) {
-        for (let C = 2; C <= 5; C++) {
-          const addr = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = ws[addr];
-          if (!cell) continue;
-          (cell as any).s = {
-            ...(cell as any).s,
-            alignment: { horizontal: 'right' },
-          };
-        }
-      }
-    }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Balanza');
-
-    const rangoSlug =
-      (this.periodoIniId && this.periodoFinId)
-        ? `_p${this.periodoIniId}-p${this.periodoFinId}`
-        : '';
-    const fecha = todayISO();
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-    const blob = new Blob(
-      [excelBuffer],
-      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
-    );
-
-    const empresaSlug = this.empresaInfo?.razon_social
-      ? this.empresaInfo.razon_social.replace(/[^\w\d]+/g, '_')
-      : 'empresa';
-
-    saveAs(blob, `${empresaSlug}_BalanzaComprobacion${rangoSlug}_${fecha}.xlsx`);
-
-    this.showToast({
-      type: 'success',
-      title: 'Excel generado',
-      message: `Se exportaron ${rows.length} filas ${allRows ? '(todas)' : '(filtradas)'}`
-    });
   }
 
 }
