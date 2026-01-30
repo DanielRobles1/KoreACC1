@@ -709,27 +709,35 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
 
   //  EXPORTAR A PDF 
   exportToPDF(): void {
-    const visible = this.getVisibleRows();
+    this.cuentasService.downloadCuentasPdf().subscribe({
+      next: (resp) => {
+        const blob = resp.body!;
+        const cd = resp.headers.get('content-disposition') ?? '';
+        const match = /filename="([^"]+)"/.exec(cd);
+        const filename = match?.[1] ?? `catalogo_cuentas_${new Date().toISOString().slice(0, 10)}.pdf`;
+        saveAs(blob, filename);
+        this.toastOk('Catálogo exportado a PDF');
+      },
+      error: async (err) => {
+        console.error('Export error status:', err.status);
 
-    const doc = new jsPDF();
-    doc.text('Catálogo de Cuentas', 14, 15);
+        if (err?.error instanceof Blob) {
+          const text = await err.error.text();
+          console.error('Backend error body:', text);
 
-    const tableData = visible.map((r) => [
-      r.codigo,
-      r.nombre,
-      r.ctaMayor ? 'Sí' : 'No',
-      r.padreCodigo ?? '',
-      r.padreNombre ?? '',
-    ]);
+          try {
+            const json = JSON.parse(text);
+            console.error('Backend error JSON:', json);
+            this.toastError(json?.message ?? json?.error ?? 'Error exportando', json);
+          } catch {
+            this.toastError(text || 'Error exportando', err);
+          }
+        } else {
+          this.toastError(err?.message ?? 'Error exportando', err);
+        }
+      }
 
-    autoTable(doc, {
-      head: [['Código', 'Nombre', '¿Mayor?', 'Padre (Código)', 'Padre (Nombre)']],
-      body: tableData,
-      startY: 20,
     });
-
-    doc.save(`catalogo_cuentas_${new Date().toISOString().split('T')[0]}.pdf`);
-    this.toastOk('Catálogo exportado a PDF');
   }
 
   importFromExcel(event: Event): void {

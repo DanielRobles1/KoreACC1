@@ -50,4 +50,7 @@ export class CentrosCostosService {
     return this.http.get(`${this.apiURL}/export.xlsx`, { responseType: 'blob', observe: 'response' });
   }
 
+  downloadCentrosPDF() {
+    return this.http.get(`${this.apiURL}/export.pdf`, { responseType: 'blob', observe: 'response' });
+  }
 }
