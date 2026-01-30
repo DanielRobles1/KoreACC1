@@ -23,6 +23,13 @@ export class CuentasService {
     });
   }
 
+  downloadCuentasPdf(): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.apiURL}/export.pdf`, {
+      responseType: 'blob',
+      observe: 'response',
+    });
+  }
+
   importCuentasExcel(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);

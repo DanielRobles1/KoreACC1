@@ -535,23 +535,15 @@ export class CatalogCentrosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const doc = new jsPDF('l', 'pt', 'a4');
-    doc.setFontSize(16);
-    doc.text('Centros de Costo', 40, 40);
-
-    const columns = this.columns.map(c => c.header);
-    const data = this.rows.map(row => this.columns.map(c => (row as any)[c.key]));
-
-    autoTable(doc, {
-      head: [columns],
-      body: data,
-      startY: 60,
-      theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: [0, 102, 204] },
+    this.centroService.downloadCentrosPDF().subscribe({
+      next: (response) => {
+        const blob = new Blob([response.body!], { type: 'application/pdf' });
+        saveAs(blob, 'centros_de_costo.pdf');
+        this.toast.success('PDF exportado correctamente.');
+      },
+      error: (err) => {
+        this.toast.error(this.extractErrorMessage(err) ?? 'No se pudo exportar a PDF', 'Fallo');
+      }
     });
-
-    doc.save('centros_de_costo.pdf');
-    this.toast.success('PDF exportado correctamente.');
   }
 }
