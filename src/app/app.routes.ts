@@ -22,7 +22,8 @@ import { BalanceGralComponent } from './pages/balance-gral/balance-gral.componen
 import { EmpresaPrincipalComponent } from './pages/empresa-principal/empresa-principal.component';
 import { DashboardContableComponent } from './pages/dashboard-contable/dashboard-contable.component';
 import { PolizaAjusteComponent } from './pages/poliza-ajuste/poliza-ajuste.component';
-
+import { PeriodosComponent } from './pages/periodos/periodos.component';
+import { animation } from '@angular/animations';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -54,7 +55,7 @@ export const routes: Routes = [
     path: 'empresa',
     component: EmpresaComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: { perms: ['consultar_empresa','editar_empresa','crear_empresa','eliminar_empresa'] }
+    data: { perms: ['consultar_empresa','editar_empresa','crear_empresa','eliminar_empresa'], animation: 'Empresa' },
   },
   {
     path: 'impuestos',
@@ -86,6 +87,7 @@ export const routes: Routes = [
   component: PolizaEditarComponent
 },
 { path: 'empresas', component: EmpresaPrincipalComponent },
+{ path: 'ejercicio/:id_ejercicio/periodos', component: PeriodosComponent, data: { animation: 'Periodos' } },
 {
    path: 'poliza-home',
     component: PolizaHomeComponent,
@@ -110,9 +112,7 @@ export const routes: Routes = [
     canActivate: [AuthGuard, PermissionGuard],
     data: {perms: ['consultar_reporte']}
 },
-// app.routes.ts
-{ path: 'dashboard-contable', component: DashboardContableComponent }
-,
+{ path: 'dashboard-contable', component: DashboardContableComponent },
 // Ruta para el ajuste de póliza
   {
     path: 'poliza/ajuste/:id',  // :id es el parámetro que representa el ID de la póliza a ajustar
