@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr; 
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+:host {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px; 
+}
+
+.field-label {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  color: #0b1020; 
+  margin-bottom: 8px;
+}
+
+/* Asterisco para requeridos */
+.field-label.required::after {
+  content: '*';
+  margin-left: 2px;
+  font-weight: 700;
+  color: #0b1020; 
+}
+
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D9DEE7;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+}
+.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width .3s ease;
+  border-right: 1px solid rgba(0,0,0,.1);
+  overflow: hidden;
+}
+
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+.content {
+  min-width: 0; 
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+.crud-shell {
+  position: relative;
+}
+
+.back-in-header {
+  position: absolute;
+  z-index: 5;
+  top: 28px;
+  left: 28px;
+  padding: 4px 6px;
+  font-weight: 600;
+}
+
+:host ::ng-deep app-crud-panel .panel__title {
+  padding-left: 110px;
+}
+
+:host ::ng-deep app-crud-panel .card__header {
+  position: relative;
+}

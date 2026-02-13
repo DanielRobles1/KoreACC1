@@ -1,0 +1,96 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+    <app-sidebar
+        class="sidebar"
+        [open]="sidebarOpen"
+        (openChange)="onSidebarToggle($event)">
+    </app-sidebar>
+    <div class="content">
+        <div class="crud-shell">
+        <button class="btn btn-link back-in-header" type="button" (click)="back()">← Volver</button>
+
+        <app-crud-panel
+            [title]="periodosTitle"
+            [primaryActionLabel]="primaryActionLabel"
+            (primaryAction)="onPrimaryPeriodo()"
+            [columns]="columns"
+            [data]="periodos"
+            [actions]="actions"
+            [showSearch]="false"
+            (action)="onPeriodoAction($event)">
+        </app-crud-panel>
+        </div>
+    </div>
+</div>
+
+<app-modal
+    [open]="modalPeriodoOpen"
+    [title]="modalPeriodoTitle"
+    [size]="'md'"
+    [showClose]="true"
+    (closed)="closePeriodoModal()"
+    (canceled)="cancelPeriodoModal()"
+    (confirmed)="confirmPeriodoModal()">
+
+    <form #periodoForm="ngForm" style="display: grid; gap: 10px;">
+
+        <div style="padding:10px; border:1px solid #2c3e50; border-radius:8px; background:#fdfdfd;">
+        <label class="field-label" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" [(ngModel)]="autoCreate" name="autoCreate" />
+            Generar automáticamente los periodos para todo el ejercicio
+        </label>
+
+        <div *ngIf="autoCreate"
+            style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:8px;">
+            <div>
+            <label class="field-label required" style="display:block;">Tipo a generar</label>
+            <select class="field-input"
+                    [(ngModel)]="autoCreateTipo"
+                    name="autoCreateTipo"
+                    required
+                    style="min-width:160px;">
+                <option value="SEMANAL">SEMANAL</option>
+                <option value="QUINCENAL">QUINCENAL</option>
+                <option value="MENSUAL">MENSUAL</option>
+                <option value="ANUAL">ANUAL</option>
+            </select>
+            </div>
+
+            <div style="margin-left:auto; font-size:12px; opacity:.9;">
+            <strong>Ejercicio seleccionado:</strong>
+            <span *ngIf="idEjercicio; else noEj">
+                {{ anioEjercicio ?? '—' }} (#{{ idEjercicio }})
+            </span>
+            <ng-template #noEj>
+                <em style="color:#e67e22;">(selecciona un ejercicio)</em>
+            </ng-template>
+            </div>
+
+            <div style="width:100%; font-size:12px; opacity:.8; margin-top:6px;">
+            Se crearán todos los períodos de ese tipo cubriendo el rango del ejercicio.
+            </div>
+        </div>
+        </div>
+
+    </form>
+</app-modal>
+
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  [size]="'sm'"
+  [showClose]="true"
+  (closed)="closeConfirm()"
+  (canceled)="cancelConfirm()"
+  (confirmed)="confirmProceed()">
+  <p style="margin:0">{{ confirmMessage }}</p>
+</app-modal>
+
+<app-toast-message
+    [open]="vm?.open ?? false"
+    [title]="vm?.title ?? ''"
+    [message]="vm?.message ?? ''"
+    [type]="vm?.type ?? 'info'"
+    position="top-right"
+    [autoCloseMs]="vm?.autoCloseMs ?? 3500"
+    (closed)="toast.close()"
+/>

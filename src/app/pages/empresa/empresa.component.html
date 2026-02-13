@@ -32,26 +32,6 @@
         (action)="onEjercicioAction($event)">
       </app-crud-panel>
 
-      <!-- Periodos contables -->
-      <app-crud-panel
-        [title]="'Períodos Contables'"
-
-        [activeTabId]="activeTabId"
-        (tabChange)="onTabChange($event)"
-
-        [primaryActionLabel]="primaryActionLabel2"
-        (primaryAction)="onPrimaryPeriodo()"
-        [disablePrimary]="!canEdit"
-
-        [columns]="columns2"
-        [data]="periodos"
-        [actions]="actions2"
-        [showSearch]="false"
-        [hidePrimary]="false"
-
-        (action)="onPeriodoAction($event)">
-      </app-crud-panel>
-
       <!-- Barra de generación y selección de ejercicio (SOLO en 'periodos') -->
       <div *ngIf="activeTabId === 'periodos'"
            style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin: 8px 0 16px;">

@@ -36,6 +36,7 @@ export interface PeriodoContableDto {
     fecha_fin: string;
     periodo_daterange?: any;
     esta_abierto?: boolean;
+    etiqueta?: string;
     created_at?: string;
     updated_at?: string;
 }
