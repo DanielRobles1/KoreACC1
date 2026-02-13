@@ -1,29 +1,29 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
-import { UsuariosComponent } from './pages/usuarios/usuarios/usuarios.component';
+import { UsuariosComponent } from './pages/seguridad-pages/usuarios/usuarios.component';
 import { LoginComponent } from './pages/login/login.component';
 import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.component';
-import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.component';
+import { RolesypermisosComponent } from './pages/seguridad-pages/rolesypermisos/rolesypermisos.component';
 import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
 import { AccesoRestringidoComponent } from './pages/acceso-restringido/acceso-restringido.component';
-import { TipopolizaComponent } from './pages/tipopoliza/tipopoliza.component';
+import { TipopolizaComponent } from './pages/empresa-pages/tipopoliza/tipopoliza.component';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { PermissionGuard } from './guards/permission.guard';
-import { EmpresaComponent } from './pages/empresa/empresa.component';
-import { ImpuestosComponent } from './pages/impuestos/impuestos.component';
-import { CatalogCentrosComponent } from './pages/catalog-centros/catalog-centros.component';
-import { PolizasComponent } from './pages/polizas/polizas.component';
-import { PolizaHomeComponent } from './pages/poliza-home/poliza-home.component';
-import { PolizaEditarComponent } from './pages/poliza-editar/poliza-editar.component';
-import { BalanzaComprobacionComponent } from './pages/balanza-comprobacion/balanza-comprobacion.component';
-import { EstadoResComponent } from './pages/estado-res/estado-res.component';
-import { BalanceGralComponent } from './pages/balance-gral/balance-gral.component';
-import { EmpresaPrincipalComponent } from './pages/empresa-principal/empresa-principal.component';
-import { DashboardContableComponent } from './pages/dashboard-contable/dashboard-contable.component';
-import { PolizaAjusteComponent } from './pages/poliza-ajuste/poliza-ajuste.component';
-import { PeriodosComponent } from './pages/periodos/periodos.component';
+import { EmpresaComponent } from './pages/empresa-pages/empresa/empresa.component';
+import { ImpuestosComponent } from './pages/empresa-pages/impuestos/impuestos.component';
+import { CatalogCentrosComponent } from './pages/catalogos-pages/catalog-centros/catalog-centros.component';
+import { PolizasComponent } from './pages/polizas-page/polizas/polizas.component';
+import { PolizaHomeComponent } from './pages/polizas-page/poliza-home/poliza-home.component';
+import { PolizaEditarComponent } from './pages/polizas-page/poliza-editar/poliza-editar.component';
+import { BalanzaComprobacionComponent } from './pages/reportes-pages/balanza-comprobacion/balanza-comprobacion.component';
+import { EstadoResComponent } from './pages/reportes-pages/estado-res/estado-res.component';
+import { BalanceGralComponent } from './pages/reportes-pages/balance-gral/balance-gral.component';
+import { EmpresaPrincipalComponent } from './pages/empresa-pages/empresa-principal/empresa-principal.component';
+import { DashboardContableComponent } from './pages/reportes-pages/dashboard-contable/dashboard-contable.component';
+import { PolizaAjusteComponent } from './pages/polizas-page/poliza-ajuste/poliza-ajuste.component';
+import { PeriodosComponent } from './pages/empresa-pages/periodos/periodos.component';
 import { animation } from '@angular/animations';
 
 export const routes: Routes = [
@@ -68,7 +68,7 @@ export const routes: Routes = [
  {
     path: 'catalogos/cuentas',
     loadComponent: () =>
-      import('./pages/catalogocuentas/catalogocuentas.component').then(m => m.CatalogoCuentasComponent),
+      import('./pages/catalogos-pages/catalogocuentas/catalogocuentas.component').then(m => m.CatalogoCuentasComponent),
      canActivate: [AuthGuard, PermissionGuard],
      data: { perms: ['consultar_cat_Contable'], animation: 'CatalogoCuentas' }
   },

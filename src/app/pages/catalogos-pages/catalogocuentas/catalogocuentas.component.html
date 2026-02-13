@@ -10,14 +10,71 @@
       <button class="btn-excel" (click)="exportToExcel()">Exportar Excel</button>
       <button class="btn-pdf" (click)="exportToPDF()">Exportar PDF</button>
 
-      <label class="btn-import" *ngIf="true">
+      <button type="button" class="btn-import" (click)="openImportHelp()">
         Importar Excel
-        <input
-          type="file"
-          accept=".xlsx, .xls"
-          (change)="importFromExcel($event)" />
-      </label>
+      </button>
+
+      <!-- input escondido; se dispara después del modal -->
+      <input
+        #excelInput
+        type="file"
+        accept=".xlsx, .xls"
+        style="display:none"
+        (change)="importFromExcel($event)" />
     </div>
+
+    <!-- Modal de guía de importación -->
+    <app-modal
+      [open]="importHelpOpen"
+      [title]="'Guía para importar Catálogo de Cuentas'"
+      [size]="'lg'"
+      [showClose]="true"
+      (closed)="closeImportHelp()"
+      (canceled)="closeImportHelp()"
+      (confirmed)="proceedImportFile()"
+    >
+      <div style="display:grid;gap:10px;line-height:1.4">
+        <p style="margin:0;">
+          Para importar correctamente, el Excel debe contener una hoja con encabezados y las siguientes columnas:
+        </p>
+
+        <div>
+          <strong>Columnas obligatorias</strong>
+          <ul style="margin:6px 0 0 18px;">
+            <li><code>codigo</code> (único, requerido)</li>
+            <li><code>nombre</code> (requerido)</li>
+            <li><code>tipo</code> = ACTIVO | PASIVO | CAPITAL | INGRESO | GASTO</li>
+            <li><code>naturaleza</code> = DEUDORA | ACREEDORA</li>
+            <li><code>ctaMayor</code> (boolean: 1/0 o TRUE/FALSE o Sí/No)</li>
+            <li><code>posteable</code> (boolean: 1/0 o TRUE/FALSE o Sí/No)</li>
+          </ul>
+        </div>
+
+        <div>
+          <strong>Jerarquía (opcional)</strong>
+          <ul style="margin:6px 0 0 18px;">
+            <li><code>parentCodigo</code> (código del padre). Dejar vacío si es cuenta raíz.</li>
+          </ul>
+          <small style="opacity:.8;display:block;margin-top:6px;">
+            Nota: La base guarda <code>parentId</code>, pero para Excel se recomienda usar <code>parentCodigo</code>.
+          </small>
+        </div>
+
+        <div>
+          <strong>Ejemplo</strong>
+          <pre style="margin:0;background:#1111;color:inherit;padding:10px;border-radius:8px;overflow:auto;">
+    codigo,nombre,tipo,naturaleza,ctaMayor,posteable,parentCodigo
+    1000000000,ACTIVO,ACTIVO,DEUDORA,1,0,
+    1100000000,CIRCULANTE,ACTIVO,DEUDORA,1,0,1000000000
+    1101000000,CAJA,ACTIVO,DEUDORA,0,1,1100000000
+          </pre>
+        </div>
+
+        <small style="opacity:.8;">
+          Si hay códigos duplicados o valores fuera del ENUM, la importación puede fallar o marcar registros como omitidos.
+        </small>
+      </div>
+    </app-modal>
 
     <app-crud-panel
       [title]="title"

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { PolizasService } from '../../services/polizas.service';
+import { PolizasService } from '../../../services/polizas.service';
 import { Poliza, Movimiento } from '@app/models/poliza';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { KoreService } from '@app/services/kore.service';

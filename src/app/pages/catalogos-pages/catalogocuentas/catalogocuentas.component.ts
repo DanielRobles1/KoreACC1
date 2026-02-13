@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, viewChild, ElementRef, ViewChild } from '@angular/core';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { Subscription, firstValueFrom } from 'rxjs';
 import * as XLSX from 'xlsx';
@@ -786,6 +786,25 @@ export class CatalogoCuentasComponent implements OnInit, OnDestroy {
       },
     });
   }
+
+  @ViewChild('excelInput') excelInput?: ElementRef<HTMLInputElement>;
+
+  importHelpOpen = false;
+
+  openImportHelp(): void {
+    this.importHelpOpen = true;
+  }
+
+  closeImportHelp(): void {
+    this.importHelpOpen = false;
+  }
+
+  proceedImportFile(): void {
+    this.importHelpOpen = false;
+    const el = this.excelInput?.nativeElement;
+    if (el) el.click();
+  }
+
 
   trackById(index: number, item: { id: number }): number {
     return item.id;
