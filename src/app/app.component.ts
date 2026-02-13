@@ -27,6 +27,6 @@ export class AppComponent implements OnInit {
   }
 
   prepareRoute(outlet: RouterOutlet) {
-    return outlet?.activatedRouteData?.['animation'] || '';
+    return outlet?.activatedRouteData?.['animation'] ?? 'default';
   }
 }

@@ -8,6 +8,7 @@ var recuperarcontr_component_1 = require("./pages/recuperarcontr/recuperarcontr.
 var rolesypermisos_component_1 = require("./pages/rolesypermisos/rolesypermisos.component");
 var cambiar_password_component_1 = require("./pages/cambiar-password/cambiar-password.component");
 var acceso_restringido_component_1 = require("./pages/acceso-restringido/acceso-restringido.component");
+var tipopoliza_component_1 = require("./pages/tipopoliza/tipopoliza.component");
 var auth_guard_1 = require("./guards/auth.guard");
 var permission_guard_1 = require("./guards/permission.guard");
 var empresa_component_1 = require("./pages/empresa/empresa.component");
@@ -22,6 +23,7 @@ var balance_gral_component_1 = require("./pages/balance-gral/balance-gral.compon
 var empresa_principal_component_1 = require("./pages/empresa-principal/empresa-principal.component");
 var dashboard_contable_component_1 = require("./pages/dashboard-contable/dashboard-contable.component");
 var poliza_ajuste_component_1 = require("./pages/poliza-ajuste/poliza-ajuste.component");
+var periodos_component_1 = require("./pages/periodos/periodos.component");
 exports.routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: login_component_1.LoginComponent },
@@ -49,7 +51,7 @@ exports.routes = [
         path: 'empresa',
         component: empresa_component_1.EmpresaComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa', 'editar_empresa', 'crear_empresa', 'eliminar_empresa'] }
+        data: { perms: ['consultar_empresa', 'editar_empresa', 'crear_empresa', 'eliminar_empresa'], animation: 'Empresa' }
     },
     {
         path: 'impuestos',
@@ -63,57 +65,63 @@ exports.routes = [
             return Promise.resolve().then(function () { return require('./pages/catalogocuentas/catalogocuentas.component'); }).then(function (m) { return m.CatalogoCuentasComponent; });
         },
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_cat_Contable'] }
     },
     {
         path: 'centros-costo',
         component: catalog_centros_component_1.CatalogCentrosComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_cat_Centros'] }
     },
     {
         path: 'polizas',
         component: polizas_component_1.PolizasComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_poliza'] }
     },
     {
         path: 'polizas/editar/:id',
         component: poliza_editar_component_1.PolizaEditarComponent
     },
     { path: 'empresas', component: empresa_principal_component_1.EmpresaPrincipalComponent },
+    { path: 'ejercicio/:id_ejercicio/periodos', component: periodos_component_1.PeriodosComponent, data: { animation: 'Periodos' } },
     {
         path: 'poliza-home',
         component: poliza_home_component_1.PolizaHomeComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_poliza'] }
     },
     {
         path: 'balanza-comprobacion',
         component: balanza_comprobacion_component_1.BalanzaComprobacionComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_reporte'] }
     },
     {
         path: 'estado-resultados',
         component: estado_res_component_1.EstadoResComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_reporte'] }
     },
     {
         path: 'balance-general',
         component: balance_gral_component_1.BalanceGralComponent,
         canActivate: [auth_guard_1.AuthGuard, permission_guard_1.PermissionGuard],
-        data: { perms: ['consultar_empresa'] }
+        data: { perms: ['consultar_reporte'] }
     },
-    // app.routes.ts
     { path: 'dashboard-contable', component: dashboard_contable_component_1.DashboardContableComponent },
     // Ruta para el ajuste de póliza
     {
         path: 'poliza/ajuste/:id',
         component: poliza_ajuste_component_1.PolizaAjusteComponent,
         canActivate: [auth_guard_1.AuthGuard],
-        data: { perms: ['ajustar_poliza'] } // Aquí puedes definir los permisos necesarios para acceder al ajuste
+        data: { perms: ['ajustar_poliza'] }
+    },
+    {
+        path: 'tipopoliza',
+        component: tipopoliza_component_1.TipopolizaComponent,
+        canActivate: [auth_guard_1.AuthGuard],
+        data: { perms: ['consultar_tipopoliza'] }
     },
     { path: '**', redirectTo: 'login' }
 ];

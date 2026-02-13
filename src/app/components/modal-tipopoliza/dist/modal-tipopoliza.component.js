@@ -41,13 +41,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 exports.__esModule = true;
 exports.TipoPolizaModalComponent = void 0;
 var common_1 = require("@angular/common");
@@ -55,7 +48,6 @@ var core_1 = require("@angular/core");
 var forms_1 = require("@angular/forms");
 var rxjs_1 = require("rxjs");
 var modal_component_1 = require("../modal/modal/modal.component");
-var NATURALEZAS = ['ingreso', 'egreso', 'diario', 'apertura', 'cierre', "ajuste"];
 var TipoPolizaModalComponent = /** @class */ (function () {
     function TipoPolizaModalComponent(fb, polizas) {
         this.fb = fb;
@@ -63,15 +55,16 @@ var TipoPolizaModalComponent = /** @class */ (function () {
         this.open = false;
         this.openChange = new core_1.EventEmitter();
         this.saved = new core_1.EventEmitter();
+        this.tipoParaEditar = null;
         this.loading = false;
         this.submitted = false;
-        this.naturalezas = __spreadArrays(NATURALEZAS);
+        this.naturalezas = [];
         this.tipos = [];
-        //  ESTADO DE EDICIÓN 
+        // EDICIÓN
         this.editing = false;
         this.editingId = null;
         this.tipoEditando = null;
-        //  ELIMINAR (modal confirmaciom) 
+        // ELIMINAR
         this.showDeleteModal = false;
         this.tipoAEliminar = null;
         this.form = this.fb.group({
@@ -79,29 +72,56 @@ var TipoPolizaModalComponent = /** @class */ (function () {
             descripcion: ['', [forms_1.Validators.required, forms_1.Validators.maxLength(255)]]
         });
     }
+    // =============================
+    // DETECTAR CAMBIOS DE INPUTS
+    // =============================
     TipoPolizaModalComponent.prototype.ngOnChanges = function (changes) {
         var _a;
+        // Cuando se abre el modal
         if (((_a = changes['open']) === null || _a === void 0 ? void 0 : _a.currentValue) === true) {
             this.loadTipos();
+            // Si viene un registro → editar
+            if (this.tipoParaEditar) {
+                this.startEdit(this.tipoParaEditar);
+            }
+            else {
+                this.resetForm();
+            }
+        }
+        // Cuando cambia el registro a editar mientras está abierto
+        if (changes['tipoParaEditar'] && this.open) {
+            if (this.tipoParaEditar) {
+                this.startEdit(this.tipoParaEditar);
+            }
+            else {
+                this.resetForm();
+            }
         }
     };
-    // Cargar lista
+    // =============================
+    // CARGAR LISTA
+    // =============================
     TipoPolizaModalComponent.prototype.loadTipos = function () {
         return __awaiter(this, void 0, Promise, function () {
-            var _a, err_1;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var _a, tipos, naturalezas, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
                     case 0:
-                        _b.trys.push([0, 2, 3, 4]);
+                        _c.trys.push([0, 2, 3, 4]);
                         this.loading = true;
-                        _a = this;
-                        return [4 /*yield*/, rxjs_1.firstValueFrom(this.polizas.getTiposPoliza())];
+                        return [4 /*yield*/, Promise.all([
+                                rxjs_1.firstValueFrom(this.polizas.getTiposPoliza()),
+                                rxjs_1.firstValueFrom(this.polizas.getNaturalezasPoliza()),
+                            ])];
                     case 1:
-                        _a.tipos = _b.sent();
+                        _a = _c.sent(), tipos = _a[0], naturalezas = _a[1];
+                        this.tipos = tipos !== null && tipos !== void 0 ? tipos : [];
+                        this.naturalezas = naturalezas !== null && naturalezas !== void 0 ? naturalezas : [];
                         return [3 /*break*/, 4];
                     case 2:
-                        err_1 = _b.sent();
+                        _b = _c.sent();
                         this.tipos = [];
+                        this.naturalezas = [];
                         return [3 /*break*/, 4];
                     case 3:
                         this.loading = false;
@@ -111,7 +131,9 @@ var TipoPolizaModalComponent = /** @class */ (function () {
             });
         });
     };
-    // INICIAR EDICIÓN
+    // =============================
+    // EDICIÓN
+    // =============================
     TipoPolizaModalComponent.prototype.startEdit = function (t) {
         this.editing = true;
         this.editingId = t.id_tipopoliza;
@@ -121,21 +143,29 @@ var TipoPolizaModalComponent = /** @class */ (function () {
             descripcion: t.descripcion
         });
     };
-    TipoPolizaModalComponent.prototype.cancelEdit = function () {
+    TipoPolizaModalComponent.prototype.resetForm = function () {
         this.editing = false;
         this.editingId = null;
         this.tipoEditando = null;
         this.form.reset();
         this.submitted = false;
     };
-    // CONFIRMAR ELIMINAR
+    TipoPolizaModalComponent.prototype.cancelEdit = function () {
+        this.resetForm();
+        this.close();
+    };
+    // =============================
+    // ELIMINAR
+    // =============================
     TipoPolizaModalComponent.prototype.confirmarEliminar = function (tipo) {
         this.tipoAEliminar = tipo;
         this.showDeleteModal = true;
+        this.close();
     };
     TipoPolizaModalComponent.prototype.cancelarEliminar = function () {
         this.tipoAEliminar = null;
         this.showDeleteModal = false;
+        this.close();
     };
     TipoPolizaModalComponent.prototype.eliminarDefinitivo = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -154,6 +184,7 @@ var TipoPolizaModalComponent = /** @class */ (function () {
                         return [4 /*yield*/, this.loadTipos()];
                     case 3:
                         _a.sent();
+                        this.saved.emit(true);
                         return [3 /*break*/, 5];
                     case 4:
                         this.loading = false;
@@ -164,15 +195,36 @@ var TipoPolizaModalComponent = /** @class */ (function () {
             });
         });
     };
-    // CERRAR MODAL PRINCIPAL
+    // =============================
+    // CERRAR MODAL
+    // =============================
     TipoPolizaModalComponent.prototype.close = function () {
         this.open = false;
         this.openChange.emit(false);
-        this.cancelEdit();
+        this.resetForm();
     };
-    TipoPolizaModalComponent.prototype.onEsc = function () { if (this.open && !this.loading)
-        this.close(); };
+    Object.defineProperty(TipoPolizaModalComponent.prototype, "naturalezasDisponibles", {
+        get: function () {
+            var _a, _b;
+            // Si estamos editando, mostrar todas
+            if (this.editing) {
+                return (_a = this.naturalezas) !== null && _a !== void 0 ? _a : [];
+            }
+            // Si es creación, filtrar
+            return ((_b = this.naturalezas) !== null && _b !== void 0 ? _b : []).filter(function (n) {
+                return !['cierre', 'apertura', 'ajuste'].includes(n.toLowerCase());
+            });
+        },
+        enumerable: false,
+        configurable: true
+    });
+    TipoPolizaModalComponent.prototype.onEsc = function () {
+        if (this.open && !this.loading)
+            this.close();
+    };
+    // =============================
     // CREAR / ACTUALIZAR
+    // =============================
     TipoPolizaModalComponent.prototype.onSubmit = function () {
         return __awaiter(this, void 0, void 0, function () {
             var payload;
@@ -203,10 +255,11 @@ var TipoPolizaModalComponent = /** @class */ (function () {
                     case 6:
                         _a.sent();
                         this.saved.emit(true);
-                        this.cancelEdit();
+                        this.resetForm();
                         return [3 /*break*/, 8];
                     case 7:
                         this.loading = false;
+                        this.close();
                         return [7 /*endfinally*/];
                     case 8: return [2 /*return*/];
                 }
@@ -222,6 +275,9 @@ var TipoPolizaModalComponent = /** @class */ (function () {
     __decorate([
         core_1.Output()
     ], TipoPolizaModalComponent.prototype, "saved");
+    __decorate([
+        core_1.Input()
+    ], TipoPolizaModalComponent.prototype, "tipoParaEditar");
     __decorate([
         core_1.HostListener('document:keydown.escape')
     ], TipoPolizaModalComponent.prototype, "onEsc");

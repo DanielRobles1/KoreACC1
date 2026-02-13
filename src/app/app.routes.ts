@@ -6,6 +6,7 @@ import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.c
 import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.component';
 import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
 import { AccesoRestringidoComponent } from './pages/acceso-restringido/acceso-restringido.component';
+import { TipopolizaComponent } from './pages/tipopoliza/tipopoliza.component';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
@@ -37,19 +38,20 @@ export const routes: Routes = [
   {
     path: 'home',
     component: HomeComponent,
-    canActivate: [AuthGuard], // sólo logueado
+    canActivate: [AuthGuard],
+    data: { animation: 'Home' }
   },
   {
     path: 'usuarios',
     component: UsuariosComponent,
     canActivate: [AuthGuard, PermissionGuard], // logueado + rol
-    data: { perms: ['consultar_usuario'] }
+    data: { perms: ['consultar_usuario'], animation: 'Usuarios' }
   },
   {
     path: 'login/roles',
     component: RolesypermisosComponent,
     canActivate: [AuthGuard, PermissionGuard], // logueado + permiso
-    data: { perms: ['consultar_rol', 'editar_rol'] }
+    data: { perms: ['consultar_rol', 'editar_rol'], animation: 'Rolesypermisos' }
   },
   {
     path: 'empresa',
@@ -68,58 +70,65 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/catalogocuentas/catalogocuentas.component').then(m => m.CatalogoCuentasComponent),
      canActivate: [AuthGuard, PermissionGuard],
-     data: { perms: ['consultar_cat_Contable']}
+     data: { perms: ['consultar_cat_Contable'], animation: 'CatalogoCuentas' }
   },
   {
    path: 'centros-costo',
     component: CatalogCentrosComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_cat_Centros']}
+    data: {perms: ['consultar_cat_Centros'], animation: 'CatalogCentros'}
 },
  {
    path: 'polizas',
     component: PolizasComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_poliza']}
+    data: {perms: ['consultar_poliza'], animation: 'Polizas'}
 },
 {
   path: 'polizas/editar/:id',
-  component: PolizaEditarComponent
+  component: PolizaEditarComponent,
+  data: { animation: 'PolizaEditar' },
 },
-{ path: 'empresas', component: EmpresaPrincipalComponent },
+{ path: 'empresas', component: EmpresaPrincipalComponent, canActivate: [AuthGuard], data: { animation: 'EmpresaPrincipal' } },
 { path: 'ejercicio/:id_ejercicio/periodos', component: PeriodosComponent, data: { animation: 'Periodos' } },
 {
    path: 'poliza-home',
     component: PolizaHomeComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_poliza']}
+    data: {perms: ['consultar_poliza'], animation: 'PolizaHome' }
 },
 {
    path: 'balanza-comprobacion',
     component: BalanzaComprobacionComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_reporte']}
+    data: {perms: ['consultar_reporte'], animation: 'BalanzaComprobacion'}
 },
 {
    path: 'estado-resultados',
     component: EstadoResComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_reporte']}
+    data: {perms: ['consultar_reporte'], animation: 'EstadoResultados'}
 },
 {
    path: 'balance-general',
     component: BalanceGralComponent,
     canActivate: [AuthGuard, PermissionGuard],
-    data: {perms: ['consultar_reporte']}
+    data: {perms: ['consultar_reporte'], animation: 'BalanceGeneral'}
 },
-{ path: 'dashboard-contable', component: DashboardContableComponent },
-// Ruta para el ajuste de póliza
+{ path: 'dashboard-contable', component: DashboardContableComponent, canActivate: [AuthGuard, PermissionGuard], data: { perms: ['consultar_reporte'], animation: 'DashboardContable' } },
   {
-    path: 'poliza/ajuste/:id',  // :id es el parámetro que representa el ID de la póliza a ajustar
+    path: 'poliza/ajuste/:id',
     component: PolizaAjusteComponent,
-    canActivate: [AuthGuard], // Si quieres que esta ruta esté protegida por autenticación y permisos
-    data: { perms: ['ajustar_poliza'] } // Aquí puedes definir los permisos necesarios para acceder al ajuste
+    canActivate: [AuthGuard], 
+    data: { perms: ['ajustar_poliza'], animation: 'PolizaAjuste' }
   },
+  {
+  path: 'tipopoliza',
+  component: TipopolizaComponent,
+  canActivate: [AuthGuard],
+  data: { perms: ['consultar_tipopoliza'], animation: 'Tipopoliza' }
+},
+
   { path: '**', redirectTo: 'login' }
 
 ];

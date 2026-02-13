@@ -1,0 +1,61 @@
+<div class="layout" [class.is-collapsed]="!sidebarOpen">
+
+  <app-sidebar
+    class="sidebar"
+    [open]="sidebarOpen"
+    (openChange)="onSidebarToggle($event)">
+  </app-sidebar>
+
+  <div class="content">
+    <div class="crud-wrapper">
+
+      <app-crud-panel
+        [title]="'Tipos de Póliza'"
+        [columns]="[
+          { key: 'naturaleza', header: 'Naturaleza' },
+          { key: 'descripcion', header: 'Descripción' }
+        ]"
+        [data]="tiposPoliza"
+        [showSearch]="false"
+        [hidePrimary]="false"
+        [primaryActionLabel]="'Nuevo'"
+        (primaryAction)="openModal()"
+        (action)="
+          $event.action === 'edit'
+            ? editarDesdeTabla($event.row)
+            : confirmarEliminar($event.row)
+        ">
+      </app-crud-panel>
+
+    </div>
+  </div>
+
+</div>
+
+
+<app-modal-tipopoliza
+  [(open)]="modalOpen"
+  [tipoParaEditar]="tipoSeleccionado"
+  (saved)="loadTipos()">
+</app-modal-tipopoliza>
+
+<!-- CONFIRM ELIMINAR -->
+
+
+<app-modal
+  [open]="confirmOpen"
+  [title]="confirmTitle"
+  (canceled)="confirmCancel()"
+  [size]="'sm'"
+  (confirmed)="confirmProceed()">
+</app-modal>
+
+<!-- TOAST -->
+
+
+<app-toast-message
+  [open]="toastOpen"
+  [message]="toastMessage"
+  [type]="toastType"
+  (closed)="toastOpen = false">
+</app-toast-message>

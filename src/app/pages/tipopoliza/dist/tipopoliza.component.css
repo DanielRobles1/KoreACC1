@@ -1,0 +1,140 @@
+@charset "UTF-8";
+:host {
+  display: block;
+}
+
+/* usuarios.component.scss (o global) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  /* la 1a col toma el ancho del sidebar */
+  height: 100vh;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Tipografía base del formulario (opcional) */
+:host {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* Grid para alinear dos campos */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  /* separa como en la captura */
+}
+
+/* Etiquetas con el look de la imagen */
+.field-label {
+  display: inline-block;
+  font-weight: 600;
+  /* negrita sutil */
+  font-size: 14px;
+  /* ajusta a 15–16 si lo quieres un pelín más grande */
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  color: #0b1020;
+  /* azul oscuro casi negro */
+  margin-bottom: 8px;
+}
+
+/* Asterisco para requeridos */
+.field-label.required::after {
+  content: "*";
+  margin-left: 2px;
+  font-weight: 700;
+  color: #0b1020;
+  /* mismo color que el texto; cambia a #e11d48 si lo quieres rojo */
+}
+
+/* Inputs básicos (opcional, por si quieres un look prolijo) */
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #D9DEE7;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* sidebar ocupa el 100% en alto y su ancho lo manda la var */
+.sidebar {
+  width: var(--sidebar-w, 280px);
+  transition: width 0.3s ease;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  /* importante para que no “asome” contenido */
+}
+
+/*0 cuando esté colapsado, ancho 0 -> el contenido se expande solo */
+.layout.is-collapsed .sidebar {
+  --sidebar-w: 0px;
+  border-right: none;
+}
+
+/* content debe permitir encogerse correctamente */
+.content {
+  min-width: 0;
+  /* evita overflow horizontal de grids */
+  padding: 1rem;
+  overflow: auto;
+  background: var(--kore-page-bg, #2C3E50);
+}
+
+/* Móvil: el sidebar se vuelve overlay deslizante */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    /* sólo una columna */
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    /* top:0; right:auto; bottom:0; left:0 */
+    height: 100vh;
+    width: 280px;
+    /* ancho fijo en móvil */
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+    z-index: 50;
+  }
+
+  .layout.is-collapsed .sidebar {
+    transform: translateX(-100%);
+  }
+}
+.crud-combined {
+  display: flex;
+  flex-direction: column;
+  /* uno abajo del otro */
+  gap: 0;
+  /* elimina espacio entre ellos */
+}
+
+.crud-combined app-crud-panel {
+  margin: 0;
+  /* elimina márgenes internos */
+}
+
+.tabs-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 4px 4px 8px;
+}
+
+.btn.btn-primary {
+  padding: 8px 12px;
+  border-radius: 10px;
+}
