@@ -12,6 +12,7 @@ import { ModalSeleccionCuentaComponent } from '@app/components/modal-seleccion-c
 import { firstValueFrom } from 'rxjs';
 import { ModalComponent } from '@app/components/modal/modal/modal.component';
 import { fmtDate, toDateOrNull, todayISO, periodoEtiqueta } from '@app/utils/fecha-utils';
+import { AuthService } from '@app/services/auth.service';
 
 type CfdiOption = {
   uuid: string;
@@ -208,7 +209,8 @@ export class PolizasComponent implements OnInit {
     private api: PolizasService,
     private ejercicioSvc: EjercicioContableService,
     private router: Router,
-    private kore: KoreService
+    private kore: KoreService,
+    private auth: AuthService
   ) { }
 
   ngOnInit(): void {
@@ -291,197 +293,35 @@ export class PolizasComponent implements OnInit {
   //  Usuario actual 
 
   private initUsuarioActual() {
-    const usr = this.leerUsuarioDescompuesto() || this.leerUsuarioDesdeJwt();
-    if (!usr) return;
+    const u: any = this.auth.getUser();
 
-    const resolved = this.resolveNombre(usr);
-    const email = this.resolveEmail(usr);
-    const fromEmail =
-      (email
-        ? email.split('@')[0].replace(/[._-]+/g, ' ').trim()
-        : '') || undefined;
-    const fallback =
-      usr.id_usuario != null ? `Usuario ${usr.id_usuario}` : 'Usuario';
-    const nombreForzado = (resolved || fromEmail || fallback).toString().trim();
-
-    this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero;
-    console.log(
-      'USUARIO',
-      (this.currentUser = { ...usr, nombre: nombreForzado } as UsuarioLigero)
-    );
-
-    const idNum = Number(usr.id_usuario);
-    if (Number.isFinite(idNum) && !this.nuevaPoliza.id_usuario) {
-      this.nuevaPoliza.id_usuario = idNum;
-    }
-  }
-
-  private getNombreForzado(src: any): string {
-    const nombre =
-      src?.nombre ??
-      src?.name ??
-      src?.nombres ??
-      src?.displayName ??
-      src?.full_name ??
-      src?.fullName ??
-      src?.first_name ??
-      src?.given_name ??
-      src?.preferred_username ??
-      src?.usuario ??
-      src?.username ??
-      src?.userName ??
-      '';
-
-    const apP =
-      src?.apellido_p ??
-      src?.apellidoP ??
-      src?.apellido ??
-      src?.apellidos ??
-      src?.last_name ??
-      src?.family_name ??
-      '';
-    const apM = src?.apellido_m ?? src?.apellidoM ?? '';
-
-    const base = [nombre, apP, apM]
-      .map(v => (v ?? '').toString().trim())
-      .filter(Boolean)
-      .join(' ');
-    if (base) return base;
-
-    const email = this.resolveEmail(src);
-    if (email) {
-      const alias = String(email)
-        .split('@')[0]
-        .replace(/[._-]+/g, ' ')
-        .trim();
-      if (alias) return alias;
+    if (!u) {
+      this.currentUser = null;
+      this.nuevaPoliza.id_usuario = undefined;
+      return;
     }
 
-    return src?.id_usuario != null ? `Usuario ${src.id_usuario}` : 'Usuario';
-  }
-
-  private leerUsuarioDescompuesto(): UsuarioLigero | null {
-    try {
-      const w: any = window as any;
-      const candidatos = [
-        w?.Usuario,
-        w?.usuario,
-        w?.currentUser,
-        localStorage.getItem('usuario'),
-        localStorage.getItem('user'),
-        sessionStorage.getItem('usuario')
-      ];
-
-      for (const c of candidatos) {
-        if (!c) continue;
-        const obj = typeof c === 'string' ? JSON.parse(c) : c;
-
-        const id = Number(obj?.id_usuario ?? obj?.id ?? obj?.sub ?? obj?.uid);
-        if (!Number.isFinite(id)) continue;
-
-        return {
-          id_usuario: id,
-          nombre: this.resolveNombre(obj) ?? undefined,
-          email: this.resolveEmail(obj) ?? undefined,
-          ...obj
-        } as UsuarioLigero;
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  }
-
-  private leerUsuarioDesdeJwt(): UsuarioLigero | null {
-    const token =
-      localStorage.getItem('token') ||
-      localStorage.getItem('access_token') ||
-      sessionStorage.getItem('token');
-    if (!token) return null;
-
-    const payload = this.decodeJwt(token);
-    if (!payload) return null;
-
-    const rawId = payload?.id_usuario ?? payload?.sub ?? payload?.uid ?? null;
-    const maybeNum = Number(rawId);
-    const idNum = Number.isFinite(maybeNum) ? maybeNum : undefined;
-
-    return {
-      id_usuario: (idNum as any) ?? rawId,
-      nombre: this.resolveNombre(payload) ?? undefined,
-      email: this.resolveEmail(payload) ?? undefined,
-      ...payload
+    const id = Number(u.id_usuario ?? u.id ?? u.ID ?? u.user_id);
+    this.currentUser = {
+      id_usuario: Number.isFinite(id) ? id : this.auth.getUserIdOrThrow(),
+      nombre: (u.nombre ?? u.name ?? u.username ?? '').toString().trim() || undefined,
+      email: (u.email ?? u.correo ?? '').toString().trim() || undefined,
+      ...u,
     } as UsuarioLigero;
-  }
 
-  private decodeJwt(token: string): any | null {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const json = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(
-            c =>
-              '%' +
-              ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-          )
-          .join('')
-      );
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
-  }
-
-  private resolveNombre(src: any): string | null {
-    if (!src) return null;
-    const cand = [
-      src.nombre,
-      src.name,
-      src.full_name,
-      src.fullName,
-      src.username,
-      src.userName,
-      src.nombres,
-      src.displayName,
-      src.first_name,
-      src.given_name,
-      src.preferred_username,
-      src.usuario,
-      src.nombre_usuario,
-      src.nombreCompleto
-    ]
-      .map(v => (v ?? '').toString().trim())
-      .filter(Boolean);
-
-    const ap = (
-      src.apellido_p ??
-      src.apellido ??
-      src.apellidos ??
-      src.last_name ??
-      src.family_name ??
-      ''
-    )
-      .toString()
-      .trim();
-    const apm = (src.apellido_m ?? '').toString().trim();
-
-    if (cand.length && (ap || apm))
-      return [cand[0], ap, apm].filter(Boolean).join(' ').trim();
-    return cand[0] || null;
-  }
-
-  private resolveEmail(src: any): string | null {
-    if (!src) return null;
-    const cand = [src.email, src.correo, src.mail, src.Email, src.EMAIL]
-      .map((v: any) => (v ?? '').toString().trim())
-      .filter(Boolean);
-    return cand[0] || null;
+    this.nuevaPoliza.id_usuario = this.auth.getUserIdOrThrow();
   }
 
   get currentUserLabel(): string {
-    return (this.currentUser?.nombre || '').toString().trim();
+    const u: any = this.auth.getUser();
+    if (!u) return '';
+
+    const nombre =
+      (u.nombre ?? '').toString().trim() ||
+      (u.usuario ?? u.username ?? '').toString().trim() ||
+      (u.email ?? '').toString().trim();
+
+    return nombre || `Usuario ${u.id_usuario ?? this.auth.getUserId() ?? ''}`.trim();
   }
 
   onBaseTipoChange(value: 'sin' | 'con'): void {
@@ -2251,7 +2091,7 @@ export class PolizasComponent implements OnInit {
         next: () => {
           this.nuevaPoliza = {
             movimientos: [],
-            id_usuario: this.currentUser?.id_usuario
+            id_usuario: this.auth.getUserIdOrThrow()
           };
           this.cargarPolizas();
           this.showToast({
@@ -2337,7 +2177,7 @@ export class PolizasComponent implements OnInit {
         next: () => {
           this.nuevaPoliza = {
             movimientos: [],
-            id_usuario: this.currentUser?.id_usuario
+            id_usuario: this.auth.getUserIdOrThrow()
           };
           this.cargarPolizas();
           this.showToast({

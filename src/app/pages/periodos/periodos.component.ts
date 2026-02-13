@@ -10,6 +10,7 @@ import { ToastMessageComponent } from '@app/components/modal/toast-message-compo
 import { ToastService, ToastState } from '@app/services/toast-service.service';
 import { SidebarComponent } from '@app/components/sidebar/sidebar.component';
 import { fmtDate, periodoEtiqueta } from '@app/utils/fecha-utils';
+import { AuthService } from '@app/services/auth.service';
 
 @Component({
   selector: 'app-periodos',
@@ -25,6 +26,7 @@ export class PeriodosComponent implements OnInit {
     private router: Router,
     private periodosService: PeriodoContableService,
     public toast: ToastService,
+    private auth: AuthService
   ) { }
 
   sidebarOpen = true;
@@ -33,7 +35,7 @@ export class PeriodosComponent implements OnInit {
   anioEjercicio: number | null = null;
 
   columns: CrudColumn[] = [
-    { key: 'id_periodo', header: '#', width: '72px' },
+    // { key: 'id_periodo', header: '#', width: '72px' },
     { key: 'tipo_periodo', header: 'Tipo' },
     { key: 'etiqueta', header: 'Período' },
     { key: 'esta_abierto', header: 'Abierto' },
@@ -43,7 +45,7 @@ export class PeriodosComponent implements OnInit {
 
   actions: CrudAction[] = [
     { id: 'delete', label: 'Eliminar', tooltip: 'Eliminar' },
-    { id: 'cerrar', label: 'Cerrar / Abrir', tooltip: 'Cerrar' },
+    { id: 'cerrar', label: 'Cerrar', tooltip: 'Cerrar' },
   ];
 
   // botón primario
@@ -109,8 +111,15 @@ export class PeriodosComponent implements OnInit {
           const fi = fmtDate(p.fecha_inicio);
           const ff = fmtDate(p.fecha_fin);
 
+          const abierto =
+            p.esta_abierto === true ||
+            p.esta_abierto === 1 ||
+            p.esta_abierto === '1' ||
+            p.esta_abierto === 'true';
+
           return {
             ...p,
+            esta_abierto: abierto,
             fecha_inicio: fi,
             fecha_fin: ff,
             etiqueta: periodoEtiqueta(fi, ff),
@@ -120,6 +129,7 @@ export class PeriodosComponent implements OnInit {
       error: () => this.toast.error('Fallo al cargar los períodos', 'Error', 0),
     });
   }
+
 
   onPrimaryPeriodo() {
     this.modalPeriodoTitle = 'Generar períodos';
@@ -136,7 +146,7 @@ export class PeriodosComponent implements OnInit {
     }
 
     if (evt.action === 'cerrar') {
-      this.openConfirmToggle(evt.row);
+      this.openConfirmCerrar(evt.row);
       return;
     }
 
@@ -160,7 +170,7 @@ export class PeriodosComponent implements OnInit {
 
     this.isGenerating = true;
 
-    const userId = 1;
+    const userId = this.auth.getUserIdOrThrow();
     const centroId = 300;
 
     this.periodosService.generate(this.idEjercicio, tipo, userId, centroId).subscribe({
@@ -194,23 +204,22 @@ export class PeriodosComponent implements OnInit {
     this.confirmOpen = true;
   }
 
-  openConfirmToggle(row: PeriodoContableDto) {
+  openConfirmCerrar(row: PeriodoContableDto) {
     const idp = row.id_periodo;
     if (!idp) return;
 
-    const cerrar = row.esta_abierto === true;
-    const nuevoEstado = !cerrar;
+    if (row.esta_abierto !== true) {
+      this.toast.info('Este período ya está cerrado.', 'Aviso');
+      return;
+    }
 
-    this.confirmTitle = cerrar ? 'Confirmar cierre' : 'Confirmar apertura';
-    this.confirmMessage = cerrar
-      ? `¿Cerrar el período ${row.fecha_inicio} → ${row.fecha_fin}?`
-      : `¿Abrir el período ${row.fecha_inicio} → ${row.fecha_fin}?`;
-
+    this.confirmTitle = 'Confirmar cierre';
+    this.confirmMessage = `¿Cerrar el período ${row.etiqueta ?? (fmtDate(row.fecha_inicio) + ' → ' + fmtDate(row.fecha_fin))}?
+                            Este proceso no se puede deshacer.`;
     this.confirmKind = 'cerrar';
-    this.confirmPayload = { id_periodo: idp, esta_abierto: nuevoEstado };
+    this.confirmPayload = { id_periodo: idp, esta_abierto: false };
     this.confirmOpen = true;
   }
-
 
   closeConfirm() {
     this.confirmOpen = false;
@@ -248,12 +257,10 @@ export class PeriodosComponent implements OnInit {
 
       this.periodosService.setAbierto(idp, esta_abierto).subscribe({
         next: () => {
-          this.periodos = this.periodos.map(p =>
-            p.id_periodo === idp ? { ...p, esta_abierto } : p
-          );
-          this.toast.success(esta_abierto ? 'Período abierto.' : 'Período cerrado.', 'Éxito', 2500);
+          this.loadPeriodos();
+          this.toast.success('Período cerrado.', 'Éxito', 2500);
         },
-        error: () => this.toast.error(`No se pudo ${esta_abierto ? 'abrir' : 'cerrar'} el período.`, 'Error', 0),
+        error: () => this.toast.error('No se pudo cerrar el período.', 'Error', 0),
       });
       return;
     }

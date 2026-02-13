@@ -5,6 +5,7 @@ export interface EjercicioContableDto {
     fecha_inicio: string;
     fecha_fin: string;
     esta_abierto: boolean;
+    etiqueta?: string;
 }
 
 export interface EjercicioFilters {

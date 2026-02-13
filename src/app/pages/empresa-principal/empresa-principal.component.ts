@@ -109,7 +109,7 @@ export class EmpresaPrincipalComponent implements OnInit {
   }
 
   columns: CrudColumn[] = [
-    { key: 'id', header: '#', width: '64px' },
+    // { key: 'id', header: '#', width: '64px' },
     { key: 'razon_social', header: 'Razón social' },
     { key: 'rfc', header: 'RFC' },
     { key: 'domicilio_fiscal', header: 'Domicilio fiscal' },

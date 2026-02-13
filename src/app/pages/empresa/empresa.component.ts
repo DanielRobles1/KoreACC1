@@ -17,6 +17,7 @@ import { PeriodoContableDto, PeriodoTipo } from '@app/models/periodo';
 import { EjercicioContableService } from '@app/services/ejercicio-contable.service';
 import { EjercicioContableDto } from '@app/models/ejercicio';
 import { PolizasService } from '@app/services/polizas.service';
+import { fmtDate, periodoEtiqueta } from '@app/utils/fecha-utils';
 
 type UiEmpresa = {
   id?: number;
@@ -130,8 +131,7 @@ export class EmpresaComponent implements OnInit {
   columns3: CrudColumn[] = [
     { key: 'id_ejercicio', header: '#', width: '72px' },
     { key: 'anio', header: 'Año' },
-    { key: 'fecha_inicio', header: 'Inicio' },
-    { key: 'fecha_fin', header: 'Fin' },
+    { key: 'etiqueta', header: 'Período' },
     { key: 'esta_abierto', header: 'Abierto' },
   ];
   ejercicios: EjercicioContableDto[] = [];
@@ -433,9 +433,22 @@ export class EmpresaComponent implements OnInit {
     const idEmp = this.empresaId();
     if (!idEmp) return;
     this.ejerciciosService.listByEmpresa(idEmp).subscribe({
-      next: (items) => this.ejercicios = items ?? [],
-      error: (err) => this.openError('Error al cargar los ejercicios', err),
-    });
+      next: (items) => {
+        this.ejercicios = (items ?? []).map((p: any) => {
+          const fi = fmtDate(p.fecha_inicio);
+          const ff = fmtDate(p.fecha_fin);
+          console.log(items)
+
+          return {
+            ...p,
+            fecha_inicio: fi,
+            fecha_fin: ff,
+            etiqueta: periodoEtiqueta(fi, ff)
+          };
+        }) as any;
+      },
+      error: () => this.openError('No se pudieron cargar los ejercicios contables.'),
+    }) 
   }
 
   // Abrir creación de ejercicio
@@ -548,7 +561,7 @@ export class EmpresaComponent implements OnInit {
         this.openSuccess('Ejercicio seleccionado.');
       },
       error: (err) => {
-        console.error('❌ Error al seleccionar ejercicio en BD:', err);
+        console.error(' Error al seleccionar ejercicio en BD:', err);
         this.openError('No se pudo seleccionar el ejercicio en el servidor.', err);
       }
     });
@@ -819,7 +832,7 @@ export class EmpresaComponent implements OnInit {
         const id = payload?.id_ejercicio as number | undefined;
         if (!id) return this.openError('No se encontró el identificador del ejercicio.');
 
-        const userId = 1; // ⚠️ pendiente de amarrar al usuario real
+        const userId = this.auth.getUserIdOrThrow();
         if (!userId) {
           return this.openError('No se pudo obtener el id_usuario del usuario autenticado.');
         }
@@ -930,8 +943,7 @@ export class EmpresaComponent implements OnInit {
 
     this.isGenerating = true;
     this.openSuccess(`Generando períodos ${tipo.toLowerCase()}...`);
-    // ⚠️⚠️PENDIENTE A CAMBIAR⚠️⚠️
-    const userId = 1;
+    const userId = this.auth.getUserIdOrThrow();
     const centroId = 300;
 
     this.periodosService.generate(ej.id_ejercicio!, tipo, userId, centroId).subscribe({
