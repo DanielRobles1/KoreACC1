@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <!-- Base -->
+  <line x1="4" y1="20" x2="20" y2="20"/>
+  <line x1="12" y1="20" x2="12" y2="4"/>
+  
+  <!-- Barra superior -->
+  <line x1="6" y1="8" x2="18" y2="8"/>
+  
+  <!-- Plato izquierdo -->
+  <line x1="6" y1="8" x2="4" y2="14"/>
+  <line x1="6" y1="8" x2="8" y2="14"/>
+  <ellipse cx="6" cy="15" rx="3" ry="1"/>
+  
+  <!-- Plato derecho -->
+  <line x1="18" y1="8" x2="16" y2="14"/>
+  <line x1="18" y1="8" x2="20" y2="14"/>
+  <ellipse cx="18" cy="15" rx="3" ry="1"/>
+</svg>

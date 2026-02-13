@@ -234,20 +234,33 @@
       transform: translateY(-50%);
       width: 3px;
       height: 60%;
-      background: #fff;
+      background: #ffffff;
       border-radius: 0 99px 99px 0;
     }
   }
 
-  &--sub {
+ &--sub {
     padding: 0.5rem var(--spacing-md);
     font-size: 0.875rem;
-    background: transparent;
+    background: #fafafa;
     margin-top: var(--spacing-xs);
-  }
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: #2e5777;
+    }
+
+    &.btn--active {
+      background-color: #2e5777;
+      color: #ffffff;
+
+      svg {
+        stroke: #ffffff;
+      }
+    }}
 
   &--logout {
-    background: #fef2f2;
+    background: #f4f2fe;
     color: #dc2626;
 
     &:hover {

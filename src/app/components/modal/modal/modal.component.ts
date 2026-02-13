@@ -39,4 +39,6 @@ export class ModalComponent {
   close() { this.closed.emit(); }
   cancel() { this.canceled.emit(); }
   confirm() { this.confirmed.emit(); }
+  
+
 }

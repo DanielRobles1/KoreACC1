@@ -6,6 +6,7 @@ import { RecuperarcontrComponent } from './pages/recuperarcontr/recuperarcontr.c
 import { RolesypermisosComponent } from './pages/rolesypermisos/rolesypermisos.component';
 import { CambiarPasswordComponent } from './pages/cambiar-password/cambiar-password.component';
 import { AccesoRestringidoComponent } from './pages/acceso-restringido/acceso-restringido.component';
+import { TipopolizaComponent } from './pages/tipopoliza/tipopoliza.component';
 
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
@@ -117,9 +118,16 @@ export const routes: Routes = [
   {
     path: 'poliza/ajuste/:id',  // :id es el parámetro que representa el ID de la póliza a ajustar
     component: PolizaAjusteComponent,
-    canActivate: [AuthGuard], // Si quieres que esta ruta esté protegida por autenticación y permisos
-    data: { perms: ['ajustar_poliza'] } // Aquí puedes definir los permisos necesarios para acceder al ajuste
+    canActivate: [AuthGuard], 
+    data: { perms: ['ajustar_poliza'] }
   },
+  {
+  path: 'tipopoliza',
+  component: TipopolizaComponent,
+  canActivate: [AuthGuard],
+  data: { perms: ['consultar_tipopoliza'] }
+},
+
   { path: '**', redirectTo: 'login' }
 
 ];

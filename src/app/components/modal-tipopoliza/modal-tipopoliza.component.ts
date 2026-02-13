@@ -1,8 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, HostListener, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  Component,
+  EventEmitter,
+  HostListener,
+  Input,
+  Output,
+  OnChanges,
+  SimpleChanges
+} from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { PolizasService} from '@app/services/polizas.service';
+import { PolizasService } from '@app/services/polizas.service';
 import { TipoPoliza, TipoPolizaCreate } from '@app/models/poliza';
 import { ModalComponent } from "../modal/modal/modal.component";
 
@@ -14,29 +27,31 @@ import { ModalComponent } from "../modal/modal/modal.component";
   styleUrls: ['./modal-tipopoliza.component.scss'],
 })
 export class TipoPolizaModalComponent implements OnChanges {
+
   @Input() open = false;
   @Output() openChange = new EventEmitter<boolean>();
-  @Output() saved = new EventEmitter<any>();
+  @Output() saved = new EventEmitter<boolean>();
+
+  @Input() tipoParaEditar: TipoPoliza | null = null;
 
   form: FormGroup;
   loading = false;
   submitted = false;
   naturalezas: string[] = [];
-
   tipos: TipoPoliza[] = [];
 
-  //  ESTADO DE EDICIÓN 
+  // EDICIÓN
   editing = false;
   editingId: number | null = null;
   tipoEditando: TipoPoliza | null = null;
 
-  //  ELIMINAR (modal confirmaciom) 
+  // ELIMINAR
   showDeleteModal = false;
   tipoAEliminar: TipoPoliza | null = null;
 
   constructor(
     private fb: FormBuilder,
-    private polizas: PolizasService,
+    private polizas: PolizasService
   ) {
     this.form = this.fb.group({
       naturaleza: ['', Validators.required],
@@ -44,13 +59,38 @@ export class TipoPolizaModalComponent implements OnChanges {
     });
   }
 
+  // =============================
+  // DETECTAR CAMBIOS DE INPUTS
+  // =============================
+
   ngOnChanges(changes: SimpleChanges): void {
+
+    // Cuando se abre el modal
     if (changes['open']?.currentValue === true) {
       this.loadTipos();
+
+      // Si viene un registro → editar
+      if (this.tipoParaEditar) {
+        this.startEdit(this.tipoParaEditar);
+      } else {
+        this.resetForm();
+      }
+    }
+
+    // Cuando cambia el registro a editar mientras está abierto
+    if (changes['tipoParaEditar'] && this.open) {
+      if (this.tipoParaEditar) {
+        this.startEdit(this.tipoParaEditar);
+      } else {
+        this.resetForm();
+      }
     }
   }
 
-  // Cargar lista
+  // =============================
+  // CARGAR LISTA
+  // =============================
+
   async loadTipos(): Promise<void> {
     try {
       this.loading = true;
@@ -58,13 +98,12 @@ export class TipoPolizaModalComponent implements OnChanges {
       const [tipos, naturalezas] = await Promise.all([
         firstValueFrom(this.polizas.getTiposPoliza()),
         firstValueFrom(this.polizas.getNaturalezasPoliza()),
+        
       ]);
 
-      this.tipos = tipos;
+      this.tipos = tipos ?? [];
       this.naturalezas = naturalezas ?? [];
-
-      console.log('NATURALEZAS', this.naturalezas);
-    } catch (err) {
+    } catch {
       this.tipos = [];
       this.naturalezas = [];
     } finally {
@@ -72,18 +111,22 @@ export class TipoPolizaModalComponent implements OnChanges {
     }
   }
 
-  // INICIAR EDICIÓN
+  // =============================
+  // EDICIÓN
+  // =============================
+
   startEdit(t: TipoPoliza) {
     this.editing = true;
     this.editingId = t.id_tipopoliza;
     this.tipoEditando = t;
+
     this.form.patchValue({
       naturaleza: t.naturaleza,
       descripcion: t.descripcion
     });
   }
 
-  cancelEdit() {
+  resetForm() {
     this.editing = false;
     this.editingId = null;
     this.tipoEditando = null;
@@ -91,42 +134,78 @@ export class TipoPolizaModalComponent implements OnChanges {
     this.submitted = false;
   }
 
-  // CONFIRMAR ELIMINAR
+  cancelEdit() {
+    this.resetForm();
+    this.close()
+  }
+
+  // =============================
+  // ELIMINAR
+  // =============================
+
   confirmarEliminar(tipo: TipoPoliza) {
     this.tipoAEliminar = tipo;
     this.showDeleteModal = true;
+    this.close()
   }
 
   cancelarEliminar() {
     this.tipoAEliminar = null;
     this.showDeleteModal = false;
+    this.close()
   }
 
   async eliminarDefinitivo() {
     if (!this.tipoAEliminar) return;
+
     try {
       this.loading = true;
-      await firstValueFrom(this.polizas.deleteTipoPoliza(this.tipoAEliminar.id_tipopoliza));
+      await firstValueFrom(
+        this.polizas.deleteTipoPoliza(this.tipoAEliminar.id_tipopoliza)
+      );
       await this.loadTipos();
+      this.saved.emit(true);
     } finally {
       this.loading = false;
       this.cancelarEliminar();
     }
   }
 
-  // CERRAR MODAL PRINCIPAL
+  // =============================
+  // CERRAR MODAL
+  // =============================
+
   close() {
     this.open = false;
     this.openChange.emit(false);
-    this.cancelEdit();
+    this.resetForm();
+  }
+get naturalezasDisponibles(): string[] {
+
+  // Si estamos editando, mostrar todas
+  if (this.editing) {
+    return this.naturalezas ?? [];
   }
 
-  @HostListener('document:keydown.escape')
-  onEsc() { if (this.open && !this.loading) this.close(); }
+  // Si es creación, filtrar
+  return (this.naturalezas ?? []).filter(n =>
+    !['cierre', 'apertura', 'ajuste'].includes(n.toLowerCase())
+  );
+}
 
+
+  @HostListener('document:keydown.escape')
+  onEsc() {
+    if (this.open && !this.loading) this.close();
+  }
+
+  // =============================
   // CREAR / ACTUALIZAR
+  // =============================
+
   async onSubmit() {
     this.submitted = true;
+
     if (this.form.invalid || this.loading) return;
 
     const payload: TipoPolizaCreate = {
@@ -135,18 +214,26 @@ export class TipoPolizaModalComponent implements OnChanges {
     };
 
     this.loading = true;
+
     try {
       if (this.editing && this.editingId != null) {
-        await firstValueFrom(this.polizas.updateTipoPoliza(this.editingId, payload));
+        await firstValueFrom(
+          this.polizas.updateTipoPoliza(this.editingId, payload)
+        );
       } else {
-        await firstValueFrom(this.polizas.createTipoPoliza(payload));
+        await firstValueFrom(
+          this.polizas.createTipoPoliza(payload)
+        );
       }
 
       await this.loadTipos();
       this.saved.emit(true);
-      this.cancelEdit();
+      this.resetForm();
+      
+
     } finally {
       this.loading = false;
+      this.close()
     }
   }
 }

@@ -12,16 +12,17 @@
 
       <div class="modal__actions">
 
-        <button
-          *ngIf="showClose"
-          class="icon-btn light"
-          type="button"
-          (click)="close()"
-          aria-label="Cerrar"
-          title="Cerrar"
-        >
-          ✕
-        </button>
+       <button
+  *ngIf="showClose"
+  class="icon-btn light"
+  type="button"
+  (click)="cancel()"
+  aria-label="Cerrar"
+  title="Cerrar"
+>
+  ✕
+</button>
+
       </div>
     </header>
 
@@ -36,8 +37,7 @@
         <button type="button" class="btn primary" (click)="confirm()" aria-label="Guardar">
           Guardar
         </button>
-      <!-- <button type="button" class="btn ghost" (click)="cancel()">Cancelar</button>
-      <button type="button" class="btn primary" (click)="confirm()">Guardar</button> -->
+      
     </footer>
   </div>
 </div>
