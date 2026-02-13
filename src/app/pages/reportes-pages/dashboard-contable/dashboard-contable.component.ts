@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DashboardContableService, DashboardContableDTO } from '../../services/dashboard-contable.service';
+import { DashboardContableService, DashboardContableDTO } from '../../../services/dashboard-contable.service';
 import { BaseChartDirective } from 'ng2-charts';
 
 import { ChartConfiguration } from 'chart.js';
